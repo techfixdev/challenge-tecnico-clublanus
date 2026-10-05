@@ -12,17 +12,17 @@ export type MoneyInput = number | string | { toNumber(): number };
 
 const LOCALE = "en-US";
 
-function toFiniteNumber(value: MoneyInput): number {
-  // `Number("")` and `Number("  ")` are 0, which would silently render "$0" for missing data.
-  const amount =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? value.trim() === ""
-          ? Number.NaN
-          : Number(value)
-        : value.toNumber();
+function toNumber(value: MoneyInput): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    // `Number("")` and `Number("  ")` are 0, which would silently render "$0" for missing data.
+    return value.trim() === "" ? Number.NaN : Number(value);
+  }
+  return value.toNumber();
+}
 
+function toFiniteNumber(value: MoneyInput): number {
+  const amount = toNumber(value);
   if (!Number.isFinite(amount)) {
     throw new RangeError(`Invalid money amount: ${String(value)}`);
   }
