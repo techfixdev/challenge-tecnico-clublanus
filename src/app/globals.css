@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/*
+ * GranaBank design tokens (from the Figma reference in docs/design).
+ * Exposed as Tailwind utilities, e.g. `bg-primary`, `text-sent`, `bg-subscription-soft`.
+ */
+@theme {
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #7a1d2d;
+  --color-primary-soft: #ddc6ca;
+
+  --color-background: #f9fafc;
+  --color-surface: #ffffff;
+
+  --color-foreground: #1e2235;
+  --color-muted: #8a8d9b;
+  --color-border: #eceef3;
+
+  --color-subscription: #c76dff;
+  --color-subscription-soft: #f3e3ff;
+
+  --color-received: #7a1d2d;
+  --color-received-soft: #ddc6ca;
+
+  --color-sent: #ef9c55;
+  --color-sent-soft: #fdebdb;
+
+  --shadow-card: 0 8px 24px -12px rgb(30 34 53 / 0.12);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}

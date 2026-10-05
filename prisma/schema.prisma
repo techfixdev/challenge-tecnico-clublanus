@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CardBrand {
+  MASTERCARD
+  VISA
+}
+
+/// SUBSCRIPTION -> "Débito Aut.", RECEIVED -> "Recibido", SENT -> "Enviado"
+enum MovementType {
+  SUBSCRIPTION
+  RECEIVED
+  SENT
+}
+
+enum MovementStatus {
+  COMPLETED
+  PENDING
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  createdAt    DateTime   @default(now())
+  cards        Card[]
+  movements    Movement[]
+}
+
+model Card {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand      CardBrand
+  last4      String     @db.VarChar(4)
+  holderName String
+  expMonth   Int
+  expYear    Int
+  balance    Decimal    @db.Decimal(12, 2)
+  currency   String     @default("USD") @db.VarChar(3)
+  isPrimary  Boolean    @default(false)
+  movements  Movement[]
+
+  @@index([userId])
+}
+
+model Movement {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId       String?
+  card         Card?          @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  counterparty String
+  description  String
+  type         MovementType
+  amount       Decimal        @db.Decimal(12, 2)
+  currency     String         @default("USD") @db.VarChar(3)
+  status       MovementStatus @default(COMPLETED)
+  reference    String         @unique
+  occurredAt   DateTime
+
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([counterparty])
+}
