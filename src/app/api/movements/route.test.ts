@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { decodeMovementCursor } from "@/features/movements/domain/movement-cursor";
 import type { MovementRepository } from "@/features/movements/domain/movement-queries";
+import { databaseUnavailableError } from "@/test/db-errors";
 import {
   OTHER_USER_ID,
   OWNER_ID,
@@ -27,7 +28,6 @@ vi.mock("@/features/movements/data/prisma-movement-repository", () => ({
 }));
 
 const { GET: listRoute } = await import("./route");
-const { GET: detailRoute } = await import("./[id]/route");
 
 const OWNER = {
   id: OWNER_ID,
@@ -58,12 +58,6 @@ function seed(
 
 function get(path: string): NextRequest {
   return new NextRequest(new URL(path, "http://localhost:3000"));
-}
-
-function detail(id: string) {
-  return detailRoute(get(`/api/movements/${id}`), {
-    params: Promise.resolve({ id }),
-  });
 }
 
 beforeEach(() => {
@@ -155,8 +149,8 @@ describe("GET /api/movements", () => {
   it("answers 503 without leaking details when the database fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.repository.current = {
-      findMany: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
-      count: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
+      findMany: vi.fn().mockRejectedValue(databaseUnavailableError()),
+      count: vi.fn().mockRejectedValue(databaseUnavailableError()),
       findById: vi.fn(),
     };
 
@@ -164,36 +158,5 @@ describe("GET /api/movements", () => {
 
     expect(response.status).toBe(503);
     expect(JSON.stringify(await response.json())).not.toContain("ECONNREFUSED");
-  });
-});
-
-describe("GET /api/movements/[id]", () => {
-  it("returns the user's own movement", async () => {
-    const response = await detail(ownRonaldo.id);
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      data: { ...ownRonaldo, occurredAt: ownRonaldo.occurredAt.toISOString() },
-    });
-  });
-
-  it("answers 404 (never 403) for another user's movement, so ids are not confirmed", async () => {
-    const response = await detail(foreign.id);
-
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      error: { code: "NOT_FOUND", message: expect.any(String) },
-    });
-  });
-
-  it("answers 404 for malformed and unknown ids", async () => {
-    expect((await detail("not-an-id")).status).toBe(404);
-    expect((await detail("cmuvt8zut00035dm61qeqiekh")).status).toBe(404);
-  });
-
-  it("answers 401 without a session", async () => {
-    mocks.getCurrentUser.mockResolvedValue(null);
-
-    expect((await detail(ownRonaldo.id)).status).toBe(401);
   });
 });

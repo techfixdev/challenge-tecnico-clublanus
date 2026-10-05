@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DUMMY_PASSWORD_HASH } from "@/features/auth/domain/authenticate";
+import { databaseUnavailableError } from "@/test/db-errors";
 
 /*
  * Exercises the real signIn service, zod schema and authenticate use case; only the
@@ -60,7 +61,9 @@ describe("POST /api/auth/login", () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ user: { id: "user_1" } });
+    await expect(response.json()).resolves.toEqual({
+      data: { userId: "user_1" },
+    });
     expect(mocks.createSession).toHaveBeenCalledWith("user_1", {
       remember: true,
     });
@@ -134,9 +137,7 @@ describe("POST /api/auth/login", () => {
 
   it("answers 503 (not an unhandled 500) when the database is down", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.findCredentialsByEmail.mockRejectedValue(
-      new Error("connect ECONNREFUSED 127.0.0.1:5432"),
-    );
+    mocks.findCredentialsByEmail.mockRejectedValue(databaseUnavailableError());
 
     const response = await post(JSON.stringify(CREDENTIALS));
     const body = await response.json();

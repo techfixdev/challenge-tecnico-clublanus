@@ -1,5 +1,7 @@
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 
+import { isDatabaseUnavailableError } from "./db-errors";
 import type { ValidationDetails } from "./validation";
 
 /**
@@ -16,6 +18,7 @@ const STATUS_BY_CODE = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   UNSUPPORTED_MEDIA_TYPE: 415,
+  INTERNAL_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
 } as const;
 
@@ -30,6 +33,7 @@ export const API_MESSAGES = {
   invalidInput: "Los datos enviados no son válidos",
   serviceUnavailable:
     "El servicio no está disponible en este momento. Intentá de nuevo en unos minutos.",
+  internalError: "Ocurrió un error inesperado. Intentá de nuevo más tarde.",
 } as const;
 
 export function apiError(
@@ -53,9 +57,11 @@ export function isJsonContentType(header: string | null): boolean {
 }
 
 /**
- * Wraps a route handler so an unexpected failure (typically infrastructure: database down,
- * missing configuration) becomes a logged 503 with the shared shape, instead of an
- * unformatted 500 that could leak internals.
+ * Wraps a route handler so an unexpected failure still answers with the shared shape and
+ * never leaks internals:
+ * - Next.js control flow (`redirect()`, `notFound()`) is rethrown for the framework to handle;
+ * - an unreachable database is a transient outage: 503, the client may retry later;
+ * - anything else is a bug: 500, logged for the server logs.
  */
 export function withApiErrorHandling<Args extends unknown[]>(
   handler: (...args: Args) => Promise<Response>,
@@ -64,8 +70,13 @@ export function withApiErrorHandling<Args extends unknown[]>(
     try {
       return await handler(...args);
     } catch (error) {
+      unstable_rethrow(error);
+      if (isDatabaseUnavailableError(error)) {
+        console.error("Database unavailable in API route handler", error);
+        return apiError("SERVICE_UNAVAILABLE", API_MESSAGES.serviceUnavailable);
+      }
       console.error("Unhandled error in API route handler", error);
-      return apiError("SERVICE_UNAVAILABLE", API_MESSAGES.serviceUnavailable);
+      return apiError("INTERNAL_ERROR", API_MESSAGES.internalError);
     }
   };
 }

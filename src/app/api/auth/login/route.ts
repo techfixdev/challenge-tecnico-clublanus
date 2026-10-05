@@ -12,6 +12,8 @@ import {
 /**
  * REST entry point for the same login use case as the Server Action (e.g. for API clients).
  * Body: `{ "email": string, "password": string, "remember"?: boolean }`.
+ * 200 → `{ "data": { "userId": string } }` plus the session cookie; errors use the shared
+ * `{ "error": { code, message, details? } }` envelope (400, 401, 415, 500, 503).
  *
  * Requiring a JSON body blocks login CSRF: a cross-site HTML form cannot send
  * `application/json`, and `fetch` with that content type triggers a CORS preflight.
@@ -34,7 +36,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest) => {
   const result = await signIn(body);
 
   if (result.ok) {
-    return NextResponse.json({ user: { id: result.userId } });
+    return NextResponse.json({ data: { userId: result.userId } });
   }
   if (result.reason === "invalid_input") {
     return apiError("INVALID_INPUT", API_MESSAGES.invalidInput, result.details);

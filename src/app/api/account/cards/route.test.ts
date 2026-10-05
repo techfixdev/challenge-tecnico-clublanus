@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { databaseUnavailableError } from "@/test/db-errors";
 import { makeCard } from "@/test/movement-fixtures";
 
 const mocks = vi.hoisted(() => ({
@@ -47,7 +48,17 @@ describe("GET /api/account/cards", () => {
     expect(mocks.findByUserId).not.toHaveBeenCalled();
   });
 
-  it("answers 503 when the session store or database fails", async () => {
+  it("answers 503 when the database is unreachable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getCurrentUser.mockRejectedValue(databaseUnavailableError());
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("SERVICE_UNAVAILABLE");
+  });
+
+  it("answers a generic 500 for a misconfiguration (it is not a transient outage)", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.getCurrentUser.mockRejectedValue(
       new Error("SESSION_SECRET is not set"),
@@ -55,7 +66,7 @@ describe("GET /api/account/cards", () => {
 
     const response = await GET();
 
-    expect(response.status).toBe(503);
-    expect((await response.json()).error.code).toBe("SERVICE_UNAVAILABLE");
+    expect(response.status).toBe(500);
+    expect((await response.json()).error.code).toBe("INTERNAL_ERROR");
   });
 });

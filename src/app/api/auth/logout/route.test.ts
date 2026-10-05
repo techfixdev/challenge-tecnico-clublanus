@@ -47,10 +47,13 @@ describe("POST /api/auth/logout", () => {
     expect(mocks.deleteSession).not.toHaveBeenCalled();
   });
 
-  it("answers 503 when ending the session fails unexpectedly", async () => {
+  it("answers a generic 500 when ending the session fails unexpectedly", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.deleteSession.mockRejectedValue(new Error("boom"));
 
-    expect((await post()).status).toBe(503);
+    const response = await post();
+
+    expect(response.status).toBe(500);
+    expect((await response.json()).error.code).toBe("INTERNAL_ERROR");
   });
 });

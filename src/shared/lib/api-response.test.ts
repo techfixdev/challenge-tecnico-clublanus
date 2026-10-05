@@ -1,8 +1,12 @@
 // @vitest-environment node
+import { notFound, redirect } from "next/navigation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { Prisma } from "@/generated/prisma/client";
+
 import {
+  API_MESSAGES,
   apiError,
   isJsonContentType,
   withApiErrorHandling,
@@ -83,10 +87,13 @@ describe("withApiErrorHandling", () => {
     expect(response.status).toBe(200);
   });
 
-  it("turns unexpected failures into a 503 without leaking internals", async () => {
+  it("answers 503 when the database is unavailable, without leaking internals", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const handler = withApiErrorHandling(async () => {
-      throw new Error("connect ECONNREFUSED 127.0.0.1:5432");
+      throw new Prisma.PrismaClientKnownRequestError(
+        "connect ECONNREFUSED 127.0.0.1:5432",
+        { code: "ECONNREFUSED", clientVersion: "7.10.0" },
+      );
     });
 
     const response = await handler();
@@ -94,12 +101,40 @@ describe("withApiErrorHandling", () => {
 
     expect(response.status).toBe(503);
     expect(body).toEqual({
-      error: {
-        code: "SERVICE_UNAVAILABLE",
-        message: expect.any(String),
-      },
+      error: { code: "SERVICE_UNAVAILABLE", message: expect.any(String) },
     });
     expect(JSON.stringify(body)).not.toContain("ECONNREFUSED");
     expect(log).toHaveBeenCalledOnce();
+  });
+
+  it("answers a generic 500 for anything else (a bug is not an outage)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const handler = withApiErrorHandling(async () => {
+      throw new TypeError("Cannot read properties of undefined (reading 'id')");
+    });
+
+    const response = await handler();
+    const body: unknown = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      error: { code: "INTERNAL_ERROR", message: API_MESSAGES.internalError },
+    });
+    expect(JSON.stringify(body)).not.toContain("properties");
+    expect(log).toHaveBeenCalledOnce();
+  });
+
+  it("lets Next.js control-flow errors (redirect, notFound) propagate", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const redirecting = withApiErrorHandling(async () => redirect("/login"));
+    const missing = withApiErrorHandling(async () => notFound());
+
+    await expect(redirecting()).rejects.toMatchObject({
+      digest: expect.stringMatching(/^NEXT_REDIRECT/),
+    });
+    await expect(missing()).rejects.toMatchObject({
+      digest: expect.stringMatching(/^NEXT_HTTP_ERROR_FALLBACK;404/),
+    });
+    expect(log).not.toHaveBeenCalled();
   });
 });
