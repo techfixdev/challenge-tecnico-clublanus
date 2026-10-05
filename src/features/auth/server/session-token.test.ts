@@ -1,7 +1,7 @@
 // @vitest-environment node
 // Server-only code; jsdom's Uint8Array is a different realm than the one jose checks.
 import { SignJWT } from "jose";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   SESSION_DURATION_SECONDS,
@@ -16,7 +16,13 @@ const SECRET = "a-test-secret-that-is-at-least-32-characters";
 const key = getSessionKey(SECRET);
 
 describe("getSessionKey", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("fails fast when the secret is missing", () => {
+    // Clear it explicitly: CI exports SESSION_SECRET, and `undefined` falls back to the env.
+    vi.stubEnv("SESSION_SECRET", "");
     expect(() => getSessionKey(undefined)).toThrow(/SESSION_SECRET is not set/);
   });
 
