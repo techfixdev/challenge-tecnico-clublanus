@@ -26,6 +26,9 @@
   --color-sent: #ef9c55;
   --color-sent-soft: #fdebdb;
 
+  --color-danger: #c0362c;
+  --color-danger-soft: #fdecea;
+
   --shadow-card: 0 8px 24px -12px rgb(30 34 53 / 0.12);
 }
 

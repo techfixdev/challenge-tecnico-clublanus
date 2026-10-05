@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { AppShell } from "@/shared/ui/AppShell";
+
 import "./globals.css";
 
 const poppins = Poppins({
@@ -17,7 +19,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${poppins.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }

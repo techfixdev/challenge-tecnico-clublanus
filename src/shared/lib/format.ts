@@ -13,11 +13,14 @@ export type MoneyInput = number | string | { toNumber(): number };
 const LOCALE = "en-US";
 
 function toFiniteNumber(value: MoneyInput): number {
+  // `Number("")` and `Number("  ")` are 0, which would silently render "$0" for missing data.
   const amount =
     typeof value === "number"
       ? value
       : typeof value === "string"
-        ? Number(value)
+        ? value.trim() === ""
+          ? Number.NaN
+          : Number(value)
         : value.toNumber();
 
   if (!Number.isFinite(amount)) {

@@ -241,72 +241,75 @@ function dateDaysAgo(daysAgo: number, hour: number): Date {
 async function main() {
   const passwordHash = await bcrypt.hash(DEMO_USER.password, 10);
 
-  const user = await prisma.user.upsert({
-    where: { email: DEMO_USER.email },
-    update: {
-      passwordHash,
-      firstName: DEMO_USER.firstName,
-      lastName: DEMO_USER.lastName,
-    },
-    create: {
-      email: DEMO_USER.email,
-      passwordHash,
-      firstName: DEMO_USER.firstName,
-      lastName: DEMO_USER.lastName,
-    },
-  });
+  // One interactive transaction: the upsert, the wipe and the recreate either all apply or
+  // none do, so a failure half-way never leaves the demo user without cards or movements.
+  const movementCount = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.upsert({
+      where: { email: DEMO_USER.email },
+      update: {
+        passwordHash,
+        firstName: DEMO_USER.firstName,
+        lastName: DEMO_USER.lastName,
+      },
+      create: {
+        email: DEMO_USER.email,
+        passwordHash,
+        firstName: DEMO_USER.firstName,
+        lastName: DEMO_USER.lastName,
+      },
+    });
 
-  // Idempotency: wipe this user's data and recreate it so re-running converges to the same state.
-  await prisma.$transaction([
-    prisma.movement.deleteMany({ where: { userId: user.id } }),
-    prisma.card.deleteMany({ where: { userId: user.id } }),
-  ]);
+    // Idempotency: wipe this user's data and recreate it so re-running converges to the same state.
+    await tx.movement.deleteMany({ where: { userId: user.id } });
+    await tx.card.deleteMany({ where: { userId: user.id } });
 
-  const primary = await prisma.card.create({
-    data: {
+    const primary = await tx.card.create({
+      data: {
+        userId: user.id,
+        brand: "MASTERCARD",
+        last4: "1234",
+        holderName: "Soy Granate",
+        expMonth: 2,
+        expYear: 2030,
+        balance: "978.85",
+        currency: "USD",
+        isPrimary: true,
+      },
+    });
+
+    const secondary = await tx.card.create({
+      data: {
+        userId: user.id,
+        brand: "VISA",
+        last4: "5678",
+        holderName: "Soy Granate",
+        expMonth: 11,
+        expYear: 2028,
+        balance: "312.40",
+        currency: "USD",
+        isPrimary: false,
+      },
+    });
+
+    const movements = MOVEMENTS.map((movement, index) => ({
       userId: user.id,
-      brand: "MASTERCARD",
-      last4: "1234",
-      holderName: "Soy Granate",
-      expMonth: 2,
-      expYear: 2030,
-      balance: "978.85",
+      cardId: movement.card === "secondary" ? secondary.id : primary.id,
+      counterparty: movement.counterparty,
+      description: DESCRIPTION[movement.type],
+      type: movement.type,
+      amount: movement.amount,
       currency: "USD",
-      isPrimary: true,
-    },
+      status: movement.pending ? ("PENDING" as const) : ("COMPLETED" as const),
+      reference: `GB-${String(index + 1).padStart(6, "0")}`,
+      occurredAt: dateDaysAgo(movement.daysAgo, movement.hour),
+    }));
+
+    const { count } = await tx.movement.createMany({ data: movements });
+    return count;
   });
-
-  const secondary = await prisma.card.create({
-    data: {
-      userId: user.id,
-      brand: "VISA",
-      last4: "5678",
-      holderName: "Soy Granate",
-      expMonth: 11,
-      expYear: 2028,
-      balance: "312.40",
-      currency: "USD",
-      isPrimary: false,
-    },
-  });
-
-  const movements = MOVEMENTS.map((movement, index) => ({
-    userId: user.id,
-    cardId: movement.card === "secondary" ? secondary.id : primary.id,
-    counterparty: movement.counterparty,
-    description: DESCRIPTION[movement.type],
-    type: movement.type,
-    amount: movement.amount,
-    currency: "USD",
-    status: movement.pending ? ("PENDING" as const) : ("COMPLETED" as const),
-    reference: `GB-${String(index + 1).padStart(6, "0")}`,
-    occurredAt: dateDaysAgo(movement.daysAgo, movement.hour),
-  }));
-
-  await prisma.movement.createMany({ data: movements });
 
   console.log(
-    `Seeded ${DEMO_USER.email}: 2 cards, ${movements.length} movements.`,
+    `Seeded ${DEMO_USER.email}: 2 cards, ${movementCount} movements.`,
   );
 }
 

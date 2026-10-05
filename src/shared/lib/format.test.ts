@@ -30,6 +30,12 @@ describe("formatMoney", () => {
     expect(() => formatMoney("abc")).toThrow(RangeError);
     expect(() => formatMoney(Number.NaN)).toThrow(RangeError);
   });
+
+  it("rejects empty or whitespace-only strings instead of formatting them as $0", () => {
+    expect(() => formatMoney("")).toThrow(RangeError);
+    expect(() => formatMoney("   ")).toThrow(RangeError);
+    expect(() => formatAmount("")).toThrow(RangeError);
+  });
 });
 
 describe("formatAmount", () => {
