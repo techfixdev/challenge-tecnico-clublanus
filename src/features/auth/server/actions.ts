@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 
 import { ROUTES } from "@/shared/lib/routes";
 
-import { LOGIN_MESSAGES, parseLoginFormData } from "./domain/login-schema";
-import type { LoginFormState } from "./login-form-state";
+import { LOGIN_MESSAGES, parseLoginFormData } from "../domain/login-schema";
+import type { LoginFormState } from "../domain/login-form-state";
 import { signIn, signOut } from "./sign-in";
 
 export async function login(

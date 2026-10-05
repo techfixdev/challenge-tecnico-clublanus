@@ -7,7 +7,7 @@ import {
   getSessionExpiry,
   getSessionKey,
   signSessionToken,
-} from "@/features/auth/session/session-token";
+} from "@/features/auth/server/session-token";
 import { ROUTES } from "@/shared/lib/routes";
 
 import { proxy } from "./proxy";

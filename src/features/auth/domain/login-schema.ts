@@ -40,7 +40,6 @@ export const loginSchema = z.object(
 );
 
 export type LoginInput = z.input<typeof loginSchema>;
-export type LoginCredentials = z.output<typeof loginSchema>;
 
 export type LoginField = "email" | "password";
 export type LoginFieldErrors = Partial<Record<LoginField, string>>;

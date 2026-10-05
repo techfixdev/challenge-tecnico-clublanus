@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { LOGIN_MESSAGES } from "@/features/auth/domain/login-schema";
-import { signIn } from "@/features/auth/sign-in";
+import { signIn } from "@/features/auth/server/sign-in";
 import {
   API_MESSAGES,
   apiError,

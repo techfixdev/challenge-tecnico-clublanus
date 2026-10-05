@@ -1,4 +1,4 @@
-import type { LoginFieldErrors } from "./domain/login-schema";
+import type { LoginFieldErrors } from "./login-schema";
 
 /** State returned by the login Server Action and rendered by `LoginForm` (via `useActionState`). */
 export type LoginFormState = {

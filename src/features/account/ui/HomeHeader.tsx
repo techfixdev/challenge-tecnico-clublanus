@@ -6,7 +6,7 @@ import { SearchIcon } from "@/shared/ui/icons";
 import { NotificationsButton } from "./NotificationsButton";
 
 /** Link from the search icon: lands on Movements with the search box focused. */
-export const SEARCH_FROM_HOME_HREF = `${ROUTES.movements}?focus=1`;
+const SEARCH_FROM_HOME_HREF = `${ROUTES.movements}?focus=1`;
 
 export function HomeHeader({ firstName }: { firstName: string }) {
   return (

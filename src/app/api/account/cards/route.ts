@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prismaCardRepository } from "@/features/account/data/prisma-card-repository";
 import { getAccountCards } from "@/features/account/domain/card";
-import { getCurrentUser } from "@/features/auth/session/current-user";
+import { getCurrentUser } from "@/features/auth/server/current-user";
 import {
   API_MESSAGES,
   apiError,

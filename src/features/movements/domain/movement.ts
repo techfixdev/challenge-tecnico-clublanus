@@ -1,3 +1,5 @@
+// The only cross-feature dependency: a movement is paid with an account card, so it reuses
+// the account domain's brand type (domain to domain; no UI or data coupling).
 import type { CardBrand } from "@/features/account/domain/card";
 
 /**

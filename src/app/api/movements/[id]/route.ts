@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getCurrentUser } from "@/features/auth/session/current-user";
+import { getCurrentUser } from "@/features/auth/server/current-user";
 import { prismaMovementRepository } from "@/features/movements/data/prisma-movement-repository";
 import { toMovementDto } from "@/features/movements/domain/movement-dto";
 import { getMovement } from "@/features/movements/domain/movement-queries";

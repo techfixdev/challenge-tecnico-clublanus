@@ -2,7 +2,7 @@ import { prismaCardRepository } from "@/features/account/data/prisma-card-reposi
 import { getAccountCards } from "@/features/account/domain/card";
 import { CardCarousel } from "@/features/account/ui/CardCarousel";
 import { HomeHeader } from "@/features/account/ui/HomeHeader";
-import { requireUser } from "@/features/auth/session/current-user";
+import { requireUser } from "@/features/auth/server/current-user";
 import { prismaMovementRepository } from "@/features/movements/data/prisma-movement-repository";
 import { getLatestMovements } from "@/features/movements/domain/movement-queries";
 import { LatestMovements } from "@/features/movements/ui/LatestMovements";

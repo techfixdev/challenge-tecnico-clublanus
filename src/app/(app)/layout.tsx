@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { logout } from "@/features/auth/actions";
+import { logout } from "@/features/auth/server/actions";
 import { BottomNav } from "@/shared/ui/BottomNav";
 
 /**

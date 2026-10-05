@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   findByUserId: vi.fn(),
 }));
 
-vi.mock("@/features/auth/session/current-user", () => ({
+vi.mock("@/features/auth/server/current-user", () => ({
   getCurrentUser: mocks.getCurrentUser,
 }));
 

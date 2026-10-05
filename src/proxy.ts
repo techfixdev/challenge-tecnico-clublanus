@@ -5,7 +5,7 @@ import {
   getSessionKey,
   verifySessionToken,
   type SessionPayload,
-} from "@/features/auth/session/session-token";
+} from "@/features/auth/server/session-token";
 import { LOGIN_EXPIRED_PARAM, ROUTES } from "@/shared/lib/routes";
 
 let hasLoggedMissingSecret = false;

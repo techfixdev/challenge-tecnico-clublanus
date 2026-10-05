@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { requireUser } from "@/features/auth/session/current-user";
+import { requireUser } from "@/features/auth/server/current-user";
 import {
   parseMovementFilters,
   toMovementSearchParams,

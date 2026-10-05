@@ -14,7 +14,7 @@ import {
 import {
   INITIAL_LOGIN_FORM_STATE,
   type LoginAction,
-} from "../login-form-state";
+} from "../domain/login-form-state";
 import { FormField, INPUT_CLASSES, fieldIds } from "./FormField";
 import { LoginHeader } from "./LoginHeader";
 import { PasswordInput } from "./PasswordInput";

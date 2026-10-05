@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { signOut } from "@/features/auth/sign-in";
+import { signOut } from "@/features/auth/server/sign-in";
 import { apiError, withApiErrorHandling } from "@/shared/lib/api-response";
 
 /**

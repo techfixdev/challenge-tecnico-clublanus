@@ -2,7 +2,7 @@ import "server-only";
 
 import type { CardBrand } from "@/features/account/domain/card";
 import { Prisma } from "@/generated/prisma/client";
-import { db } from "@/lib/db";
+import { db } from "@/shared/lib/db";
 import { containsPattern, LIKE_ESCAPE_CHAR } from "@/shared/lib/like-pattern";
 
 import type { Movement } from "../domain/movement";

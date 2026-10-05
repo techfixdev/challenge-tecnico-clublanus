@@ -39,7 +39,7 @@ export function describeCard(card: Pick<Card, "brand" | "last4">): string {
 }
 
 /** Primary card first (it is the one the design shows in front), stable otherwise. */
-export function sortCardsPrimaryFirst(cards: readonly Card[]): Card[] {
+function sortCardsPrimaryFirst(cards: readonly Card[]): Card[] {
   return [...cards].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
 }
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { db } from "@/shared/lib/db";
 
 import type { StoredCredentials } from "../domain/authenticate";
 

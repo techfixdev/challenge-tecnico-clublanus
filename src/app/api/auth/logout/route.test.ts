@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({ deleteSession: vi.fn() }));
 vi.mock("@/features/auth/data/user-repository", () => ({
   findCredentialsByEmail: vi.fn(),
 }));
-vi.mock("@/features/auth/session/session", () => ({
+vi.mock("@/features/auth/server/session", () => ({
   createSession: vi.fn(),
   deleteSession: mocks.deleteSession,
 }));

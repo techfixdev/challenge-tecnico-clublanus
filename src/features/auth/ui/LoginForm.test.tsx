@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { LOGIN_MESSAGES } from "../domain/login-schema";
-import type { LoginAction, LoginFormState } from "../login-form-state";
+import type { LoginAction, LoginFormState } from "../domain/login-form-state";
 import { LoginForm } from "./LoginForm";
 
 function renderForm(

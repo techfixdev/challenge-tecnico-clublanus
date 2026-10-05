@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   repository: { current: null as MovementRepository | null },
 }));
 
-vi.mock("@/features/auth/session/current-user", () => ({
+vi.mock("@/features/auth/server/current-user", () => ({
   getCurrentUser: mocks.getCurrentUser,
 }));
 

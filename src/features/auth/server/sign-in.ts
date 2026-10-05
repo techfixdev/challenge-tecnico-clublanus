@@ -7,14 +7,14 @@ import {
   type ValidationDetails,
 } from "@/shared/lib/validation";
 
-import { findCredentialsByEmail } from "./data/user-repository";
-import { authenticate } from "./domain/authenticate";
+import { findCredentialsByEmail } from "../data/user-repository";
+import { authenticate } from "../domain/authenticate";
 import {
   getLoginFieldErrors,
   loginSchema,
   type LoginFieldErrors,
-} from "./domain/login-schema";
-import { createSession, deleteSession } from "./session/session";
+} from "../domain/login-schema";
+import { createSession, deleteSession } from "./session";
 
 export type SignInResult =
   | { ok: true; userId: string }

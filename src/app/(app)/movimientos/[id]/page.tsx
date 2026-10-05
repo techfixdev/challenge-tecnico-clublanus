@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { requireUser } from "@/features/auth/session/current-user";
+import { requireUser } from "@/features/auth/server/current-user";
 import { prismaMovementRepository } from "@/features/movements/data/prisma-movement-repository";
 import { detailBackHref } from "@/features/movements/domain/movement-filters";
 import { getMovement } from "@/features/movements/domain/movement-queries";

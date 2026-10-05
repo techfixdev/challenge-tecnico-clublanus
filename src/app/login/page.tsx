@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { login } from "@/features/auth/actions";
+import { login } from "@/features/auth/server/actions";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
 
 export const metadata: Metadata = {

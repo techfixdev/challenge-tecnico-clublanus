@@ -11,13 +11,13 @@ import { decodeMovementCursor, type MovementCursor } from "./movement-cursor";
  * The URL uses readable Spanish slugs; the domain uses the enum values.
  */
 
-export const MOVEMENT_TYPE_SLUGS = {
+const MOVEMENT_TYPE_SLUGS = {
   debito: "SUBSCRIPTION",
   recibido: "RECEIVED",
   enviado: "SENT",
 } as const satisfies Record<string, MovementType>;
 
-export type MovementTypeSlug = keyof typeof MOVEMENT_TYPE_SLUGS;
+type MovementTypeSlug = keyof typeof MOVEMENT_TYPE_SLUGS;
 
 const SLUG_BY_TYPE: Record<MovementType, MovementTypeSlug> = {
   SUBSCRIPTION: "debito",
@@ -29,7 +29,7 @@ export const SEARCH_MAX_LENGTH = 50;
 
 export type MovementFilters = { query?: string; type?: MovementType };
 
-export const FILTER_MESSAGES = {
+const FILTER_MESSAGES = {
   queryTooLong: `La búsqueda admite hasta ${SEARCH_MAX_LENGTH} caracteres`,
   invalidType: "El tipo debe ser debito, recibido o enviado",
   invalidCursor: "El cursor de paginación no es válido",
@@ -123,7 +123,7 @@ export function parseMovementListParams(
   };
 }
 
-export function typeToSlug(type: MovementType): MovementTypeSlug {
+function typeToSlug(type: MovementType): MovementTypeSlug {
   return SLUG_BY_TYPE[type];
 }
 
