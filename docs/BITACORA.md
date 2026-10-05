@@ -66,8 +66,8 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | # | Tarea | Estado |
 |---|---|---|
 | T1 | Scaffold, base de datos, ORM, datos de ejemplo, tests | ✅ Hecha |
-| T2 | Login, sesión, protección de rutas, logout | 🔍 En revisión |
-| T3 | Home, listado con búsqueda y filtros, detalle, estados | ⏳ Pendiente |
+| T2 | Login, sesión, protección de rutas, logout | ✅ Hecha |
+| T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
 | T4 | Pulido, accesibilidad, test end-to-end, README final | ⏳ Pendiente |
 | T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
 
@@ -126,7 +126,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 
 | Decisión | Por qué |
 |---|---|
-| JWT en cookie (con `jose`, HS256) en lugar de sesiones en base | El proxy valida sin consultar la base. Contra: no se puede revocar una sesión puntual; se compensa con expiración corta y verificando el usuario en cada lectura. |
+| JWT en cookie (con `jose`, HS256) en lugar de sesiones en base | El proxy valida sin consultar la base. Contra: no se puede revocar una sesión puntual; se mitiga verificando el usuario en cada lectura y con expiración de 1 día si no se marca "Recordarme" (con "Recordarme" son 30 días, un trade-off de comodidad). |
 | El token solo guarda el id del usuario | Un JWT se puede decodificar; no lleva datos personales. |
 | Algoritmo fijo al verificar | Evita el ataque de "alg confusion", donde el token elige su propio algoritmo. |
 | Cookie `httpOnly`, `sameSite=lax`, `secure` en producción | JavaScript (y por lo tanto un XSS) no puede leerla, y no viaja en POST de otros sitios. |
@@ -149,7 +149,65 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 
 **Verificación:** lint ✅ · typecheck ✅ · tests 39/39 ✅ · e2e 5/5 ✅ · build ✅ · prettier ✅
 
+**Commit:** `797e7d2` — `feat(auth): add login, jwt session cookie and route protection`
+
+**Revisión automática (4 enfoques: seguridad, resiliencia, legibilidad, confiabilidad): aprobada sin bloqueantes**, con 15 observaciones. Las importantes se corrigen en T3:
+- La API de login acepta cualquier `Content-Type` que *contenga* `application/json` (chequeo por substring).
+- Si la base se cae, la API de login devuelve un 500 sin controlar; debería devolver un error claro (503).
+- Las rutas REST no tienen tests.
+- Si falta `SESSION_SECRET`, el proxy rompe en lugar de redirigir al login.
+- No hay límite de intentos de login (rate limiting): bcrypt consume CPU y permite fuerza bruta. Queda documentado como mejora, porque en serverless un límite en memoria no sirve y requiere un servicio externo (por ejemplo Redis).
+- Esta bitácora decía "expiración corta", pero con "Recordarme" son 30 días; se corrigió el texto.
+
 **Diferencia con el Figma:** los placeholders dicen "Ingresá…" (voseo, igual que el lema "sumás"); en el Figma dicen "Ingresa…".
+
+### T3 — Home, movimientos y detalle (05/10/2026)
+
+**Qué se hizo**
+- **Home:** saludo, carrusel de tarjetas (la Visa asoma al costado, como en el Figma), "Últimos movimientos" (5) con "Ver todos", lupa que lleva a Movimientos y campana con aviso "Próximamente".
+- **Movimientos:** búsqueda por nombre o servicio, filtros rápidos (Todos, Débito Aut., Recibido, Enviado) y paginación con "Cargar más".
+- **Detalle** `/movimientos/[id]`: pantalla nueva con el mismo lenguaje visual (fecha, tipo, tarjeta, referencia, estado).
+- **Estados:** esqueletos de carga, error con "Reintentar", vacío sin movimientos y vacío sin resultados (con "Limpiar filtros"). También hay pantalla de "no encontrado".
+- **Navegación inferior** compartida: Home, Movimientos y Salir.
+- **API REST:** `GET /api/movements`, `GET /api/movements/[id]`, `GET /api/account/cards`.
+- **Correcciones de la revisión de T2.**
+- **Capturas** en `docs/screenshots/`.
+
+**Decisiones y por qué**
+
+| Decisión | Por qué |
+|---|---|
+| Búsqueda y filtros en la URL (`?q=&type=`) | Se pueden compartir, sobreviven al recargar, funcionan con el botón atrás, y el filtrado ocurre en la base y no en el navegador. |
+| Búsqueda con espera de 300 ms (debounce) + `router.replace` + `useTransition` | Una consulta por pausa y no una por tecla; no llena el historial; muestra un indicador mientras carga. |
+| Chips de filtro como links | Funcionan sin JavaScript y conservan la búsqueda. |
+| Paginación por cursor (`occurredAt` + `id`) en lugar de offset | Es estable si entran movimientos nuevos (con offset se duplican o saltean filas) y aprovecha el índice. |
+| Cada consulta filtra por `userId`; un id ajeno da el mismo 404 que uno inexistente | Protección IDOR: nadie ve datos de otro cambiando el id en la URL, y ni siquiera se confirma que el id exista. |
+| Ids mal formados se rechazan antes de ir a la base | Ahorra la consulta y evita entradas inválidas. |
+| Casos de uso que reciben el repositorio por parámetro | Igual que el login: se testean con mocks, y el wiring con Prisma ocurre solo en las páginas y las rutas. |
+| Montos como string con 2 decimales en la API | Mantiene la exactitud del `Decimal`; un número JSON podría perder precisión. |
+| Fechas en zona horaria `America/Argentina/Buenos_Aires` | Vercel corre en UTC; sin esto, un movimiento de las 22 h aparecería al día siguiente. |
+| Mismo schema zod con dos políticas | La página ignora parámetros inválidos y muestra todo (amable con el usuario); la API responde 400 con el detalle (estricta con el desarrollador). |
+| `Suspense` con key por filtros | El esqueleto aparece solo en los resultados; el buscador y los chips no se desmontan y no se pierde el foco. |
+| Error boundaries por sección | Si fallan los movimientos, la navegación sigue funcionando. |
+| Dos estados vacíos distintos | "No tenés movimientos" y "No hay resultados para tu búsqueda" son situaciones diferentes y piden acciones diferentes. |
+| "Volver" construido con parámetros validados | Vuelve a la lista con los mismos filtros y no se puede usar como redirección abierta a otro sitio. |
+| Íconos y logos en SVG inline | Sin dependencias extra. |
+| Lista sin encabezados por fecha | Se probó agrupar por "Hoy/Ayer", pero con un movimiento por día quedaba un título en casi cada fila. Se mantuvo la lista del diseño. |
+
+**Correcciones de la revisión de T2:** `Content-Type` comparado exacto; errores de infraestructura devuelven 503 con un formato común `{ error: { code, message } }`; errores de validación completos en la API; el proxy no rompe si falta el secreto; constante compartida para `expired`; tests de todas las rutas REST y del proxy; ternario anidado reemplazado.
+
+**Tests:** 149 unitarios (28 archivos) y 13 end-to-end. La mayoría se escribió antes del código. Algunos (detalle, pantalla de error y helpers de tarjeta) se escribieron después; se reconoce honestamente.
+
+**Verificación:** lint ✅ · typecheck ✅ · tests 149/149 ✅ · e2e 13/13 ✅ · build ✅ · prettier ✅
+
+**Correcciones antes del commit** (detectadas al revisar juntos):
+- **Búsqueda sin distinguir acentos:** "jose" encuentra "José". Se activó la extensión `unaccent` de Postgres con una migración. La consulta usa parámetros (`Prisma.sql`), nunca concatenación, así que no hay inyección SQL; además se escapan `%` y `_`, y buscar "%" no devuelve todo.
+  - *Por qué no normalizar en la app:* habría que traer todas las filas para quitarles los acentos.
+  - *Por qué no una columna normalizada:* es un dato duplicado que hay que mantener sincronizado; no se justifica para este volumen.
+  - *Mejora futura:* índice trigram (GIN) sobre una función `unaccent` inmutable, para búsquedas rápidas con muchos datos.
+- **404 real en el detalle:** un movimiento inexistente o ajeno ahora responde HTTP 404. Con un `loading.tsx` por encima, Next empieza a transmitir la página y el status queda fijo en 200 antes de saber si el movimiento existe. Los esqueletos de Home y lista se movieron a *route groups* (`(home)`, `(list)`) para que no envuelvan al detalle; las URLs no cambian. *Trade-off:* el detalle no muestra esqueleto mientras carga, pero es una sola consulta indexada.
+
+**Limitación conocida:** el violeta de suscripción (`#C76DFF`) del diseño no llega al contraste AA en texto chico. Se respetó el diseño.
 
 ---
 
