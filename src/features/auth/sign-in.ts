@@ -2,6 +2,11 @@ import "server-only";
 
 import bcrypt from "bcryptjs";
 
+import {
+  validationDetails,
+  type ValidationDetails,
+} from "@/shared/lib/validation";
+
 import { findCredentialsByEmail } from "./data/user-repository";
 import { authenticate } from "./domain/authenticate";
 import {
@@ -13,7 +18,14 @@ import { createSession, deleteSession } from "./session/session";
 
 export type SignInResult =
   | { ok: true; userId: string }
-  | { ok: false; reason: "invalid_input"; fieldErrors: LoginFieldErrors }
+  | {
+      ok: false;
+      reason: "invalid_input";
+      /** First message per form field, for the login form. */
+      fieldErrors: LoginFieldErrors;
+      /** Every issue (any field, or a non-object body), for API clients. */
+      details: ValidationDetails;
+    }
   | { ok: false; reason: "invalid_credentials" };
 
 /**
@@ -27,6 +39,7 @@ export async function signIn(input: unknown): Promise<SignInResult> {
       ok: false,
       reason: "invalid_input",
       fieldErrors: getLoginFieldErrors(parsed.error),
+      details: validationDetails(parsed.error),
     };
   }
 

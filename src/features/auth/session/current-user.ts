@@ -9,13 +9,6 @@ import { findSessionUserById, type SessionUser } from "../data/user-repository";
 import { readSession } from "./session";
 
 /**
- * Login URL used when a cookie is cryptographically valid but no longer maps to a user
- * (e.g. the database was reset). `proxy.ts` clears the cookie for this URL; a plain
- * redirect to /login would bounce back to / because the proxy only checks the signature.
- */
-export const LOGIN_EXPIRED_URL = `${ROUTES.login}?expired=1`;
-
-/**
  * Data-access-layer check (defense in depth): the proxy only does an optimistic signature
  * check, so every server read re-verifies the session and loads the user from the database.
  * Memoized per request with React `cache`.
@@ -30,7 +23,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) {
-    redirect(LOGIN_EXPIRED_URL);
+    // Valid cookie but unknown user: the proxy clears the cookie on this URL.
+    redirect(ROUTES.loginExpired);
   }
   return user;
 }

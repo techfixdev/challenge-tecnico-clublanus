@@ -12,24 +12,32 @@ export const LOGIN_MESSAGES = {
   // Deliberately generic: never reveal whether the email or the password was wrong.
   invalidCredentials: "Email o contraseña incorrectos",
   unexpected: "No pudimos iniciar sesión. Intentá de nuevo.",
+  // Only reachable through the REST API (the form always sends an object with a boolean).
+  bodyNotObject: "Enviá un objeto JSON con email y contraseña",
+  rememberInvalid: "Recordarme debe ser verdadero o falso",
 } as const;
 
 // bcrypt only uses the first 72 bytes; the cap just stops absurd payloads early.
 const PASSWORD_MAX_LENGTH = 128;
 
-export const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .min(1, LOGIN_MESSAGES.emailRequired)
-    .pipe(z.email(LOGIN_MESSAGES.emailInvalid)),
-  password: z
-    .string()
-    .min(1, LOGIN_MESSAGES.passwordRequired)
-    .max(PASSWORD_MAX_LENGTH, LOGIN_MESSAGES.passwordTooLong),
-  remember: z.boolean().default(false),
-});
+export const loginSchema = z.object(
+  {
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(1, LOGIN_MESSAGES.emailRequired)
+      .pipe(z.email(LOGIN_MESSAGES.emailInvalid)),
+    password: z
+      .string()
+      .min(1, LOGIN_MESSAGES.passwordRequired)
+      .max(PASSWORD_MAX_LENGTH, LOGIN_MESSAGES.passwordTooLong),
+    remember: z
+      .boolean({ error: LOGIN_MESSAGES.rememberInvalid })
+      .default(false),
+  },
+  { error: LOGIN_MESSAGES.bodyNotObject },
+);
 
 export type LoginInput = z.input<typeof loginSchema>;
 export type LoginCredentials = z.output<typeof loginSchema>;

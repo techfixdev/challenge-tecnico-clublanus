@@ -4,8 +4,38 @@ import {
   SESSION_COOKIE_NAME,
   getSessionKey,
   verifySessionToken,
+  type SessionPayload,
 } from "@/features/auth/session/session-token";
-import { ROUTES } from "@/shared/lib/routes";
+import { LOGIN_EXPIRED_PARAM, ROUTES } from "@/shared/lib/routes";
+
+let hasLoggedMissingSecret = false;
+
+/**
+ * Fail safe: a missing or short SESSION_SECRET must not crash every request. Treat the
+ * visitor as signed out (they land on /login, where the login action reports the problem)
+ * and log the misconfiguration once per server instance instead of on every request.
+ */
+async function readSessionSafely(
+  request: NextRequest,
+): Promise<SessionPayload | null> {
+  let key: Uint8Array;
+  try {
+    key = getSessionKey();
+  } catch (error) {
+    if (!hasLoggedMissingSecret) {
+      hasLoggedMissingSecret = true;
+      console.error(
+        "Session key unavailable; treating requests as signed out.",
+        error,
+      );
+    }
+    return null;
+  }
+  return verifySessionToken(
+    request.cookies.get(SESSION_COOKIE_NAME)?.value,
+    key,
+  );
+}
 
 /**
  * Optimistic route guard: only verifies the JWT signature/expiry from the cookie (no DB),
@@ -16,17 +46,14 @@ export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
   const isLoginPage = pathname === ROUTES.login;
 
-  // Signed cookie whose user no longer exists (see LOGIN_EXPIRED_URL): drop it and show login.
-  if (isLoginPage && searchParams.has("expired")) {
+  // Signed cookie whose user no longer exists (see LOGIN_EXPIRED_PARAM): drop it, show login.
+  if (isLoginPage && searchParams.has(LOGIN_EXPIRED_PARAM)) {
     const response = NextResponse.next();
     response.cookies.delete(SESSION_COOKIE_NAME);
     return response;
   }
 
-  const session = await verifySessionToken(
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-    getSessionKey(),
-  );
+  const session = await readSessionSafely(request);
 
   if (isLoginPage) {
     return session
