@@ -21,6 +21,8 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["src/**/*.integration.test.ts"],
+    // Same time zone as the production servers (Vercel runs in UTC), on every machine.
+    env: { TZ: "UTC" },
     css: false,
   },
 });

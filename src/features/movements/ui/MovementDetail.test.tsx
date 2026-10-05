@@ -53,4 +53,19 @@ describe("MovementDetail", () => {
       "Mastercard •••• terminada en 1234",
     );
   });
+
+  it("dates movements in Buenos Aires time, whatever the server's time zone", () => {
+    // Vitest runs with TZ=UTC (like Vercel): 01:30 UTC on Oct 5 is still Oct 4 in Argentina.
+    render(
+      <MovementDetail
+        movement={makeMovement({
+          occurredAt: new Date("2026-10-05T01:30:00Z"),
+        })}
+        backHref="/movimientos"
+      />,
+    );
+
+    expect(screen.getByText("4 de octubre de 2026")).toBeInTheDocument();
+    expect(screen.getByText("22:30 h")).toBeInTheDocument();
+  });
 });

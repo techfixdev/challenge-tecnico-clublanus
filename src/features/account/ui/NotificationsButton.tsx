@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { BellIcon } from "@/shared/ui/icons";
 
-const FEEDBACK_MS = 2000;
+export const FEEDBACK_MS = 2000;
 
 /**
  * Notifications are out of scope. Instead of a dead or disabled icon, the bell stays a
@@ -13,19 +13,23 @@ const FEEDBACK_MS = 2000;
  */
 export function NotificationsButton() {
   const [showFeedback, setShowFeedback] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  useEffect(() => {
-    if (!showFeedback) return;
-    const timer = setTimeout(() => setShowFeedback(false), FEEDBACK_MS);
-    return () => clearTimeout(timer);
-  }, [showFeedback]);
+  useEffect(() => () => clearTimeout(hideTimer.current), []);
+
+  function handleClick() {
+    setShowFeedback(true);
+    // Every click restarts the countdown, so the message never vanishes right after a tap.
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setShowFeedback(false), FEEDBACK_MS);
+  }
 
   return (
     <div className="relative">
       <button
         type="button"
         aria-label="Notificaciones"
-        onClick={() => setShowFeedback(true)}
+        onClick={handleClick}
         className="flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
       >
         <BellIcon className="size-[22px]" />

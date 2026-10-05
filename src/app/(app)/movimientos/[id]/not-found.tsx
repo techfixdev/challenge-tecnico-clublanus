@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ROUTES } from "@/shared/lib/routes";
+import { buttonClassName } from "@/shared/ui/Button";
 import { SearchIcon } from "@/shared/ui/icons";
 
 /** Same answer for unknown, malformed and other users' ids: never confirms an id exists. */
@@ -19,7 +20,7 @@ export default function MovementNotFound() {
       </p>
       <Link
         href={ROUTES.movements}
-        className="mt-8 inline-flex h-12 items-center rounded-2xl bg-primary px-6 text-sm font-semibold text-white shadow-card transition-colors hover:bg-primary/90 focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
+        className={buttonClassName({ size: "compact", className: "mt-8" })}
       >
         Ver mis movimientos
       </Link>

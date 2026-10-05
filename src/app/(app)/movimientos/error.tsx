@@ -1,22 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { RouteError, type RouteErrorProps } from "@/shared/ui/RouteError";
 
-import { ErrorState } from "@/shared/ui/ErrorState";
-
-/** Covers the list and the detail. `retry` re-fetches the segment from the server. */
-export default function MovementsError({
-  error,
-  retry,
-}: {
-  error: Error & { digest?: string };
-  retry: () => void;
-}) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
-  return (
-    <ErrorState title="No pudimos cargar tus movimientos" onRetry={retry} />
-  );
+/** Covers the list and the detail, so a failing query never takes the whole app down. */
+export default function MovementsError(props: RouteErrorProps) {
+  return <RouteError title="No pudimos cargar tus movimientos" {...props} />;
 }
