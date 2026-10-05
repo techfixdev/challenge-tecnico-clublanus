@@ -9,6 +9,10 @@
 
   --color-primary: #7a1d2d;
   --color-primary-soft: #ddc6ca;
+  --color-primary-dark: #4e111c;
+
+  /* Second card in the Home carousel (the pink card peeking in the design). */
+  --color-card-pink: #f6c3c4;
 
   --color-background: #f9fafc;
   --color-surface: #ffffff;
@@ -28,6 +32,14 @@
 
   --color-danger: #c0362c;
   --color-danger-soft: #fdecea;
+
+  --color-success: #1d7a50;
+  --color-success-soft: #e2f4ea;
+
+  --color-warning: #9a5b00;
+  --color-warning-soft: #fff0d4;
+
+  --color-skeleton: #eceef3;
 
   --shadow-card: 0 8px 24px -12px rgb(30 34 53 / 0.12);
 }
