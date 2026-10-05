@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   MOVEMENT_STATUS_LABEL,
   MOVEMENT_TYPE_LABEL,
+  formatMovementCount,
   formatSignedAmount,
 } from "./movement-display";
 
@@ -34,5 +35,13 @@ describe("labels", () => {
       COMPLETED: "Completado",
       PENDING: "Pendiente",
     });
+  });
+});
+
+describe("formatMovementCount", () => {
+  it("uses the singular only for exactly one movement", () => {
+    expect(formatMovementCount(0)).toBe("0 movimientos");
+    expect(formatMovementCount(1)).toBe("1 movimiento");
+    expect(formatMovementCount(26)).toBe("26 movimientos");
   });
 });

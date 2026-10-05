@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prismaMovementRepository } from "../data/prisma-movement-repository";
+import { formatMovementCount } from "../domain/movement-display";
 import {
   hasActiveFilters,
   toMovementSearchParams,
@@ -10,10 +11,6 @@ import { listMovements } from "../domain/movement-queries";
 import { LoadMoreMovements } from "./LoadMoreMovements";
 import { MovementList } from "./MovementList";
 import { MovementsEmptyState } from "./MovementsEmptyState";
-
-function countLabel(total: number): string {
-  return total === 1 ? "1 movimiento" : `${total} movimientos`;
-}
 
 /**
  * Container (Server Component): loads the first page for the current filters and picks the
@@ -43,7 +40,7 @@ export async function MovementResults({
           isFiltered && !isEmpty ? "text-xs font-medium text-muted" : "sr-only"
         }
       >
-        {countLabel(page.total)}
+        {formatMovementCount(page.total)}
       </p>
       {isEmpty ? (
         <MovementsEmptyState filters={filters} />

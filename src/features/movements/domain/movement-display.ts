@@ -23,3 +23,8 @@ export function formatSignedAmount(
   const sign = movement.type === "RECEIVED" ? "+" : MINUS;
   return `${sign}${formatMoney(movement.amount)}`;
 }
+
+/** "1 movimiento", "26 movimientos". */
+export function formatMovementCount(count: number): string {
+  return count === 1 ? "1 movimiento" : `${count} movimientos`;
+}
