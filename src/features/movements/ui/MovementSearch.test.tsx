@@ -1,6 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MovementSearch, SEARCH_DEBOUNCE_MS } from "./MovementSearch";
 
@@ -13,6 +19,20 @@ vi.mock("next/navigation", () => ({
 beforeEach(() => {
   replace.mockReset();
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+function typeInto(text: string) {
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: text } });
+}
+
+function waitForDebounce() {
+  act(() => {
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+  });
+}
 
 describe("MovementSearch", () => {
   it("renders a labelled search box with the design placeholder", () => {
@@ -27,15 +47,21 @@ describe("MovementSearch", () => {
     expect(input).toHaveValue("adobe");
   });
 
-  it("updates the URL once, after the user stops typing, keeping the type filter", async () => {
-    const user = userEvent.setup();
+  it("updates the URL once, after the user stops typing, keeping the type filter", () => {
+    vi.useFakeTimers();
     render(<MovementSearch filters={{ type: "RECEIVED" }} />);
 
-    await user.type(screen.getByRole("searchbox"), "ronal");
+    // Keystrokes closer together than the debounce: only the last one navigates.
+    for (const text of ["r", "ro", "ron", "rona", "ronal"]) {
+      typeInto(text);
+      act(() => {
+        vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1);
+      });
+    }
+    expect(replace).not.toHaveBeenCalled();
+    waitForDebounce();
 
-    await waitFor(() => expect(replace).toHaveBeenCalledTimes(1), {
-      timeout: SEARCH_DEBOUNCE_MS * 4,
-    });
+    expect(replace).toHaveBeenCalledOnce();
     expect(replace).toHaveBeenCalledWith("/movimientos?q=ronal&type=recibido", {
       scroll: false,
     });
@@ -58,5 +84,79 @@ describe("MovementSearch", () => {
     render(<MovementSearch filters={{}} autoFocus />);
 
     expect(screen.getByRole("searchbox")).toHaveFocus();
+  });
+
+  describe("debounce and URL sync", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    it("uses the type filter that is active when the search fires, not when typing began", () => {
+      const { rerender } = render(
+        <MovementSearch filters={{ type: "RECEIVED" }} />,
+      );
+
+      typeInto("ron");
+      // A quick-filter chip is clicked before the debounce elapses.
+      rerender(<MovementSearch filters={{ type: "SENT" }} />);
+      waitForDebounce();
+
+      expect(replace).toHaveBeenCalledOnce();
+      expect(replace).toHaveBeenCalledWith("/movimientos?q=ron&type=enviado", {
+        scroll: false,
+      });
+    });
+
+    it("drops a pending search when the URL changes from outside (back button, Limpiar filtros)", () => {
+      const { rerender } = render(<MovementSearch filters={{}} />);
+
+      typeInto("ron");
+      rerender(<MovementSearch filters={{ query: "adobe" }} />);
+      waitForDebounce();
+
+      expect(screen.getByRole("searchbox")).toHaveValue("adobe");
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("adopts an outside URL change even while the box has focus", () => {
+      const { rerender } = render(
+        <MovementSearch filters={{ query: "adobe" }} />,
+      );
+      screen.getByRole("searchbox").focus();
+
+      rerender(<MovementSearch filters={{}} />);
+
+      expect(screen.getByRole("searchbox")).toHaveFocus();
+      expect(screen.getByRole("searchbox")).toHaveValue("");
+    });
+
+    it("keeps what the user typed after its own search lands in the URL", () => {
+      const { rerender } = render(<MovementSearch filters={{}} />);
+
+      typeInto("ron");
+      waitForDebounce();
+      typeInto("rona");
+      // The URL catches up with the first search while the user keeps typing.
+      rerender(<MovementSearch filters={{ query: "ron" }} />);
+      waitForDebounce();
+
+      expect(screen.getByRole("searchbox")).toHaveValue("rona");
+      expect(replace).toHaveBeenNthCalledWith(1, "/movimientos?q=ron", {
+        scroll: false,
+      });
+      expect(replace).toHaveBeenNthCalledWith(2, "/movimientos?q=rona", {
+        scroll: false,
+      });
+    });
+
+    it("cancels the pending search on unmount", () => {
+      const { unmount } = render(<MovementSearch filters={{}} />);
+
+      typeInto("ron");
+      unmount();
+      waitForDebounce();
+
+      expect(replace).not.toHaveBeenCalled();
+    });
   });
 });

@@ -32,6 +32,11 @@ type MovementSearchProps = {
  * - `router.replace` (not push) so typing does not flood the back-button history;
  * - inside a transition, so the current list stays interactive and `isPending` drives
  *   a subtle spinner while the new results stream in.
+ *
+ * URL ↔ input sync: when the URL's query changes from outside (back button, "Limpiar
+ * filtros", the nav link) the box adopts it, even while focused, because the list below
+ * already shows that query; a pending search for the old text is dropped. When the change
+ * is just our own search landing, the box keeps whatever the user typed since.
  */
 export function MovementSearch({
   filters,
@@ -42,16 +47,22 @@ export function MovementSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Read when the debounce fires, so a chip clicked mid-typing is respected.
+  const latestFilters = useRef(filters);
+  useEffect(() => {
+    latestFilters.current = filters;
+  }, [filters]);
+
   const urlQuery = filters.query ?? "";
   const [value, setValue] = useState(urlQuery);
-  const [isFocused, setIsFocused] = useState(false);
-
-  // The URL can change from elsewhere (back button, "Limpiar filtros"). Adopt it unless the
-  // user is typing, so their in-progress text is never overwritten mid-word.
+  const [requestedQuery, setRequestedQuery] = useState(urlQuery);
   const [syncedQuery, setSyncedQuery] = useState(urlQuery);
   if (urlQuery !== syncedQuery) {
     setSyncedQuery(urlQuery);
-    if (!isFocused) setValue(urlQuery);
+    if (urlQuery !== requestedQuery) {
+      setRequestedQuery(urlQuery);
+      setValue(urlQuery);
+    }
   }
 
   useEffect(() => {
@@ -62,19 +73,22 @@ export function MovementSearch({
 
   function navigate(text: string) {
     clearTimeout(debounceRef.current);
+    const { query: currentQuery, type } = latestFilters.current;
     const query = text.trim() || undefined;
-    if (query === filters.query) return;
+    if (query === currentQuery) return;
+    setRequestedQuery(query ?? "");
     startTransition(() => {
-      router.replace(buildMovementsHref({ query, type: filters.type }), {
-        scroll: false,
-      });
+      router.replace(buildMovementsHref({ query, type }), { scroll: false });
     });
   }
 
   function handleChange(text: string) {
     setValue(text);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => navigate(text), SEARCH_DEBOUNCE_MS);
+    debounceRef.current = setTimeout(() => {
+      // An outside URL change replaced the text meanwhile: that search is stale.
+      if (inputRef.current?.value === text) navigate(text);
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   function handleClear() {
@@ -113,8 +127,6 @@ export function MovementSearch({
           enterKeyHint="search"
           placeholder="Ingresá un nombre o servicio"
           onChange={(event) => handleChange(event.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
           className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-xs placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
         />
         {value && (
