@@ -68,7 +68,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | T1 | Scaffold, base de datos, ORM, datos de ejemplo, tests | ✅ Hecha |
 | T2 | Login, sesión, protección de rutas, logout | ✅ Hecha |
 | T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
-| T4 | Pulido, accesibilidad, test end-to-end, README final | ⏳ Pendiente |
+| T4 | Pulido: hallazgos de revisión, estructura, CI, README final | 🔍 En revisión |
 | T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
 
 ---
@@ -196,6 +196,36 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 
 **Correcciones de la revisión de T2:** `Content-Type` comparado exacto; errores de infraestructura devuelven 503 con un formato común `{ error: { code, message } }`; errores de validación completos en la API; el proxy no rompe si falta el secreto; constante compartida para `expired`; tests de todas las rutas REST y del proxy; ternario anidado reemplazado.
 
+**Historial de commits:** T3 se hizo primero como un solo commit (95 archivos, ~4.500 líneas). La revisión automática no pudo procesarlo por tamaño, y además un commit así es difícil de revisar para cualquier persona. Se partió en 14 commits temáticos de ~400 líneas, cada uno con sus tests, y se verificó que cada uno compile y pase los tests por sí solo. El código final quedó idéntico byte a byte (mismo hash de árbol de git).
+
+```
+4d936a5 refactor(shared): add api error helpers, validation and route constants
+80935b0 fix(auth): harden login and logout routes and proxy
+df9c46c feat(account): add card domain and prisma card repository
+28e7006 feat(movements): add movement domain model, filters and cursor
+3ae1a86 feat(movements): add movement use cases and dto
+6ba588c feat(movements): add prisma repository with accent-insensitive search
+fd31938 feat(api): add cards and movements rest endpoints
+c76419d feat(ui): add shared bottom nav, icons, skeleton and error state
+be8e193 feat(account): add home header and card carousel
+21ea4f3 feat(movements): add movement row and list components
+acaca96 feat(movements): add filter chips and search
+0a39e06 feat(movements): add empty states, detail view and load more
+02c1f91 feat(app): add home, movements and detail pages with loading and error boundaries
+5e9dd5a docs: update project log and screenshots
+```
+
+**Revisión automática por tramos: los 4 aprobados, sin bloqueantes.**
+
+| Tramo | Commits | Enfoques | Observaciones relevantes (no bloqueantes) |
+|---|---|---|---|
+| A — shared + hardening auth | `4d936a5`…`80935b0` | seguridad, resiliencia, legibilidad, confiabilidad | El manejo de errores convierte *cualquier* error en 503: un bug de programación debería ser 500, y se tragan los `redirect()`/`notFound()` de Next. |
+| B — dominio, datos y API | `df9c46c`…`fd31938` | confiabilidad | El SQL crudo de búsqueda no tiene un test contra la base real; conviene verificar el cast del cursor. |
+| C — componentes UI | `c76419d`…`acaca96` | confiabilidad | En el buscador, si cambiás de filtro mientras tipeás, la búsqueda pendiente puede aplicarse con el filtro anterior. |
+| D — estados y páginas | `0a39e06`…`02c1f91` | seguridad, resiliencia, legibilidad, confiabilidad | "Reintentar" no usa bien la función de Next; "Cargar más" ignora errores en silencio y, con la sesión vencida, puede reintentar sin parar. |
+
+Todas se corrigen en T4.
+
 **Tests:** 149 unitarios (28 archivos) y 13 end-to-end. La mayoría se escribió antes del código. Algunos (detalle, pantalla de error y helpers de tarjeta) se escribieron después; se reconoce honestamente.
 
 **Verificación:** lint ✅ · typecheck ✅ · tests 149/149 ✅ · e2e 13/13 ✅ · build ✅ · prettier ✅
@@ -209,9 +239,79 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 
 **Limitación conocida:** el violeta de suscripción (`#C76DFF`) del diseño no llega al contraste AA en texto chico. Se respetó el diseño.
 
+### T4 — Pulido final (05/10/2026)
+
+**Qué se hizo**
+- Se corrigieron todos los hallazgos de las revisiones automáticas de T3.
+- Tests de integración contra Postgres real.
+- La estructura de carpetas quedó unificada en las tres features.
+- CI con GitHub Actions.
+- README final en español.
+
+**Correcciones y por qué**
+
+| Cambio | Por qué |
+|---|---|
+| Errores de la API: 503 solo si la base no responde, 500 para el resto, y las redirecciones de Next se dejan pasar (`unstable_rethrow`) | Un 503 le dice al cliente "reintentá más tarde"; un bug no se arregla reintentando, es un 500 que hay que corregir. Antes, un `redirect()` dentro de una ruta se convertía en error. |
+| Clasificador de errores de base (`db-errors.ts`) basado en errores observados | Con Prisma 7 y el adaptador `pg`, una conexión rechazada llega como `ECONNREFUSED`, no como el clásico `P1001`. Se verificó en la práctica en lugar de suponerlo. |
+| Respuesta de login con formato `{ data }` / `{ error }` | Todas las respuestas de la API siguen el mismo formato. |
+| Tests de integración (`pnpm test:integration`) contra Postgres | El SQL crudo de la búsqueda solo se puede probar contra una base real: acentos, `%`/`_`, aislamiento por usuario, desempate con timestamps iguales y paginación de las 26 filas sin duplicados. |
+| Los tests de integración corren en zona horaria de Buenos Aires | Se probó que, si se rompe la conversión de fechas del cursor, los tests fallan (*mutation check*). |
+| El buscador lee los filtros actuales al momento de disparar | Si cambiabas de chip mientras tipeabas, la búsqueda pendiente usaba el filtro viejo. |
+| "Cargar más": mensaje de error con "Reintentar", redirección al login si la sesión venció, timeout de 10 s | Antes, los errores se ignoraban en silencio y con la sesión vencida podía reintentar sin fin. |
+| Pantalla de error compartida (`RouteError`) que registra el error con su `digest` | Una sola implementación para todas las secciones, y el `digest` permite rastrear el error en los logs del servidor. |
+| Los tests unitarios corren con `TZ=UTC` (como Vercel) | Garantiza que las fechas se ven bien en Argentina aunque el servidor esté en UTC. |
+| Un id mal formado en la API sigue dando 404 y no 400 | La API nunca revela si un id existe o no. |
+
+**Estructura:** `db.ts` pasó a `src/shared/lib/`. `auth` quedó con las mismas capas que las otras features, más `server/` para el código que solo corre en el servidor (Server Actions, sesión, orquestación del login). También se eliminaron exports que no se usaban.
+
+**CI** (`.github/workflows/ci.yml`): en cada PR y en cada push a `main`. Corre en dos jobs: (1) lint, typecheck, formato y tests unitarios; (2) Postgres real con migraciones, seed, integración, build y e2e contra el build de producción.
+
+**Tests:** 189 unitarios, 10 de integración y 13 end-to-end. Algunos tests de T4 se escribieron después del código: son *tests de caracterización*, que fijan un comportamiento que ya existía. Se aclara con honestidad.
+
+**Verificación:** lint ✅ · typecheck ✅ · formato ✅ · unitarios 189/189 ✅ (3 corridas) · integración 10/10 ✅ · e2e 13/13 (dev y producción) ✅ · build ✅ · README probado en un clon limpio ✅
+
+**Nota:** en el clon limpio, un test falló una vez y no se repitió en 17 corridas más. El sospechoso era un test del buscador que dependía del tiempo real; se reescribió con timers simulados.
+
 ---
 
-## 6. Cómo correrlo (hasta ahora)
+## 6. Estructura del proyecto
+
+Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.
+
+```
+src/
+├── app/                        ← solo rutas (delgadas): conectan features
+│   ├── (app)/                  ← zona logueada: layout con navegación inferior
+│   │   ├── (home)/             page + loading
+│   │   ├── movimientos/
+│   │   │   ├── (list)/         page + loading
+│   │   │   └── [id]/           page + not-found (404 real)
+│   │   └── error.tsx
+│   ├── api/                    ← REST: auth/, movements/, account/ (con tests)
+│   └── login/
+├── features/
+│   ├── auth/       domain/ data/ server/ ui/
+│   ├── movements/  domain/ data/ ui/
+│   └── account/    domain/ data/ ui/
+├── shared/
+│   ├── lib/        db, db-errors, api-response, validation, format, dates, like-pattern, routes
+│   └── ui/         AppShell, BottomNav, Button, ErrorState, RouteError, Skeleton, icons
+├── proxy.ts                    ← protección de rutas (+ test)
+└── test/                       ← fixtures de tests
+prisma/   schema · migrations (init, unaccent) · seed
+e2e/      auth.spec.ts · movements.spec.ts (Playwright)
+docs/     BITACORA.md · design/ (Figma) · screenshots/
+```
+
+**Convenciones**
+- Los tests viven al lado del archivo que prueban (`x.ts` + `x.test.ts`). Los de integración contra la base usan `x.integration.test.ts`.
+- Las carpetas entre paréntesis (`(app)`, `(home)`, `(list)`) son *route groups* de Next: organizan el código sin cambiar la URL.
+- Las dependencias van en una sola dirección: `ui` → `domain` ← `data`. El dominio no conoce Prisma ni React.
+
+---
+
+## 7. Cómo correrlo
 
 ```bash
 pnpm install
