@@ -59,6 +59,20 @@ describe("loginSchema", () => {
     expect(spaced.data?.password).toBe(" x ");
   });
 
+  it("reports missing or non-string fields with the same messages (API bodies)", () => {
+    const missing = loginSchema.safeParse({});
+    expect(getLoginFieldErrors(missing.error!)).toEqual({
+      email: LOGIN_MESSAGES.emailRequired,
+      password: LOGIN_MESSAGES.passwordRequired,
+    });
+
+    const wrongType = loginSchema.safeParse({ email: 42, password: null });
+    expect(getLoginFieldErrors(wrongType.error!)).toEqual({
+      email: LOGIN_MESSAGES.emailRequired,
+      password: LOGIN_MESSAGES.passwordRequired,
+    });
+  });
+
   it("reports one message per invalid field", () => {
     const result = loginSchema.safeParse({ email: "", password: "" });
     expect(getLoginFieldErrors(result.error!)).toEqual({

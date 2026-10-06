@@ -22,14 +22,16 @@ const PASSWORD_MAX_LENGTH = 128;
 
 export const loginSchema = z.object(
   {
+    // `error` on z.string() covers missing / non-string values (API bodies): without it
+    // zod reports its default English message instead of the field's own.
     email: z
-      .string()
+      .string({ error: LOGIN_MESSAGES.emailRequired })
       .trim()
       .toLowerCase()
       .min(1, LOGIN_MESSAGES.emailRequired)
       .pipe(z.email(LOGIN_MESSAGES.emailInvalid)),
     password: z
-      .string()
+      .string({ error: LOGIN_MESSAGES.passwordRequired })
       .min(1, LOGIN_MESSAGES.passwordRequired)
       .max(PASSWORD_MAX_LENGTH, LOGIN_MESSAGES.passwordTooLong),
     remember: z
