@@ -6,7 +6,7 @@ import type { MovementType } from "../domain/movement";
 import {
   buildMovementsHref,
   type MovementFilters,
-} from "../domain/movement-filters";
+} from "../domain/movement-search-params";
 
 const CHIPS: { label: string; type: MovementType | undefined }[] = [
   { label: "Todos", type: undefined },

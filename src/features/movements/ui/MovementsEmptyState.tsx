@@ -7,7 +7,7 @@ import { ListIcon, SearchIcon } from "@/shared/ui/icons";
 import {
   hasActiveFilters,
   type MovementFilters,
-} from "../domain/movement-filters";
+} from "../domain/movement-search-params";
 
 /**
  * Two different empty states: an account without movements at all, and a search or

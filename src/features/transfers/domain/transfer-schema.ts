@@ -1,102 +1,51 @@
 import { z } from "zod";
 
 import {
-  isValidAlias,
-  isValidCvu,
-  normalizeAlias,
-  normalizeCvu,
-} from "@/features/account/domain/account-identifiers";
-import { parseAmount } from "@/shared/lib/money";
-import {
   validationDetails,
   type ValidationDetails,
 } from "@/shared/lib/validation";
 
+import {
+  DESCRIPTION_MAX_LENGTH,
+  TRANSFER_MESSAGES,
+  checkTransferAmount,
+  checkTransferRecipient,
+  type RecipientKey,
+} from "./transfer-rules";
+
+export {
+  DESCRIPTION_MAX_LENGTH,
+  MAX_TRANSFER_CENTS,
+  TRANSFER_MESSAGES,
+  type RecipientKey,
+} from "./transfer-rules";
+
 /**
- * Transfer validation shared by the send form (instant feedback) and the server (source of
- * truth). Messages are UI copy, so they are in Spanish.
+ * The server's transfer validation (source of truth). Field rules come from
+ * `transfer-rules.ts`, the same functions the send form runs while typing, so both give the
+ * same verdict; this schema adds the request shape and turns failures into field errors.
  */
-export const TRANSFER_MESSAGES = {
-  bodyNotObject:
-    "Enviá un objeto JSON con destinatario, monto y clave de idempotencia",
-  recipientRequired: "Ingresá el alias o CVU de destino",
-  cvuLength: "El CVU tiene 22 dígitos",
-  cvuInvalid: "Revisá el CVU: algún dígito no es correcto",
-  aliasInvalid:
-    "El alias tiene entre 6 y 20 caracteres: letras, números, puntos o guiones",
-  amountInvalid: "Ingresá un monto válido, con hasta 2 decimales",
-  amountPositive: "El monto tiene que ser mayor a cero",
-  amountTooLarge: "El monto máximo por transferencia es $100,000",
-  descriptionInvalid: "El motivo tiene que ser un texto",
-  descriptionTooLong: "El motivo puede tener hasta 60 caracteres",
-  cardInvalid: "Elegí una tarjeta válida",
-  idempotencyKeyInvalid:
-    "Falta la clave de idempotencia (un UUID por intento de transferencia)",
-} as const;
-
-/** Per-transfer cap: US$ 100,000.00. A sanity limit, well inside `Decimal(12,2)`. */
-export const MAX_TRANSFER_CENTS = 100_000_00;
-export const DESCRIPTION_MAX_LENGTH = 60;
-
-/** How the sender identifies the recipient: a CVU (22 digits) or an alias. */
-export type RecipientKey =
-  { kind: "alias"; alias: string } | { kind: "cvu"; cvu: string };
 
 const recipientSchema = z
   .string({ error: TRANSFER_MESSAGES.recipientRequired })
-  .trim()
-  .min(1, TRANSFER_MESSAGES.recipientRequired)
-  .max(64, TRANSFER_MESSAGES.aliasInvalid)
   .transform((raw, ctx): RecipientKey => {
-    const digits = normalizeCvu(raw);
-    // Only digits (once spaces and dashes are gone) means the user typed a CVU.
-    if (/^\d+$/.test(digits)) {
-      if (digits.length !== 22) {
-        ctx.issues.push({
-          code: "custom",
-          message: TRANSFER_MESSAGES.cvuLength,
-          input: raw,
-        });
-        return z.NEVER;
-      }
-      if (!isValidCvu(digits)) {
-        ctx.issues.push({
-          code: "custom",
-          message: TRANSFER_MESSAGES.cvuInvalid,
-          input: raw,
-        });
-        return z.NEVER;
-      }
-      return { kind: "cvu", cvu: digits };
-    }
-    const alias = normalizeAlias(raw);
-    if (!isValidAlias(alias)) {
-      ctx.issues.push({
-        code: "custom",
-        message: TRANSFER_MESSAGES.aliasInvalid,
-        input: raw,
-      });
+    const result = checkTransferRecipient(raw);
+    if (!result.ok) {
+      ctx.issues.push({ code: "custom", message: result.message, input: raw });
       return z.NEVER;
     }
-    return { kind: "alias", alias };
+    return result.key;
   });
 
 const amountSchema = z
   .union([z.string(), z.number()], { error: TRANSFER_MESSAGES.amountInvalid })
   .transform((raw, ctx) => {
-    const parsed = parseAmount(raw);
-    const message = !parsed
-      ? TRANSFER_MESSAGES.amountInvalid
-      : parsed.cents === 0
-        ? TRANSFER_MESSAGES.amountPositive
-        : parsed.cents > MAX_TRANSFER_CENTS
-          ? TRANSFER_MESSAGES.amountTooLarge
-          : null;
-    if (!parsed || message) {
-      ctx.issues.push({ code: "custom", message: message ?? "", input: raw });
+    const result = checkTransferAmount(raw);
+    if (!result.ok) {
+      ctx.issues.push({ code: "custom", message: result.message, input: raw });
       return z.NEVER;
     }
-    return parsed;
+    return { amount: result.amount, cents: result.cents };
   });
 
 const transferRequestSchema = z
@@ -142,20 +91,6 @@ export function parseTransferRequest(input: unknown): Parsed<TransferRequest> {
   return result.success
     ? { success: true, data: result.data }
     : { success: false, details: validationDetails(result.error) };
-}
-
-/** One amount as typed in the send form ("12,30" or "12.30"), with the same rules. */
-export function parseTransferAmount(
-  raw: string,
-): { success: true; cents: number } | { success: false; message: string } {
-  const result = amountSchema.safeParse(raw);
-  return result.success
-    ? { success: true, cents: result.data.cents }
-    : {
-        success: false,
-        message:
-          result.error.issues[0]?.message ?? TRANSFER_MESSAGES.amountInvalid,
-      };
 }
 
 const recipientQuerySchema = z.object({ q: recipientSchema });

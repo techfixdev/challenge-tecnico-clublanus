@@ -5,12 +5,11 @@ import { useActionState, useState, type FormEvent } from "react";
 import { Button } from "@/shared/ui/Button";
 
 import {
-  getLoginFieldErrors,
-  loginSchema,
   parseLoginFormData,
+  validateLoginFields,
   type LoginField,
   type LoginFieldErrors,
-} from "../domain/login-schema";
+} from "../domain/login-rules";
 import {
   INITIAL_LOGIN_FORM_STATE,
   type LoginAction,
@@ -27,8 +26,9 @@ type LoginFormProps = {
 const FIELD_ORDER: LoginField[] = ["email", "password"];
 
 /**
- * Login screen. Validates on the client with the shared zod schema for instant feedback;
- * the Server Action validates again because client checks can be bypassed.
+ * Login screen. Checks the fields on the client for instant feedback, with the plain rules
+ * the server's zod schema shares (no zod in the browser); the Server Action validates
+ * again because client checks can be bypassed.
  */
 export function LoginForm({ action }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(
@@ -44,15 +44,12 @@ export function LoginForm({ action }: LoginFormProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const form = event.currentTarget;
-    const result = loginSchema.safeParse(
-      parseLoginFormData(new FormData(form)),
-    );
-    if (result.success) {
+    const errors = validateLoginFields(parseLoginFormData(new FormData(form)));
+    if (Object.keys(errors).length === 0) {
       setClientErrors(null);
       return;
     }
     event.preventDefault();
-    const errors = getLoginFieldErrors(result.error);
     setClientErrors(errors);
     const firstInvalid = FIELD_ORDER.find((field) => errors[field]);
     if (firstInvalid) {

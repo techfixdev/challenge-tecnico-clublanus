@@ -2,24 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { z } from "zod";
 
 import { ROUTES } from "@/shared/lib/routes";
 import { Button } from "@/shared/ui/Button";
 
 import type { Movement } from "../domain/movement";
 import { formatMovementCount } from "../domain/movement-display";
-import { movementDtoSchema, parseMovementDto } from "../domain/movement-dto";
 import {
   toMovementSearchParams,
   type MovementFilters,
-} from "../domain/movement-filters";
+} from "../domain/movement-search-params";
 import { MovementList } from "./MovementList";
 
-const pageResponseSchema = z.object({
-  data: z.array(movementDtoSchema),
-  nextCursor: z.string().nullable(),
-});
+/**
+ * The response validator (zod/mini) is loaded on the first "Cargar más", in parallel with
+ * the request, so the list page itself ships no validation library.
+ */
+const loadMovementDto = () => import("../domain/movement-dto");
 
 /** A hung request must not leave the button spinning forever. */
 export const LOAD_MORE_TIMEOUT_MS = 10_000;
@@ -50,13 +49,21 @@ function loadedAnnouncement(count: number): string {
 }
 
 async function fetchMovementPage(url: string, signal: AbortSignal) {
+  const [json, { parseMovementPage }] = await Promise.all([
+    fetchJson(url, signal),
+    loadMovementDto(),
+  ]);
+  return parseMovementPage(json);
+}
+
+async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
   const response = await fetch(url, {
     headers: { accept: "application/json" },
     signal,
   });
   if (response.status === 401) throw new SessionExpiredError();
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return pageResponseSchema.parse(await response.json());
+  return response.json();
 }
 
 type LoadMoreMovementsProps = {
@@ -68,7 +75,7 @@ type LoadMoreMovementsProps = {
 /**
  * "Cargar más": keyset pagination through the REST API (`/api/movements?cursor=`).
  * The first page is server-rendered; later pages are appended on demand. The response is
- * validated with the same schema the API is built on, so a contract drift fails loudly.
+ * validated with the movement DTO schema of the API, so a contract drift fails loudly.
  *
  * Failures are recoverable in place (inline message + "Reintentar"), except an expired
  * session (401), which goes to the login instead of retrying a request that cannot succeed;
@@ -110,7 +117,7 @@ export function LoadMoreMovements({
         `/api/movements?${params}`,
         controller.signal,
       );
-      const next = page.data.map(parseMovementDto);
+      const next = page.movements;
       setBatchStart(movements.length);
       setMovements((current) => [...current, ...next]);
       setCursor(page.nextCursor);

@@ -16,7 +16,7 @@ import {
   SEARCH_MAX_LENGTH,
   buildMovementsHref,
   type MovementFilters,
-} from "../domain/movement-filters";
+} from "../domain/movement-search-params";
 
 export const SEARCH_DEBOUNCE_MS = 300;
 

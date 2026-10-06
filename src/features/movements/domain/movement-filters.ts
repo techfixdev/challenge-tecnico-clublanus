@@ -2,32 +2,29 @@ import { z } from "zod";
 
 import { ROUTES } from "@/shared/lib/routes";
 
-import type { MovementType } from "./movement";
 import { decodeMovementCursor, type MovementCursor } from "./movement-cursor";
+import {
+  MOVEMENT_TYPE_SLUGS,
+  SEARCH_MAX_LENGTH,
+  type MovementFilters,
+  type MovementTypeSlug,
+  buildMovementsHref,
+} from "./movement-search-params";
+
+export {
+  DETAIL_FROM_HOME,
+  SEARCH_MAX_LENGTH,
+  buildMovementsHref,
+  hasActiveFilters,
+  toMovementSearchParams,
+  type MovementFilters,
+} from "./movement-search-params";
 
 /**
- * Search and quick filters live in the URL (`/movimientos?q=adobe&type=recibido`), so a
- * filtered list is shareable, survives a reload and works with the back button.
- * The URL uses readable Spanish slugs; the domain uses the enum values.
+ * Server side of the movement filters: parses the URL's search params (validated with zod).
+ * Building URLs from filters is in `movement-search-params.ts`, which client components
+ * import without pulling zod into the browser.
  */
-
-const MOVEMENT_TYPE_SLUGS = {
-  debito: "SUBSCRIPTION",
-  recibido: "RECEIVED",
-  enviado: "SENT",
-} as const satisfies Record<string, MovementType>;
-
-type MovementTypeSlug = keyof typeof MOVEMENT_TYPE_SLUGS;
-
-const SLUG_BY_TYPE: Record<MovementType, MovementTypeSlug> = {
-  SUBSCRIPTION: "debito",
-  RECEIVED: "recibido",
-  SENT: "enviado",
-};
-
-export const SEARCH_MAX_LENGTH = 50;
-
-export type MovementFilters = { query?: string; type?: MovementType };
 
 const FILTER_MESSAGES = {
   queryTooLong: `La búsqueda admite hasta ${SEARCH_MAX_LENGTH} caracteres`,
@@ -122,33 +119,6 @@ export function parseMovementListParams(
     data: { filters: withoutUndefined({ query: q, type }), cursor },
   };
 }
-
-function typeToSlug(type: MovementType): MovementTypeSlug {
-  return SLUG_BY_TYPE[type];
-}
-
-/** Query string for the given filters (`q`, `type` as a slug), without the leading "?". */
-export function toMovementSearchParams(
-  filters: MovementFilters,
-): URLSearchParams {
-  const params = new URLSearchParams();
-  if (filters.query) params.set("q", filters.query);
-  if (filters.type) params.set("type", typeToSlug(filters.type));
-  return params;
-}
-
-/** `/movimientos` with the filters applied, e.g. `/movimientos?q=adobe&type=debito`. */
-export function buildMovementsHref(filters: MovementFilters): string {
-  const search = toMovementSearchParams(filters).toString();
-  return search ? `${ROUTES.movements}?${search}` : ROUTES.movements;
-}
-
-export function hasActiveFilters(filters: MovementFilters): boolean {
-  return Boolean(filters.query || filters.type);
-}
-
-/** Query string for detail links opened from Home, so "Volver" goes back there. */
-export const DETAIL_FROM_HOME = "from=home";
 
 /**
  * Where "Volver" on a movement detail leads: Home, or the list with the filters the detail

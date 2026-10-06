@@ -11,7 +11,7 @@ import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
-import type { TransferReceipt } from "../domain/transfer";
+import type { TransferReceipt } from "../domain/transfer-model";
 
 const POP_SPRING = { type: "spring", stiffness: 380, damping: 22 } as const;
 const ENTER_EASE = [0.22, 1, 0.36, 1] as const;

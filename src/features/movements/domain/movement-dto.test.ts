@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { Movement } from "./movement";
-import { parseMovementDto, toMovementDto } from "./movement-dto";
+import {
+  parseMovementDto,
+  parseMovementPage,
+  toMovementDto,
+} from "./movement-dto";
 
 const MOVEMENT: Movement = {
   id: "cmuvt8zut00035dm61qeqiekh",
@@ -34,6 +38,24 @@ describe("movement DTO", () => {
     expect(() => parseMovementDto({ ...MOVEMENT, amount: 125 })).toThrow();
     expect(() =>
       parseMovementDto({ ...toMovementDto(MOVEMENT), type: "REFUND" }),
+    ).toThrow();
+  });
+
+  it("parses a page of the list API, rejecting a malformed one", () => {
+    const json: unknown = JSON.parse(
+      JSON.stringify({ data: [toMovementDto(MOVEMENT)], nextCursor: "abc" }),
+    );
+
+    expect(parseMovementPage(json)).toEqual({
+      movements: [MOVEMENT],
+      nextCursor: "abc",
+    });
+    expect(() => parseMovementPage({ data: [], nextCursor: 1 })).toThrow();
+    expect(() =>
+      parseMovementPage({
+        data: [{ ...toMovementDto(MOVEMENT), occurredAt: "ayer" }],
+        nextCursor: null,
+      }),
     ).toThrow();
   });
 });

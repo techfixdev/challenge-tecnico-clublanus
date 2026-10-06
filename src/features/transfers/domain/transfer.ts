@@ -1,7 +1,6 @@
 // Cross-feature dependency, domain to domain only: a transfer debits an account card and
 // finds the recipient by the account identifiers (alias / CVU).
 import { maskCvu } from "@/features/account/domain/account-identifiers";
-import type { CardBrand } from "@/features/account/domain/card";
 import { toCents } from "@/shared/lib/money";
 import type { ValidationDetails } from "@/shared/lib/validation";
 
@@ -11,6 +10,13 @@ import {
   type RecipientKey,
   type TransferRequest,
 } from "./transfer-schema";
+import {
+  fullNameOf,
+  type RecipientAccount,
+  type RecipientPreview,
+  type TransferFailureReason,
+  type TransferReceipt,
+} from "./transfer-model";
 
 /**
  * Transfers between GranaBank users. Framework-free: the rules live here; the Prisma
@@ -20,59 +26,14 @@ import {
  * means something broke (database down, a bug), not that the user lacks funds.
  */
 
-export type TransferFailureReason =
-  | "recipient_not_found"
-  | "self_transfer"
-  | "card_not_found"
-  | "currency_mismatch"
-  | "insufficient_funds"
-  /** The idempotency key was already used for a different transfer. */
-  | "idempotency_conflict";
-
-export const TRANSFER_FAILURE_MESSAGE: Record<TransferFailureReason, string> = {
-  recipient_not_found: "No encontramos una cuenta con ese alias o CVU",
-  self_transfer: "No podés transferirte a tu propia cuenta",
-  card_not_found: "No encontramos esa tarjeta en tu cuenta",
-  currency_mismatch: "La cuenta de destino opera en otra moneda",
-  insufficient_funds: "No tenés saldo suficiente en esta tarjeta",
-  idempotency_conflict:
-    "Esta operación ya se registró con otros datos. Empezá una transferencia nueva.",
-};
-
-export type RecipientAccount = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  alias: string | null;
-  cvu: string | null;
-};
-
-export type RecipientPreview = {
-  fullName: string;
-  alias: string | null;
-  cvuMasked: string | null;
-};
-
-export type TransferReceipt = {
-  id: string;
-  /** Fixed 2-decimal string. */
-  amount: string;
-  currency: string;
-  description: string | null;
-  createdAt: Date;
-  recipient: { fullName: string; alias: string | null };
-  /** The debited card and its balance now (null only if the card was deleted since). */
-  sourceCard: {
-    id: string;
-    brand: CardBrand;
-    last4: string;
-    balance: string;
-  } | null;
-  /** The sender's SENT movement, for the movement detail link. */
-  movementId: string | null;
-  /** That movement's reference, as printed on its receipt ("ENV-7Q4K-92XA"). */
-  reference: string | null;
-};
+export {
+  TRANSFER_FAILURE_MESSAGE,
+  fullNameOf,
+  type RecipientAccount,
+  type RecipientPreview,
+  type TransferFailureReason,
+  type TransferReceipt,
+} from "./transfer-model";
 
 export type TransferOutcome =
   | {
@@ -157,13 +118,6 @@ export function isSameTransferRequest(
     // No card in the request means "the primary one": whichever it was, it matches.
     (request.cardId === undefined || stored.sourceCardId === request.cardId)
   );
-}
-
-export function fullNameOf(user: {
-  firstName: string;
-  lastName: string;
-}): string {
-  return `${user.firstName} ${user.lastName}`;
 }
 
 /** Use case: send money. Shared by the REST route and the Server Action. */

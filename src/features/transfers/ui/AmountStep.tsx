@@ -13,7 +13,7 @@ import {
   normalizeAmountInput,
   type ConfirmedRecipient,
 } from "../domain/transfer-form";
-import { DESCRIPTION_MAX_LENGTH } from "../domain/transfer-schema";
+import { DESCRIPTION_MAX_LENGTH } from "../domain/transfer-rules";
 import {
   FIELD_CLASSES,
   FieldMessage,

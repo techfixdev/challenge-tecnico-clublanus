@@ -6,7 +6,7 @@ import {
   hasActiveFilters,
   toMovementSearchParams,
   type MovementFilters,
-} from "../domain/movement-filters";
+} from "../domain/movement-search-params";
 import { listMovements } from "../domain/movement-queries";
 import { LoadMoreMovements } from "./LoadMoreMovements";
 import { MovementList } from "./MovementList";

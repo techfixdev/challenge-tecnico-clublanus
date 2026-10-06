@@ -12,13 +12,14 @@ import {
   type RecipientPreview,
   type TransferFailureReason,
   type TransferReceipt,
-} from "./transfer";
-import { parseRecipientQuery, parseTransferAmount } from "./transfer-schema";
+} from "./transfer-model";
+import { checkTransferAmount, checkTransferRecipient } from "./transfer-rules";
 
 /**
  * The send flow as the UI sees it: steps, the Server Actions' results and the instant
- * checks the form runs while typing. Every check reuses the server's schema, so the form
- * and the server can never disagree on what is valid.
+ * checks the form runs while typing. Every check runs the rules the server's schema
+ * delegates to (`transfer-rules.ts`, no zod in the browser), so the form and the server
+ * can never disagree on what is valid.
  */
 
 export type TransferStep = "recipient" | "amount" | "review";
@@ -67,8 +68,8 @@ export const TRANSFER_FORM_MESSAGES = {
 
 /** Instant feedback for the alias / CVU field: null when the text is well formed. */
 export function recipientInputError(raw: string): string | null {
-  const result = parseRecipientQuery(raw);
-  return result.success ? null : (result.details.fieldErrors.q?.[0] ?? null);
+  const result = checkTransferRecipient(raw);
+  return result.ok ? null : result.message;
 }
 
 const RECIPIENT_HINT = "Alias de 6 a 20 caracteres o CVU de 22 dígitos";
@@ -89,8 +90,8 @@ export function amountInputError(
   raw: string,
   availableBalance?: string,
 ): string | null {
-  const parsed = parseTransferAmount(raw);
-  if (!parsed.success) return parsed.message;
+  const parsed = checkTransferAmount(raw);
+  if (!parsed.ok) return parsed.message;
   if (
     availableBalance !== undefined &&
     parsed.cents > toCents(availableBalance)
