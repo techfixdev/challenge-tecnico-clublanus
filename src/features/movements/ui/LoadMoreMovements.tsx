@@ -24,15 +24,24 @@ const pageResponseSchema = z.object({
 /** A hung request must not leave the button spinning forever. */
 export const LOAD_MORE_TIMEOUT_MS = 10_000;
 
-type LoadStatus = "idle" | "loading" | "error";
+/** `redirecting` is terminal: the session expired and the login page takes over. */
+type LoadStatus = "idle" | "loading" | "error" | "redirecting";
 
-const BUTTON_LABEL: Record<LoadStatus, string> = {
+const BUTTON_LABEL: Record<Exclude<LoadStatus, "redirecting">, string> = {
   idle: "Cargar más",
   loading: "Cargando…",
   error: "Reintentar",
 };
 
 const ERROR_MESSAGE = "No pudimos cargar más movimientos.";
+const SESSION_EXPIRED_MESSAGE = "Tu sesión venció. Redirigiendo…";
+
+const STATUS_CLASS: Record<LoadStatus, string> = {
+  idle: "sr-only",
+  loading: "sr-only",
+  error: "text-center text-sm text-danger",
+  redirecting: "text-center text-sm text-foreground",
+};
 
 class SessionExpiredError extends Error {}
 
@@ -62,7 +71,8 @@ type LoadMoreMovementsProps = {
  * validated with the same schema the API is built on, so a contract drift fails loudly.
  *
  * Failures are recoverable in place (inline message + "Reintentar"), except an expired
- * session (401), which goes to the login instead of retrying a request that cannot succeed.
+ * session (401), which goes to the login instead of retrying a request that cannot succeed;
+ * while that navigation happens the button is gone and the reason is shown.
  */
 export function LoadMoreMovements({
   filters,
@@ -85,7 +95,7 @@ export function LoadMoreMovements({
   );
 
   async function loadMore() {
-    if (!cursor || status === "loading") return;
+    if (!cursor || status === "loading" || status === "redirecting") return;
     const controller = new AbortController();
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), LOAD_MORE_TIMEOUT_MS);
@@ -107,6 +117,10 @@ export function LoadMoreMovements({
     } catch (error) {
       if (requestRef.current !== controller) return; // unmounted meanwhile
       if (error instanceof SessionExpiredError) {
+        // End the pending state before navigating: the redirect may take a moment, and
+        // the user should see why the list stopped instead of a button stuck on "Cargando…".
+        setStatus("redirecting");
+        setAnnouncement(SESSION_EXPIRED_MESSAGE);
         router.replace(ROUTES.loginExpired);
         return;
       }
@@ -125,16 +139,11 @@ export function LoadMoreMovements({
           detailSearch={toMovementSearchParams(filters).toString()}
         />
       )}
-      {/* One polite live region: visible for errors, screen-reader-only for progress. */}
-      <p
-        role="status"
-        className={
-          status === "error" ? "text-center text-sm text-danger" : "sr-only"
-        }
-      >
+      {/* One polite live region: visible for errors and the redirect, screen-reader-only for progress. */}
+      <p role="status" className={STATUS_CLASS[status]}>
         {announcement}
       </p>
-      {cursor && (
+      {cursor && status !== "redirecting" && (
         <Button
           variant="secondary"
           onClick={loadMore}

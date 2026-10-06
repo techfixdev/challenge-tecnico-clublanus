@@ -142,6 +142,22 @@ describe("LoadMoreMovements", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("ends the pending state while redirecting after a 401, instead of spinning", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: { code: "UNAUTHORIZED", message: "x" } }, 401),
+    );
+    renderLoadMore();
+
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Tu sesión venció. Redirigiendo…",
+    );
+    // Nothing left to press or wait for: the navigation takes over.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
   it("gives up after the timeout and offers to retry", async () => {
     vi.useFakeTimers();
     fetchMock.mockImplementation(hangUntilAborted);
