@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubReducedMotion } from "@/test/reduced-motion";
 
 import { BalanceAmount } from "./BalanceAmount";
+import { BalanceVisibilityProvider } from "./BalanceVisibility";
 
 /** The 0–9 strips of the odometer, in reading order. */
 function strips(container: HTMLElement) {
@@ -64,6 +65,30 @@ describe("BalanceAmount odometer", () => {
       "1",
     ]);
     for (const sizer of sizers) expect(sizer).toHaveClass("invisible");
+  });
+
+  it("sizes the columns with a neutral digit while hidden, so neither the markup nor the width spells the balance", () => {
+    const { container } = render(
+      <BalanceVisibilityProvider initialHidden>
+        <BalanceAmount balance="312.41" />
+      </BalanceVisibilityProvider>,
+    );
+
+    const sizers = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "[data-odometer] [data-digit-sizer]",
+      ),
+    );
+    expect(sizers.map((sizer) => sizer.textContent)).toEqual([
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+    ]);
+    // The narrow-1 kerning would also reveal where the 1s are.
+    for (const sizer of sizers)
+      expect(sizer.parentElement!.style.margin).toBe("");
   });
 
   it("starts rolling from 0 when it mounts on the client", () => {

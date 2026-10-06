@@ -80,10 +80,12 @@ export function BalanceAmount({ balance }: { balance: string }) {
               <span
                 key={cell.key}
                 className="relative inline-block h-[1.15em] overflow-y-clip"
-                style={digitSidebearing(cell.digit)}
+                style={digitSidebearing(hidden ? 0 : cell.digit)}
               >
+                {/* While hidden every column is sized as a 0: neither the markup nor the
+                    width of the masked row may spell the balance. */}
                 <span data-digit-sizer className="invisible leading-[1.15]">
-                  {cell.digit}
+                  {hidden ? 0 : cell.digit}
                 </span>
                 <m.span
                   data-digit={hidden ? 0 : cell.digit}
