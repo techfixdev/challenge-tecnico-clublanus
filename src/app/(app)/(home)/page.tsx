@@ -20,7 +20,9 @@ export default async function HomePage() {
   return (
     <main className="flex flex-col">
       <HomeHeader firstName={user.firstName} />
-      <div className="mt-6">
+      {/* 24px from the title, as in the design: the header's own 12px bottom padding
+          (its compact bar needs it) plus 12px here. */}
+      <div className="mt-3">
         <CardCarousel cards={cards} balanceHidden={balanceHidden} />
       </div>
       <div className="mt-2">

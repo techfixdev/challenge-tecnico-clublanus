@@ -93,7 +93,9 @@ export function CardDeck({
         ))}
       </ul>
       {slides.length > 1 && (
-        <div className="-mt-5 flex justify-center">
+        // The dots sit in the carousel's bottom padding (room for the card shadow), so
+        // they add no height to the page.
+        <div className="-mt-6 flex justify-center">
           {slides.map((slide, index) => (
             <button
               key={slide.id}
