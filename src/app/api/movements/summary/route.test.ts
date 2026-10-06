@@ -98,6 +98,20 @@ describe("GET /api/movements/summary", () => {
     expect(body.error.details.fieldErrors.month).toHaveLength(1);
   });
 
+  it("answers 400 in Spanish for a month outside the supported range", async () => {
+    const response = await summaryRoute(
+      get("/api/movements/summary?month=0000-01"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("INVALID_INPUT");
+    expect(body.error.details.fieldErrors.month).toEqual([
+      "El mes debe estar entre 2000-01 y 2100-12",
+    ]);
+    expect(mocks.sumByType).not.toHaveBeenCalled();
+  });
+
   it("answers 503 when the database is down", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.sumByType.mockRejectedValue(databaseUnavailableError());

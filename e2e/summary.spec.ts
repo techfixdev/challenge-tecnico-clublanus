@@ -52,10 +52,18 @@ test("the summary API validates the month", async ({ page }) => {
   expect(invalid.status()).toBe(400);
   expect((await invalid.json()).error.code).toBe("INVALID_INPUT");
 
-  const past = await page.request.get("/api/movements/summary?month=1999-01");
+  const outOfRange = await page.request.get(
+    "/api/movements/summary?month=0000-01",
+  );
+  expect(outOfRange.status()).toBe(400);
+  expect((await outOfRange.json()).error.details.fieldErrors.month).toEqual([
+    "El mes debe estar entre 2000-01 y 2100-12",
+  ]);
+
+  const past = await page.request.get("/api/movements/summary?month=2000-01");
   expect(await past.json()).toEqual({
     data: {
-      month: "1999-01",
+      month: "2000-01",
       currency: "USD",
       income: "0.00",
       expenses: "0.00",

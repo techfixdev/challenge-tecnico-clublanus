@@ -105,4 +105,21 @@ describe("parseSummaryMonth", () => {
       });
     },
   );
+
+  it.each(["2000-01", "2100-12"])("accepts the range boundary %j", (raw) => {
+    expect(parseSummaryMonth(raw, OCTOBER_15)).toEqual({
+      success: true,
+      month: raw,
+    });
+  });
+
+  it.each(["0000-01", "0099-12", "1999-12", "2101-01", "9999-12"])(
+    "rejects the out-of-range month %j",
+    (raw) => {
+      expect(parseSummaryMonth(raw, OCTOBER_15)).toEqual({
+        success: false,
+        fieldErrors: { month: ["El mes debe estar entre 2000-01 y 2100-12"] },
+      });
+    },
+  );
 });

@@ -101,9 +101,24 @@ export async function getMonthlySummary(
   };
 }
 
+/**
+ * Supported years, a fixed window. Outside it the month is not a real query: years below
+ * 100 would even hit `Date.UTC`'s 19xx mapping. Fixed (not relative to "now") so the API
+ * contract and its tests are deterministic; a future month inside it is simply empty.
+ */
+const MIN_SUMMARY_YEAR = 2000;
+const MAX_SUMMARY_YEAR = 2100;
+
 const monthSchema = z
   .string()
-  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "El mes debe tener el formato AAAA-MM");
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: "El mes debe tener el formato AAAA-MM",
+    abort: true, // a malformed month gets one error, not also the range one
+  })
+  .refine((month) => {
+    const year = Number(month.slice(0, 4));
+    return year >= MIN_SUMMARY_YEAR && year <= MAX_SUMMARY_YEAR;
+  }, `El mes debe estar entre ${MIN_SUMMARY_YEAR}-01 y ${MAX_SUMMARY_YEAR}-12`);
 
 export type SummaryMonthResult =
   | { success: true; month: string }
