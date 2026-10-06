@@ -24,28 +24,82 @@ describe("parseAmount", () => {
     expect(parseAmount(95.25)).toEqual({ amount: "95.25", cents: 9525 });
   });
 
-  it("accepts a decimal comma, as typed on a Spanish keyboard", () => {
-    expect(parseAmount("12,30")).toEqual({ amount: "12.30", cents: 1230 });
-  });
-
   it("is exact where floating point is not (0.1 + 0.2)", () => {
     const sum =
       (parseAmount("0.1")?.cents ?? 0) + (parseAmount("0.2")?.cents ?? 0);
     expect(fromCents(sum)).toBe("0.30");
   });
 
+  describe("Argentine format", () => {
+    it.each([
+      ["12,30", "12.30"],
+      ["12,3", "12.30"],
+      ["1234,56", "1234.56"],
+      ["1.234,56", "1234.56"],
+      ["312.400,50", "312400.50"],
+      ["100.000.000,00", "100000000.00"],
+      ["0,05", "0.05"],
+    ])("reads %j as %s (one comma: the decimal separator)", (input, amount) => {
+      expect(parseAmount(input)?.amount).toBe(amount);
+    });
+
+    it.each([
+      ["1.234", "1234.00"],
+      ["12.300", "12300.00"],
+      ["10.555", "10555.00"],
+      ["1.234.567", "1234567.00"],
+    ])(
+      "reads %j as %s (dots before 3 digits group thousands)",
+      (input, amount) => {
+        expect(parseAmount(input)?.amount).toBe(amount);
+      },
+    );
+  });
+
+  describe("plain decimals with a dot", () => {
+    it.each([
+      ["12.30", "12.30"],
+      ["12.3", "12.30"],
+      ["1234.5", "1234.50"],
+      ["0.99", "0.99"],
+    ])(
+      "reads %j as %s (a dot before 1 or 2 digits is the decimal point)",
+      (input, amount) => {
+        expect(parseAmount(input)?.amount).toBe(amount);
+      },
+    );
+
+    it("never reads a JSON number's dot as a thousands separator", () => {
+      expect(parseAmount(1.5)).toEqual({ amount: "1.50", cents: 150 });
+      // 1.234 as a number is one dollar and change, not 1234: too many decimals.
+      expect(parseAmount(1.234)).toBeNull();
+    });
+  });
+
   it.each([
-    "",
-    "abc",
-    "1.234",
-    "1.234,56",
-    "-5",
-    "1e3",
-    "10.",
-    ".5",
-    "Infinity",
-    "12345678901",
-  ])("rejects %j", (input) => {
+    ["", "empty"],
+    ["abc", "not a number"],
+    ["-5", "negative"],
+    ["1e3", "exponent"],
+    ["Infinity", "not finite"],
+    ["10.", "half-typed decimal point"],
+    ["12,", "half-typed decimal comma"],
+    [".5", "no integer part"],
+    [",5", "no integer part"],
+    ["10,555", "3 decimals after a comma"],
+    ["1,234", "a comma as thousands separator (en-US) is ambiguous"],
+    ["1,234.56", "en-US grouping"],
+    ["1,2,3", "two commas"],
+    ["1.2.3", "dots that do not group thousands"],
+    ["1.23.456", "uneven groups"],
+    ["1234.567", "a group without its leading dot pattern"],
+    ["1.2345", "a 4-digit group"],
+    ["0.123", "a thousands group after a leading zero"],
+    ["1.234,", "half-typed decimals"],
+    ["1 234", "spaces inside"],
+    ["12345678901", "more than 10 integer digits"],
+    ["12.345.678.901", "more than 10 integer digits, grouped"],
+  ])("rejects %j (%s)", (input) => {
     expect(parseAmount(input)).toBeNull();
   });
 
@@ -53,5 +107,6 @@ describe("parseAmount", () => {
     expect(parseAmount(Number.NaN)).toBeNull();
     expect(parseAmount(1e21)).toBeNull();
     expect(parseAmount(10.005)).toBeNull();
+    expect(parseAmount(-1)).toBeNull();
   });
 });
