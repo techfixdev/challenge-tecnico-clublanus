@@ -68,8 +68,8 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Los tests automáticos usan su propia base y nunca tocan los saldos de prueba manual (`3ec82d3`, `25a3dcb`).
 - [x] Tarjeta en pesos y formato argentino en todos los montos; la API acepta solo montos canónicos (`da809a4` a `f72883e`).
 - [x] Tarjeta que gira al tocarla (reverso con banda, firma y CVV); un ojito por tarjeta revela saldo, número y CVV, ocultos por defecto y pedidos al servidor recién al tocar (`5f4b3cc` a `1acf3f1`).
-- [ ] ⏳ Ver el build de producción en el celular.
-- [ ] Transiciones tipo iOS entre pantallas, revelado de contenido y entrada de marca.
+- [x] Ver el build de producción en el celular por la red local, con una opción explícita que se niega a correr en Vercel (`e815a7f`).
+- [ ] ⏳ Transiciones tipo iOS entre pantallas, revelado de contenido y entrada de marca.
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
 - [ ] Lista de pantallas y estados para capturar en Figma (requiere conectar tu cuenta de Figma).
 - [ ] Revisar todo juntos y commitear (local).
