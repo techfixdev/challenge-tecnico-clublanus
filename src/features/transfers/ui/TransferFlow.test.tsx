@@ -37,8 +37,8 @@ const CARDS: SourceCard[] = [
     id: "card_visa",
     brand: "VISA",
     last4: "5678",
-    balance: "312.40",
-    currency: "USD",
+    balance: "312400.50",
+    currency: "ARS",
   },
 ];
 
@@ -100,6 +100,32 @@ async function toReviewStep(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("TransferFlow", () => {
+  it("sends pesos from the peso card, in the Argentine format", async () => {
+    const { user, send } = renderFlow();
+    await toAmountStep(user);
+    await user.click(screen.getByRole("radio", { name: /Visa/ }));
+    expect(screen.getByText("Disponible:").parentElement).toHaveTextContent(
+      "$ 312.400,50",
+    );
+    await user.type(screen.getByLabelText("Monto en ARS"), "12.400,5");
+    await user.tab();
+    expect(screen.getByLabelText("Monto en ARS")).toHaveValue("12.400,50");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByRole("heading", { name: "Revisá la transferencia" });
+
+    expect(screen.getByText("$ 12.400,50")).toBeInTheDocument();
+    expect(screen.getByText("12.400,50 pesos")).toHaveClass("sr-only");
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar y enviar" }),
+    );
+
+    await screen.findByRole("heading", { name: "¡Transferencia enviada!" });
+    expect(Object.fromEntries(send.mock.calls[0][1])).toMatchObject({
+      amount: "12400.50",
+      cardId: "card_visa",
+    });
+  });
+
   it("shows the first step at once and slides in only the steps that follow", async () => {
     const { user } = renderFlow();
     // The step wrapper: the closest element carrying Motion's inline style.
@@ -185,11 +211,21 @@ describe("TransferFlow", () => {
 
     await user.type(amount, "500");
     expect(proceed).toBeEnabled();
+    expect(screen.getByTestId("amount-currency")).toHaveTextContent("US$");
+
+    // The peso card: the field switches to pesos and checks the peso balance.
     await user.click(screen.getByRole("radio", { name: /Visa/ }));
+    const pesos = screen.getByLabelText("Monto en ARS");
+    expect(pesos).toHaveValue("500");
+    expect(screen.getByTestId("amount-currency")).toHaveTextContent(/^\$$/);
+    expect(proceed).toBeEnabled();
+    await user.type(pesos, "000");
     expect(
       screen.getByText(TRANSFER_FAILURE_MESSAGE.insufficient_funds),
     ).toBeInTheDocument();
     expect(proceed).toBeDisabled();
+    await user.clear(pesos);
+    await user.type(pesos, "500");
 
     await user.click(screen.getByRole("radio", { name: /Mastercard/ }));
     await user.type(screen.getByLabelText(/Motivo/), "Entradas");
@@ -228,7 +264,12 @@ describe("TransferFlow", () => {
     await user.type(amount, "12,3");
     expect(amount).toHaveValue("12,3");
     await user.tab();
-    expect(amount).toHaveValue("12.30");
+    expect(amount).toHaveValue("12,30");
+
+    await user.clear(amount);
+    await user.type(amount, "1234.5");
+    await user.tab();
+    expect(amount).toHaveValue("1.234,50");
 
     await user.clear(amount);
     await user.type(amount, "40");
@@ -240,7 +281,8 @@ describe("TransferFlow", () => {
     const { user, send, key } = renderFlow();
     await toReviewStep(user);
 
-    expect(screen.getByText("$12.30")).toBeInTheDocument();
+    expect(screen.getByText("US$ 12,30")).toBeInTheDocument();
+    expect(screen.getByText("12,30 dólares")).toHaveClass("sr-only");
     await user.click(
       screen.getByRole("button", { name: "Confirmar y enviar" }),
     );

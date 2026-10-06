@@ -35,6 +35,26 @@ export async function primaryCardBalance(email: string): Promise<string> {
   }
 }
 
+/** The balance of one of a user's cards, by its last 4 digits, e.g. "312400.50". */
+export async function cardBalance(
+  email: string,
+  last4: string,
+): Promise<string> {
+  const client = await connect();
+  try {
+    const { rows } = await client.query<{ balance: string }>(
+      `SELECT c.balance::text AS balance
+         FROM "Card" c JOIN "User" u ON u.id = c."userId"
+        WHERE u.email = $1 AND c.last4 = $2`,
+      [email, last4],
+    );
+    if (rows.length !== 1) throw new Error(`No card ${last4} for ${email}`);
+    return rows[0].balance;
+  } finally {
+    await client.end();
+  }
+}
+
 export async function undoDemoTransfersSince(since: Date): Promise<number> {
   const client = await connect();
   try {

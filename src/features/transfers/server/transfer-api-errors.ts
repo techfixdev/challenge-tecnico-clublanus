@@ -13,6 +13,7 @@ const API_CODE: Record<TransferFailureReason, ApiErrorCode> = {
   self_transfer: "SELF_TRANSFER",
   insufficient_funds: "INSUFFICIENT_FUNDS",
   currency_mismatch: "CURRENCY_MISMATCH",
+  amount_over_limit: "AMOUNT_OVER_LIMIT",
   idempotency_conflict: "IDEMPOTENCY_KEY_REUSED",
 };
 

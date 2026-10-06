@@ -144,10 +144,11 @@ async function runTransfer(
       where: recipientWhere(request.recipient),
       select: {
         ...recipientSelect,
+        // Every card, primary first: `planTransfer` credits the first one in the
+        // source card's currency. The id makes the order total, so it never changes.
         cards: {
-          where: { isPrimary: true },
           select: { id: true, currency: true },
-          take: 1,
+          orderBy: [{ isPrimary: "desc" }, { id: "asc" }],
         },
       },
     }),
@@ -160,18 +161,18 @@ async function runTransfer(
     }),
   ]);
 
-  const destinationCard = recipient?.cards[0] ?? null;
   const plan = planTransfer({
     senderId,
     amountCents: request.amountCents,
-    recipient: recipient ? { id: recipient.id, destinationCard } : null,
+    recipient: recipient ? { id: recipient.id, cards: recipient.cards } : null,
     sourceCard: sourceCard
       ? { ...sourceCard, balance: sourceCard.balance.toFixed(2) }
       : null,
   });
   if (!plan.ok) throw new TransferRejected(plan.reason);
+  const { destinationCard } = plan;
   // planTransfer guarantees both exist past this point.
-  if (!recipient || !destinationCard || !sourceCard) {
+  if (!recipient || !sourceCard) {
     throw new Error("Unreachable: planTransfer accepted a missing party");
   }
 

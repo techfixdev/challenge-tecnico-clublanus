@@ -6,9 +6,12 @@ import { buildCvu } from "@/features/account/domain/account-identifiers";
 
 import {
   MAX_TRANSFER_CENTS,
+  TRANSFER_LIMIT_CENTS,
   TRANSFER_MESSAGES,
   checkTransferAmount,
   checkTransferRecipient,
+  transferLimitCents,
+  transferLimitMessage,
 } from "./transfer-rules";
 import { parseRecipientQuery, parseTransferRequest } from "./transfer-schema";
 
@@ -35,10 +38,13 @@ const RECIPIENT_CASES: [string, string | null][] = [
 const AMOUNT_CASES: [string | number, string | null][] = [
   ["1", null],
   ["12,30", null],
+  ["1.234,56", null],
+  ["1.234", null],
   [MAX_TRANSFER_CENTS / 100, null],
   ["0", TRANSFER_MESSAGES.amountPositive],
   ["0.00", TRANSFER_MESSAGES.amountPositive],
-  ["10.555", TRANSFER_MESSAGES.amountInvalid],
+  ["10,555", TRANSFER_MESSAGES.amountInvalid],
+  ["1,234", TRANSFER_MESSAGES.amountInvalid],
   ["-5", TRANSFER_MESSAGES.amountInvalid],
   ["abc", TRANSFER_MESSAGES.amountInvalid],
   ["", TRANSFER_MESSAGES.amountInvalid],
@@ -97,4 +103,42 @@ describe("checkTransferAmount", () => {
       ).toBe(message);
     },
   );
+});
+
+describe("per-currency limits", () => {
+  it("caps a transfer at US$ 100.000 and $ 100.000.000", () => {
+    expect(TRANSFER_LIMIT_CENTS).toEqual({
+      USD: 100_000_00,
+      ARS: 100_000_000_00,
+    });
+    expect(MAX_TRANSFER_CENTS).toBe(TRANSFER_LIMIT_CENTS.ARS);
+    expect(transferLimitMessage("USD")).toBe(
+      "El monto máximo por transferencia es US$\u00a0100.000",
+    );
+    expect(transferLimitMessage("ARS")).toBe(
+      "El monto máximo por transferencia es $\u00a0100.000.000",
+    );
+  });
+
+  it("applies the card's currency cap when the currency is known", () => {
+    expect(checkTransferAmount("100.000", "USD").ok).toBe(true);
+    expect(checkTransferAmount("100.000,01", "USD")).toEqual({
+      ok: false,
+      message: transferLimitMessage("USD"),
+    });
+    expect(checkTransferAmount("100.000,01", "ARS").ok).toBe(true);
+    expect(checkTransferAmount("100.000.000", "ARS").ok).toBe(true);
+    expect(checkTransferAmount("100.000.000,01", "ARS")).toEqual({
+      ok: false,
+      message: transferLimitMessage("ARS"),
+    });
+  });
+
+  it("uses the strictest cap for a currency it does not know", () => {
+    expect(transferLimitCents("EUR")).toBe(TRANSFER_LIMIT_CENTS.USD);
+  });
+
+  it("checks only the highest cap without a currency (the server, before the card)", () => {
+    expect(checkTransferAmount("100.000,01").ok).toBe(true);
+  });
 });

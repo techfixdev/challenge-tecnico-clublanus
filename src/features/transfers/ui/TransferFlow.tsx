@@ -82,7 +82,7 @@ export function TransferFlow({
     setHandledState(sendState);
     if (sendState.status === "error") {
       setStep(sendState.step);
-      // Refused for the recipient (gone, the user's own, another currency): what was
+      // Refused for the recipient (gone, or the user's own): what was
       // confirmed no longer holds, so it must be looked up and confirmed again.
       if (sendState.step === "recipient") setRecipient(null);
       setStepError({ step: sendState.step, message: sendState.message });

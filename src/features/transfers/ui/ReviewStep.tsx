@@ -3,7 +3,7 @@
 import type { ReactNode, Ref } from "react";
 
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
-import { formatMoney } from "@/shared/lib/format";
+import { Money } from "@/shared/ui/Money";
 import { Button } from "@/shared/ui/Button";
 
 import type { ConfirmedRecipient } from "../domain/transfer-form";
@@ -64,9 +64,11 @@ export function ReviewStep({
       <div className="mt-8 flex flex-col items-center text-center">
         <p className="text-xs text-muted">Vas a enviar</p>
         <p className="mt-1 text-4xl font-semibold text-foreground tabular-nums">
-          {formatMoney(amount, card.currency)}
+          <Money value={amount} currency={card.currency} />
         </p>
-        <p className="mt-1 text-xs font-medium text-muted">{card.currency}</p>
+        <p aria-hidden="true" className="mt-1 text-xs font-medium text-muted">
+          {card.currency}
+        </p>
       </div>
 
       <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">

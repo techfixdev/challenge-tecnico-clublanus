@@ -4,6 +4,8 @@ import {
   normalizeAlias,
   normalizeCvu,
 } from "@/features/account/domain/account-identifiers";
+import { isCurrency, type Currency } from "@/shared/lib/currency";
+import { formatMoney } from "@/shared/lib/format";
 import { parseAmount } from "@/shared/lib/money";
 
 /**
@@ -22,7 +24,7 @@ export const TRANSFER_MESSAGES = {
     "El alias tiene entre 6 y 20 caracteres: letras, números, puntos o guiones",
   amountInvalid: "Ingresá un monto válido, con hasta 2 decimales",
   amountPositive: "El monto tiene que ser mayor a cero",
-  amountTooLarge: "El monto máximo por transferencia es $100,000",
+  amountTooLarge: "El monto supera el máximo por transferencia",
   descriptionInvalid: "El motivo tiene que ser un texto",
   descriptionTooLong: "El motivo puede tener hasta 60 caracteres",
   cardInvalid: "Elegí una tarjeta válida",
@@ -30,8 +32,33 @@ export const TRANSFER_MESSAGES = {
     "Falta la clave de idempotencia (un UUID por intento de transferencia)",
 } as const;
 
-/** Per-transfer cap: US$ 100,000.00. A sanity limit, well inside `Decimal(12,2)`. */
-export const MAX_TRANSFER_CENTS = 100_000_00;
+/**
+ * Per-transfer caps, per currency: US$ 100.000 and $ 100.000.000 (pesos). Sanity limits
+ * of the same order once converted, well inside `Decimal(12,2)`.
+ */
+export const TRANSFER_LIMIT_CENTS: Record<Currency, number> = {
+  USD: 100_000_00,
+  ARS: 100_000_000_00,
+};
+/**
+ * The highest cap: all the server's schema can check before the transaction reads the
+ * card (and so its currency); `planTransfer` then applies the card's own cap.
+ */
+export const MAX_TRANSFER_CENTS = Math.max(
+  ...Object.values(TRANSFER_LIMIT_CENTS),
+);
+
+/** The cap for a card's currency; the strictest one for a currency the app does not know. */
+export function transferLimitCents(currency: string): number {
+  return isCurrency(currency)
+    ? TRANSFER_LIMIT_CENTS[currency]
+    : Math.min(...Object.values(TRANSFER_LIMIT_CENTS));
+}
+
+/** "El monto máximo por transferencia es US$ 100.000". */
+export function transferLimitMessage(currency: string): string {
+  return `El monto máximo por transferencia es ${formatMoney(transferLimitCents(currency) / 100, currency)}`;
+}
 export const DESCRIPTION_MAX_LENGTH = 60;
 /** Longer text is no alias nor CVU; the cap just stops absurd input early. */
 const RECIPIENT_MAX_LENGTH = 64;
@@ -69,14 +96,22 @@ export function checkTransferRecipient(
   return { ok: true, key: { kind: "alias", alias } };
 }
 
-/** An amount as typed ("12,30" or "12.30") or sent as a number: format and limits. */
+/**
+ * An amount as typed ("1.234,56", "12,30" or "12.30") or sent as a number: format and
+ * limit. With the card's currency (the send form knows it) the cap is that currency's;
+ * without it (the server's schema, before reading the card) it is the highest one.
+ */
 export function checkTransferAmount(
   raw: string | number,
+  currency?: string,
 ): Checked<{ amount: string; cents: number }> {
   const parsed = parseAmount(raw);
   if (!parsed) return { ok: false, message: TRANSFER_MESSAGES.amountInvalid };
   if (parsed.cents === 0) {
     return { ok: false, message: TRANSFER_MESSAGES.amountPositive };
+  }
+  if (currency !== undefined && parsed.cents > transferLimitCents(currency)) {
+    return { ok: false, message: transferLimitMessage(currency) };
   }
   if (parsed.cents > MAX_TRANSFER_CENTS) {
     return { ok: false, message: TRANSFER_MESSAGES.amountTooLarge };

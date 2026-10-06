@@ -10,6 +10,7 @@ import {
   type RecipientKey,
   type TransferRequest,
 } from "./transfer-schema";
+import { transferLimitCents } from "./transfer-rules";
 import {
   fullNameOf,
   type RecipientAccount,
@@ -60,37 +61,50 @@ export type TransferState = {
   amountCents: number;
   recipient: {
     id: string;
-    /** The recipient's primary card, which receives the money. */
-    destinationCard: { id: string; currency: string } | null;
+    /** The recipient's cards, primary first: the first one in the right currency is credited. */
+    cards: readonly DestinationCard[];
   } | null;
   /** The sender's chosen (or primary) card, scoped to the sender. */
   sourceCard: { id: string; currency: string; balance: string } | null;
 };
 
+export type DestinationCard = { id: string; currency: string };
+
 /**
  * The transfer rules, in the order a user would want them reported: who (does the
  * recipient exist, is it someone else), then from where (card, currency), then how much.
- * The balance check here gives the friendly answer; the repository's conditional debit is
- * what actually guarantees no overdraft under concurrency.
+ *
+ * Money moves in the source card's currency and lands, unconverted, on the recipient's
+ * card in that same currency (primary first): there is no FX. A recipient without a card
+ * in that currency cannot receive it ("currency_mismatch"). The per-transfer cap is the
+ * source currency's. The balance check here gives the friendly answer; the repository's
+ * conditional debit is what actually guarantees no overdraft under concurrency.
  */
 export function planTransfer(
   state: TransferState,
-): { ok: true } | { ok: false; reason: TransferFailureReason } {
+):
+  | { ok: true; destinationCard: DestinationCard }
+  | { ok: false; reason: TransferFailureReason } {
   const { recipient, sourceCard } = state;
-  if (!recipient?.destinationCard) {
+  // A recipient with no card at all cannot receive money in any currency.
+  if (!recipient || recipient.cards.length === 0) {
     return { ok: false, reason: "recipient_not_found" };
   }
   if (recipient.id === state.senderId) {
     return { ok: false, reason: "self_transfer" };
   }
   if (!sourceCard) return { ok: false, reason: "card_not_found" };
-  if (sourceCard.currency !== recipient.destinationCard.currency) {
-    return { ok: false, reason: "currency_mismatch" };
+  const destinationCard = recipient.cards.find(
+    (card) => card.currency === sourceCard.currency,
+  );
+  if (!destinationCard) return { ok: false, reason: "currency_mismatch" };
+  if (state.amountCents > transferLimitCents(sourceCard.currency)) {
+    return { ok: false, reason: "amount_over_limit" };
   }
   if (toCents(sourceCard.balance) < state.amountCents) {
     return { ok: false, reason: "insufficient_funds" };
   }
-  return { ok: true };
+  return { ok: true, destinationCard };
 }
 
 /**

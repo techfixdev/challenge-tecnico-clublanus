@@ -16,7 +16,8 @@ import {
   stepForFailure,
   stepForInvalidInput,
 } from "./transfer-form";
-import { MAX_TRANSFER_CENTS, TRANSFER_MESSAGES } from "./transfer-schema";
+import { transferLimitMessage } from "./transfer-rules";
+import { TRANSFER_MESSAGES } from "./transfer-schema";
 
 const CVU = buildCvu("0000003", "1000000000025");
 
@@ -52,11 +53,26 @@ describe("recipientInputHint", () => {
   });
 });
 
+const USD_CARD = { balance: "978.85", currency: "USD" };
+const ARS_CARD = { balance: "312400.50", currency: "ARS" };
+
 describe("amountInputError", () => {
   it("accepts a decimal comma or dot within the available balance", () => {
-    expect(amountInputError("12,30", "978.85")).toBeNull();
-    expect(amountInputError("12.30", "978.85")).toBeNull();
-    expect(amountInputError("978.85", "978.85")).toBeNull();
+    expect(amountInputError("12,30", USD_CARD)).toBeNull();
+    expect(amountInputError("12.30", USD_CARD)).toBeNull();
+    expect(amountInputError("978,85", USD_CARD)).toBeNull();
+    expect(amountInputError("312.400,50", ARS_CARD)).toBeNull();
+  });
+
+  it("checks the chosen card's currency cap", () => {
+    const rich = { balance: "200000000.00", currency: "ARS" };
+    expect(amountInputError("150.000", { ...rich, currency: "USD" })).toBe(
+      transferLimitMessage("USD"),
+    );
+    expect(amountInputError("150.000", rich)).toBeNull();
+    expect(amountInputError("100.000.001", rich)).toBe(
+      transferLimitMessage("ARS"),
+    );
   });
 
   it.each([
@@ -64,10 +80,10 @@ describe("amountInputError", () => {
     ["abc", TRANSFER_MESSAGES.amountInvalid],
     ["1,234", TRANSFER_MESSAGES.amountInvalid],
     ["0", TRANSFER_MESSAGES.amountPositive],
-    [String(MAX_TRANSFER_CENTS / 100 + 1), TRANSFER_MESSAGES.amountTooLarge],
-    ["978.86", TRANSFER_FAILURE_MESSAGE.insufficient_funds],
+    ["100.000,01", transferLimitMessage("USD")],
+    ["978,86", TRANSFER_FAILURE_MESSAGE.insufficient_funds],
   ])("rejects %j", (raw, message) => {
-    expect(amountInputError(raw, "978.85")).toBe(message);
+    expect(amountInputError(raw, USD_CARD)).toBe(message);
   });
 
   it("skips the balance check when no card is known", () => {
@@ -77,14 +93,20 @@ describe("amountInputError", () => {
 
 describe("normalizeAmountInput", () => {
   it.each([
-    ["12,30", "12.30"],
-    ["12,3", "12.30"],
-    ["12.3", "12.30"],
-    ["0,5", "0.50"],
-    ["  7,05 ", "7.05"],
-  ])("writes %j with a decimal point and two decimals: %j", (raw, shown) => {
-    expect(normalizeAmountInput(raw)).toBe(shown);
-  });
+    ["12,30", "12,30"],
+    ["12,3", "12,30"],
+    ["12.3", "12,30"],
+    ["0,5", "0,50"],
+    ["  7,05 ", "7,05"],
+    ["1234,5", "1.234,50"],
+    ["1.234", "1.234,00"],
+    ["312400.5", "312.400,50"],
+  ])(
+    "writes %j in the Argentine format with two decimals: %j",
+    (raw, shown) => {
+      expect(normalizeAmountInput(raw)).toBe(shown);
+    },
+  );
 
   it.each(["12", "", "abc", "12,", "1,234", "12,345", "1.2.3"])(
     "leaves %j as typed (a whole amount, or one the field flags as invalid)",
@@ -100,7 +122,9 @@ describe("stepForFailure", () => {
     expect(stepForFailure("self_transfer")).toBe("recipient");
     expect(stepForFailure("insufficient_funds")).toBe("amount");
     expect(stepForFailure("card_not_found")).toBe("amount");
-    expect(stepForFailure("currency_mismatch")).toBe("recipient");
+    // The card decides the currency: choosing another one can fix it.
+    expect(stepForFailure("currency_mismatch")).toBe("amount");
+    expect(stepForFailure("amount_over_limit")).toBe("amount");
     expect(stepForFailure("idempotency_conflict")).toBe("review");
   });
 });

@@ -11,6 +11,8 @@ export type TransferFailureReason =
   | "self_transfer"
   | "card_not_found"
   | "currency_mismatch"
+  /** Above the per-transfer cap of the source card's currency. */
+  | "amount_over_limit"
   | "insufficient_funds"
   /** The idempotency key was already used for a different transfer. */
   | "idempotency_conflict";
@@ -19,7 +21,10 @@ export const TRANSFER_FAILURE_MESSAGE: Record<TransferFailureReason, string> = {
   recipient_not_found: "No encontramos una cuenta con ese alias o CVU",
   self_transfer: "No podés transferirte a tu propia cuenta",
   card_not_found: "No encontramos esa tarjeta en tu cuenta",
-  currency_mismatch: "La cuenta de destino opera en otra moneda",
+  currency_mismatch:
+    "La cuenta de destino no opera en la moneda de esta tarjeta. Probá con otra tarjeta.",
+  amount_over_limit:
+    "El monto supera el máximo por transferencia en la moneda de esta tarjeta",
   insufficient_funds: "No tenés saldo suficiente en esta tarjeta",
   idempotency_conflict:
     "Esta operación ya se registró con otros datos. Empezá una transferencia nueva.",

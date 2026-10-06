@@ -1,7 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { formatAmount, formatMoney } from "../src/shared/lib/format";
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
 import {
+  cardBalance,
   primaryCardBalance,
   undoDemoTransfersSince,
 } from "./fixtures/transfers-db";
@@ -13,6 +15,9 @@ const RECIPIENT = { email: "hincha@clublanus.com", password: "GRANATE2@" };
 const SEED = {
   senderAlias: "soy.granate.lanus",
   senderCvuGrouped: "0000 0031 1000 0000 0001 75",
+  /** The sender's peso Visa and the recipient's peso Mastercard. */
+  senderPesoCard: "5678",
+  recipientPesoCard: "1915",
 };
 
 function amountToCents(amount: string): number {
@@ -20,9 +25,9 @@ function amountToCents(amount: string): number {
   return Number(units) * 100 + Number(fraction);
 }
 
-/** 96655 → "966.55" (as the card shows it, without grouping below 1,000). */
+/** 96655 → "966,55", as the card shows it (the app's one formatter). */
 function centsToAmount(cents: number): string {
-  return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
+  return formatAmount(cents / 100);
 }
 
 async function login(page: Page, user: { email: string; password: string }) {
@@ -91,15 +96,15 @@ test("sends money to hincha.granate, who receives it", async ({
   await expect(page.getByRole("radio", { name: /Mastercard/ })).toBeChecked();
   await page.getByLabel("Monto en USD").fill("12,30");
   await page.getByLabel(/Motivo/).fill("Entradas e2e");
-  // Left the field: the amount is written the app's way.
-  await expect(page.getByLabel("Monto en USD")).toHaveValue("12.30");
+  // Left the field: the amount is written the app's (Argentine) way.
+  await expect(page.getByLabel("Monto en USD")).toHaveValue("12,30");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   // Step 3: review and confirm.
   await expect(
     page.getByRole("heading", { name: "Revisá la transferencia" }),
   ).toBeVisible();
-  await expect(page.getByText("$12.30")).toBeVisible();
+  await expect(page.getByText("US$ 12,30")).toBeVisible();
   await page.getByRole("button", { name: "Confirmar y enviar" }).click();
 
   await expect(
@@ -124,7 +129,7 @@ test("sends money to hincha.granate, who receives it", async ({
     centsToAmount(amountToCents(senderBalance) - 1230),
   );
   await expect(latestMovements(page).first()).toContainText("Hincha Granate");
-  await expect(latestMovements(page).first()).toContainText("$12.30");
+  await expect(latestMovements(page).first()).toContainText("US$ 12,30");
 
   // The recipient sees the money arrive.
   const recipientContext = await browser.newContext();
@@ -133,9 +138,61 @@ test("sends money to hincha.granate, who receives it", async ({
   const received = latestMovements(recipientPage).first();
   await expect(received).toContainText("Granate Lanús");
   await expect(received).toContainText("Entradas e2e");
-  await expect(received).toContainText("$12.30");
+  await expect(received).toContainText("US$ 12,30");
   await expect(received).toContainText("Recibido");
   await recipientContext.close();
+});
+
+test("sends pesos from the Visa, credited to the recipient's peso card", async ({
+  page,
+}) => {
+  const senderPesos = await cardBalance(SENDER.email, SEED.senderPesoCard);
+  const recipientPesos = await cardBalance(
+    RECIPIENT.email,
+    SEED.recipientPesoCard,
+  );
+  const recipientDollars = await primaryCardBalance(RECIPIENT.email);
+
+  await login(page, SENDER);
+  await page.goto("/transferir");
+  await page.getByLabel("Alias o CVU").fill("hincha.granate");
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  // The peso card: the field turns to pesos and takes the Argentine format.
+  await page.locator("label", { hasText: "Visa" }).click();
+  await expect(page.getByRole("radio", { name: /Visa/ })).toBeChecked();
+  await expect(page.getByTestId("amount-currency")).toHaveText("$");
+  const amount = page.getByLabel("Monto en ARS");
+  await amount.fill("12.400,5");
+  await amount.blur();
+  await expect(amount).toHaveValue("12.400,50");
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Revisá la transferencia" }),
+  ).toBeVisible();
+  await expect(page.getByText("$ 12.400,50")).toBeVisible();
+  await expect(page.getByText("12.400,50 pesos")).toBeAttached();
+  await page.getByRole("button", { name: "Confirmar y enviar" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "¡Transferencia enviada!" }),
+  ).toBeVisible();
+  await expect(page.getByText("$ 12.400,50")).toBeVisible();
+  const remaining = amountToCents(senderPesos) - 12_400_50;
+  await expect(page.getByText(/^Saldo:/)).toContainText(
+    formatMoney(remaining / 100, "ARS"),
+  );
+
+  // No FX: the pesos left the Visa and landed on the recipient's peso card.
+  expect(
+    amountToCents(await cardBalance(SENDER.email, SEED.senderPesoCard)),
+  ).toBe(remaining);
+  expect(
+    amountToCents(await cardBalance(RECIPIENT.email, SEED.recipientPesoCard)),
+  ).toBe(amountToCents(recipientPesos) + 12_400_50);
+  expect(await primaryCardBalance(RECIPIENT.email)).toBe(recipientDollars);
+  expect(await primaryCardBalance(SENDER.email)).toBe(senderBalance);
 });
 
 test("refuses an amount above the balance, in Spanish, and moves nothing", async ({
@@ -158,7 +215,7 @@ test("refuses an amount above the balance, in Spanish, and moves nothing", async
   await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled();
 
   await page.goto("/");
-  await expect(primaryCard(page)).toContainText(senderBalance);
+  await expect(primaryCard(page)).toContainText(formatAmount(senderBalance));
   expect(await primaryCardBalance(SENDER.email)).toBe(senderBalance);
 });
 

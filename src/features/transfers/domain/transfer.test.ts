@@ -28,16 +28,66 @@ function state(overrides: Partial<TransferState> = {}): TransferState {
     amountCents: 5000,
     recipient: {
       id: RECIPIENT.id,
-      destinationCard: { id: "card_dest", currency: "USD" },
+      cards: [{ id: "card_dest", currency: "USD" }],
     },
     sourceCard: { id: "card_src", currency: "USD", balance: "50.00" },
     ...overrides,
   };
 }
 
+const DEST_USD = { id: "card_dest", currency: "USD" };
+const DEST_ARS = { id: "card_dest_ars", currency: "ARS" };
+
 describe("planTransfer", () => {
   it("allows a transfer that spends the whole balance", () => {
-    expect(planTransfer(state())).toEqual({ ok: true });
+    expect(planTransfer(state())).toEqual({
+      ok: true,
+      destinationCard: DEST_USD,
+    });
+  });
+
+  it("credits the recipient's first card in the source card's currency", () => {
+    const recipient = { id: RECIPIENT.id, cards: [DEST_USD, DEST_ARS] };
+    expect(
+      planTransfer(
+        state({
+          recipient,
+          sourceCard: { id: "card_src", currency: "ARS", balance: "1000.00" },
+        }),
+      ),
+    ).toEqual({ ok: true, destinationCard: DEST_ARS });
+    expect(planTransfer(state({ recipient }))).toEqual({
+      ok: true,
+      destinationCard: DEST_USD,
+    });
+  });
+
+  it("applies the source currency's cap: US$ 100.000, $ 100.000.000", () => {
+    const rich = (currency: string) => ({
+      id: "card_src",
+      currency,
+      balance: "999999999.00",
+    });
+    const recipient = { id: RECIPIENT.id, cards: [DEST_USD, DEST_ARS] };
+    expect(
+      planTransfer(
+        state({ recipient, sourceCard: rich("USD"), amountCents: 100_000_01 }),
+      ),
+    ).toEqual({ ok: false, reason: "amount_over_limit" });
+    expect(
+      planTransfer(
+        state({ recipient, sourceCard: rich("ARS"), amountCents: 100_000_01 }),
+      ),
+    ).toEqual({ ok: true, destinationCard: DEST_ARS });
+    expect(
+      planTransfer(
+        state({
+          recipient,
+          sourceCard: rich("ARS"),
+          amountCents: 100_000_000_01,
+        }),
+      ),
+    ).toEqual({ ok: false, reason: "amount_over_limit" });
   });
 
   it.each([
@@ -45,26 +95,22 @@ describe("planTransfer", () => {
     [
       // A recipient with no card to credit cannot receive money.
       "recipient_not_found",
-      { recipient: { id: RECIPIENT.id, destinationCard: null } },
+      { recipient: { id: RECIPIENT.id, cards: [] } },
     ],
     [
       "self_transfer",
       {
         recipient: {
           id: SENDER,
-          destinationCard: { id: "card_src", currency: "USD" },
+          cards: [{ id: "card_src", currency: "USD" }],
         },
       },
     ],
     ["card_not_found", { sourceCard: null }],
     [
+      // The recipient has cards, none in the source card's currency (no FX).
       "currency_mismatch",
-      {
-        recipient: {
-          id: RECIPIENT.id,
-          destinationCard: { id: "card_dest", currency: "ARS" },
-        },
-      },
+      { recipient: { id: RECIPIENT.id, cards: [DEST_ARS] } },
     ],
     ["insufficient_funds", { amountCents: 5001 }],
   ] as const)("rejects with %s", (reason, overrides) => {
@@ -183,6 +229,6 @@ describe("previewRecipient", () => {
 describe("TRANSFER_FAILURE_MESSAGE", () => {
   it("has Spanish copy for every business failure", () => {
     expect(TRANSFER_FAILURE_MESSAGE.insufficient_funds).toMatch(/saldo/);
-    expect(Object.keys(TRANSFER_FAILURE_MESSAGE)).toHaveLength(6);
+    expect(Object.keys(TRANSFER_FAILURE_MESSAGE)).toHaveLength(7);
   });
 });

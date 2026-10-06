@@ -59,6 +59,8 @@ type MovementSeed = {
 };
 
 // Ordered newest first; the first rows match the "Últimos movimientos" list in the design.
+// Amounts are in the card's currency: dollars on the primary Mastercard, pesos on the
+// secondary Visa ("card: secondary").
 const MOVEMENTS: MovementSeed[] = [
   {
     counterparty: "Adobe",
@@ -127,7 +129,7 @@ const MOVEMENTS: MovementSeed[] = [
   {
     counterparty: "Netflix",
     type: "SUBSCRIPTION",
-    amount: "15.49",
+    amount: "11999.00",
     daysAgo: 12,
     hour: 7,
     card: "secondary",
@@ -142,7 +144,7 @@ const MOVEMENTS: MovementSeed[] = [
   {
     counterparty: "Google One",
     type: "SUBSCRIPTION",
-    amount: "2.99",
+    amount: "2499.00",
     daysAgo: 16,
     hour: 9,
     card: "secondary",
@@ -192,7 +194,7 @@ const MOVEMENTS: MovementSeed[] = [
   {
     counterparty: "Sofía Romero",
     type: "SENT",
-    amount: "48.75",
+    amount: "45000.00",
     daysAgo: 38,
     hour: 21,
     card: "secondary",
@@ -214,7 +216,7 @@ const MOVEMENTS: MovementSeed[] = [
   {
     counterparty: "Netflix",
     type: "SUBSCRIPTION",
-    amount: "15.49",
+    amount: "11999.00",
     daysAgo: 42,
     hour: 7,
     card: "secondary",
@@ -322,27 +324,33 @@ async function upsertUser(
   });
 }
 
+type SeededCard = { id: string; currency: string };
+
 function toMovementRows(
   userId: string,
   seeds: MovementSeed[],
-  cards: { primary: string; secondary?: string },
+  cards: { primary: SeededCard; secondary?: SeededCard },
   referencePrefix: string,
 ) {
-  return seeds.map((movement, index) => ({
-    userId,
-    cardId:
+  return seeds.map((movement, index) => {
+    const card =
       movement.card === "secondary" && cards.secondary
         ? cards.secondary
-        : cards.primary,
-    counterparty: movement.counterparty,
-    description: DESCRIPTION[movement.type],
-    type: movement.type,
-    amount: movement.amount,
-    currency: "USD",
-    status: movement.pending ? ("PENDING" as const) : ("COMPLETED" as const),
-    reference: `${referencePrefix}${String(index + 1).padStart(6, "0")}`,
-    occurredAt: dateDaysAgo(movement.daysAgo, movement.hour),
-  }));
+        : cards.primary;
+    return {
+      userId,
+      cardId: card.id,
+      counterparty: movement.counterparty,
+      description: DESCRIPTION[movement.type],
+      type: movement.type,
+      amount: movement.amount,
+      // A movement is always in its card's currency.
+      currency: card.currency,
+      status: movement.pending ? ("PENDING" as const) : ("COMPLETED" as const),
+      reference: `${referencePrefix}${String(index + 1).padStart(6, "0")}`,
+      occurredAt: dateDaysAgo(movement.daysAgo, movement.hour),
+    };
+  });
 }
 
 async function main() {
@@ -383,6 +391,7 @@ async function main() {
       },
     });
 
+    // The peso account: Argentine banks pair a dollar and a peso card.
     const secondary = await tx.card.create({
       data: {
         userId: demo.id,
@@ -391,8 +400,8 @@ async function main() {
         holderName: "Soy Granate",
         expMonth: 11,
         expYear: 2028,
-        balance: "312.40",
-        currency: "USD",
+        balance: "312400.50",
+        currency: "ARS",
         isPrimary: false,
       },
     });
@@ -411,19 +420,29 @@ async function main() {
       },
     });
 
+    // So a peso transfer to the second user has a peso card to land on (no FX).
+    const secondPesos = await tx.card.create({
+      data: {
+        userId: second.id,
+        brand: "MASTERCARD",
+        last4: "1915",
+        holderName: "Hincha Granate",
+        expMonth: 6,
+        expYear: 2030,
+        balance: "185000.00",
+        currency: "ARS",
+        isPrimary: false,
+      },
+    });
+
     const demoMovements = await tx.movement.createMany({
-      data: toMovementRows(
-        demo.id,
-        MOVEMENTS,
-        { primary: primary.id, secondary: secondary.id },
-        "GB-",
-      ),
+      data: toMovementRows(demo.id, MOVEMENTS, { primary, secondary }, "GB-"),
     });
     const secondMovements = await tx.movement.createMany({
       data: toMovementRows(
         second.id,
         SECOND_USER_MOVEMENTS,
-        { primary: secondPrimary.id },
+        { primary: secondPrimary, secondary: secondPesos },
         "GB-H",
       ),
     });
@@ -478,7 +497,7 @@ async function main() {
     `Seeded 1 transfer ${DEMO_USER.alias} → ${SECOND_USER.alias} (${movementReference(DEMO_TRANSFER.code, "SENT")}).`,
   );
   console.log(
-    `Seeded ${SECOND_USER.email}: 1 card, ${counts.second} movements.`,
+    `Seeded ${SECOND_USER.email}: 2 cards, ${counts.second} movements.`,
   );
 }
 

@@ -86,7 +86,7 @@ describe("parseTransferRequest", () => {
   it.each([
     ["0", TRANSFER_MESSAGES.amountPositive],
     ["0.00", TRANSFER_MESSAGES.amountPositive],
-    ["10.555", TRANSFER_MESSAGES.amountInvalid],
+    ["10,555", TRANSFER_MESSAGES.amountInvalid],
     ["-5", TRANSFER_MESSAGES.amountInvalid],
     [(MAX_TRANSFER_CENTS + 1) / 100, TRANSFER_MESSAGES.amountTooLarge],
   ])("rejects the amount %j", (amount, message) => {

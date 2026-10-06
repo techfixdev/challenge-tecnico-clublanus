@@ -2,6 +2,7 @@ import {
   maskCvu,
   normalizeCvu,
 } from "@/features/account/domain/account-identifiers";
+import { formatAmount } from "@/shared/lib/format";
 import { parseAmount, toCents } from "@/shared/lib/money";
 import type { ValidationDetails } from "@/shared/lib/validation";
 
@@ -83,38 +84,39 @@ export function recipientInputHint(raw: string): string {
 }
 
 /**
- * Instant feedback for the amount: format and limits (the server's rules), then the
- * chosen card's balance, so an impossible transfer never reaches the confirm step.
+ * Instant feedback for the amount: format and the chosen card's currency cap (the
+ * server's rules), then that card's balance, so an impossible transfer never reaches the
+ * confirm step.
  */
 export function amountInputError(
   raw: string,
-  availableBalance?: string,
+  card?: { balance: string; currency: string },
 ): string | null {
-  const parsed = checkTransferAmount(raw);
+  const parsed = checkTransferAmount(raw, card?.currency);
   if (!parsed.ok) return parsed.message;
-  if (
-    availableBalance !== undefined &&
-    parsed.cents > toCents(availableBalance)
-  ) {
+  if (card !== undefined && parsed.cents > toCents(card.balance)) {
     return TRANSFER_FAILURE_MESSAGE.insufficient_funds;
   }
   return null;
 }
 
 /**
- * The amount as the app writes it, once the field is left: "12,3" → "12.30", like the
- * review and the receipt show it. A whole amount stays as typed ("12"), and so does text
- * the field flags as invalid, so the user can still see and fix what they wrote.
+ * The amount as the app writes it, once the field is left: "1234,5" → "1.234,50", like
+ * the review and the receipt show it. A whole amount stays as typed ("12"), and so does
+ * text the field flags as invalid, so the user can still see and fix what they wrote.
  */
 export function normalizeAmountInput(raw: string): string {
   if (!/[.,]/.test(raw)) return raw;
-  return parseAmount(raw)?.amount ?? raw;
+  const parsed = parseAmount(raw);
+  return parsed ? formatAmount(parsed.amount, { fractionDigits: 2 }) : raw;
 }
 
 const FAILURE_STEP: Record<TransferFailureReason, TransferStep> = {
   recipient_not_found: "recipient",
   self_transfer: "recipient",
-  currency_mismatch: "recipient",
+  // The source card sets the currency: picking another card can fix both.
+  currency_mismatch: "amount",
+  amount_over_limit: "amount",
   insufficient_funds: "amount",
   card_not_found: "amount",
   idempotency_conflict: "review",

@@ -4,9 +4,10 @@ import { useState, type FormEvent, type Ref } from "react";
 
 import { CARD_BRAND_LABEL, type Card } from "@/features/account/domain/card";
 import { CardBrandLogo } from "@/features/account/ui/CardBrandLogo";
-import { formatMoney } from "@/shared/lib/format";
+import { currencySymbol } from "@/shared/lib/currency";
 import { parseAmount } from "@/shared/lib/money";
 import { Button } from "@/shared/ui/Button";
+import { Money } from "@/shared/ui/Money";
 
 import {
   amountInputError,
@@ -39,9 +40,11 @@ function sanitizeAmount(raw: string): string {
 }
 
 /**
- * Step 2: how much, from which card, and an optional reason. The amount accepts "12,30"
- * and "12.30"; it is checked against the chosen card's balance while typing, so
- * "Continuar" is only enabled for a transfer that can go through.
+ * Step 2: how much, from which card, and an optional reason. The amount is in the chosen
+ * card's currency (its symbol leads the field) and accepts the Argentine "1.234,56" as
+ * well as "12,30" and "12.30" (see `parseAmount`); it is checked against that card's
+ * balance and currency cap while typing, so "Continuar" is only enabled for a transfer
+ * that can go through.
  */
 export function AmountStep({
   headingRef,
@@ -74,7 +77,8 @@ export function AmountStep({
 }) {
   const [showErrors, setShowErrors] = useState(amount !== "");
   const card = cards.find((candidate) => candidate.id === cardId) ?? cards[0];
-  const amountError = amountInputError(amount, card?.balance);
+  const amountError = amountInputError(amount, card);
+  const currency = card?.currency ?? "USD";
   // A complete amount that cannot go through (balance, limit) is flagged while typing;
   // a half-typed one ("12,") waits until the field is left.
   const complete = parseAmount(amount) !== null;
@@ -112,15 +116,19 @@ export function AmountStep({
 
       <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col">
         <label htmlFor={AMOUNT_ID} className="sr-only">
-          Monto en {card?.currency ?? "USD"}
+          Monto en {currency}
         </label>
         <div className="flex items-baseline justify-center gap-1">
-          <span aria-hidden="true" className="text-3xl font-medium text-muted">
-            $
+          <span
+            aria-hidden="true"
+            data-testid="amount-currency"
+            className="text-3xl font-medium text-muted"
+          >
+            {currencySymbol(currency)}
           </span>
           {/* The input sits on an invisible copy of its text, so its width follows the
-              digits and "$" stays right next to the number, centered as a whole. */}
-          <span className="inline-grid max-w-[calc(100%-2rem)] text-5xl font-semibold tabular-nums">
+              digits and the symbol stays right next to the number, centered as a whole. */}
+          <span className="inline-grid max-w-[calc(100%-4.5rem)] text-5xl font-semibold tabular-nums">
             <span
               aria-hidden="true"
               className="invisible col-start-1 row-start-1 overflow-hidden whitespace-pre"
@@ -136,7 +144,7 @@ export function AmountStep({
               }
               onBlur={() => {
                 setShowErrors(true);
-                // "12,3" → "12.30", as the review and the receipt write it.
+                // "1234,5" → "1.234,50", as the review and the receipt write it.
                 const normalized = normalizeAmountInput(amount);
                 if (normalized !== amount) onAmountChange(normalized);
               }}
@@ -161,7 +169,7 @@ export function AmountStep({
                 <>
                   Disponible:{" "}
                   <span className="font-medium text-foreground tabular-nums">
-                    {formatMoney(card.balance, card.currency)}
+                    <Money value={card.balance} currency={card.currency} />
                   </span>
                 </>
               ) : null
@@ -204,7 +212,10 @@ export function AmountStep({
                     <span className="text-xs text-muted">
                       Disponible{" "}
                       <span className="tabular-nums">
-                        {formatMoney(option.balance, option.currency)}
+                        <Money
+                          value={option.balance}
+                          currency={option.currency}
+                        />
                       </span>
                     </span>
                   </span>

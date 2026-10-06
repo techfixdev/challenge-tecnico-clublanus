@@ -6,7 +6,7 @@ import type { ReactNode, Ref } from "react";
 
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
-import { formatMoney } from "@/shared/lib/format";
+import { Money } from "@/shared/ui/Money";
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
@@ -81,7 +81,7 @@ export function TransferSuccess({
           Le enviaste a {receipt.recipient.fullName}
         </p>
         <p className="mt-4 text-4xl font-semibold text-foreground tabular-nums">
-          {formatMoney(receipt.amount, receipt.currency)}
+          <Money value={receipt.amount} currency={receipt.currency} />
         </p>
       </div>
 
@@ -112,7 +112,8 @@ export function TransferSuccess({
               {sourceCard.last4}
             </span>
             <span className="block text-xs font-normal text-muted">
-              Saldo: {formatMoney(sourceCard.balance, receipt.currency)}
+              Saldo:{" "}
+              <Money value={sourceCard.balance} currency={receipt.currency} />
             </span>
           </ReceiptRow>
         ) : null}

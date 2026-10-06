@@ -70,6 +70,27 @@ async function createAccount(
   return { userId: user.id, alias, cvu, cardId: user.cards[0].id };
 }
 
+/** A second, non-primary card for the account, e.g. a peso one. */
+async function addCard(
+  account: Account,
+  { currency, balance }: { currency: string; balance: string },
+): Promise<string> {
+  const card = await db.card.create({
+    data: {
+      userId: account.userId,
+      brand: "VISA",
+      last4: "5678",
+      holderName: "Integration",
+      expMonth: 1,
+      expYear: 2031,
+      balance,
+      currency,
+      isPrimary: false,
+    },
+  });
+  return card.id;
+}
+
 async function balanceOf(cardId: string): Promise<string> {
   const card = await db.card.findUniqueOrThrow({ where: { id: cardId } });
   return card.balance.toFixed(2);
@@ -91,6 +112,118 @@ afterAll(async () => {
 });
 
 describe("prismaTransferRepository (PostgreSQL)", () => {
+  describe("currencies (no FX: money lands in the source card's currency)", () => {
+    it("credits a peso transfer to the recipient's peso card, not the primary dollar one", async () => {
+      const sender = await createAccount("Sender", "10.00");
+      const senderPesos = await addCard(sender, {
+        currency: "ARS",
+        balance: "312400.50",
+      });
+      const recipient = await createAccount("Recipient", "650.00");
+      const recipientPesos = await addCard(recipient, {
+        currency: "ARS",
+        balance: "185000.00",
+      });
+
+      const result = await send(sender, {
+        recipient: recipient.alias,
+        amount: "12.400,50",
+        cardId: senderPesos,
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        receipt: {
+          amount: "12400.50",
+          currency: "ARS",
+          sourceCard: { id: senderPesos, balance: "300000.00" },
+        },
+      });
+      expect(await balanceOf(senderPesos)).toBe("300000.00");
+      expect(await balanceOf(recipientPesos)).toBe("197400.50");
+      // Neither dollar card moved.
+      expect(await balanceOf(sender.cardId)).toBe("10.00");
+      expect(await balanceOf(recipient.cardId)).toBe("650.00");
+
+      const transferId = result.ok ? result.receipt.id : "";
+      const transfer = await db.transfer.findUniqueOrThrow({
+        where: { id: transferId },
+        include: { movements: true },
+      });
+      expect(transfer).toMatchObject({
+        currency: "ARS",
+        sourceCardId: senderPesos,
+        destinationCardId: recipientPesos,
+      });
+      expect(
+        transfer.movements.map((m) => [m.type, m.cardId, m.currency]).sort(),
+      ).toEqual([
+        ["RECEIVED", recipientPesos, "ARS"],
+        ["SENT", senderPesos, "ARS"],
+      ]);
+    });
+
+    it("keeps a dollar transfer on the dollar cards when the recipient has both", async () => {
+      const sender = await createAccount("Sender", "100.00");
+      const recipient = await createAccount("Recipient", "1.00");
+      const recipientPesos = await addCard(recipient, {
+        currency: "ARS",
+        balance: "500.00",
+      });
+
+      const result = await send(sender, {
+        recipient: recipient.alias,
+        amount: "25",
+      });
+
+      expect(result).toMatchObject({ ok: true, receipt: { currency: "USD" } });
+      expect(await balanceOf(recipient.cardId)).toBe("26.00");
+      expect(await balanceOf(recipientPesos)).toBe("500.00");
+    });
+
+    it("refuses pesos for a recipient with no peso card, moving nothing", async () => {
+      const sender = await createAccount("Sender", "10.00");
+      const senderPesos = await addCard(sender, {
+        currency: "ARS",
+        balance: "1000.00",
+      });
+      const recipient = await createAccount("Recipient", "1.00");
+
+      await expect(
+        send(sender, {
+          recipient: recipient.alias,
+          amount: "100",
+          cardId: senderPesos,
+        }),
+      ).resolves.toEqual({ ok: false, reason: "currency_mismatch" });
+      expect(await balanceOf(senderPesos)).toBe("1000.00");
+      expect(await balanceOf(recipient.cardId)).toBe("1.00");
+    });
+
+    it("applies the source currency's cap: over US$ 100.000 is refused, the same in pesos is not", async () => {
+      const sender = await createAccount("Sender", "200000.00");
+      const senderPesos = await addCard(sender, {
+        currency: "ARS",
+        balance: "200000.00",
+      });
+      const recipient = await createAccount("Recipient", "0.00");
+      await addCard(recipient, { currency: "ARS", balance: "0.00" });
+
+      await expect(
+        send(sender, { recipient: recipient.alias, amount: "100.000,01" }),
+      ).resolves.toEqual({ ok: false, reason: "amount_over_limit" });
+      expect(await balanceOf(sender.cardId)).toBe("200000.00");
+
+      await expect(
+        send(sender, {
+          recipient: recipient.alias,
+          amount: "100.000,01",
+          cardId: senderPesos,
+        }),
+      ).resolves.toMatchObject({ ok: true });
+    });
+  });
+
   it("moves the money and records both movements, linked to the transfer", async () => {
     const sender = await createAccount("Sender", "100.00");
     const recipient = await createAccount("Recipient", "5.00");
