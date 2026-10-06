@@ -43,7 +43,7 @@ describe("MovementSearch", () => {
     // `placeholder:` variant, which does not trigger the zoom) may be smaller. The real
     // computed size is checked in the browser by e2e/movements.spec.ts.
     const sizeUtilities = [...screen.getByRole("searchbox").classList].filter(
-      (name) => /^text-(xs|sm|base|lg|\[)/.test(name),
+      (name) => /^text-(xs|sm|base|lg|\d*xl|\[)/.test(name),
     );
     expect(sizeUtilities).toEqual(["text-base"]);
   });

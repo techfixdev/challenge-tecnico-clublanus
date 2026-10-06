@@ -33,11 +33,16 @@ function renderCard({ initialHidden = false } = {}) {
 }
 
 beforeEach(() => {
-  stubReducedMotion(false);
+  // These tests are about masking, not motion: without the count-up the visible amount
+  // is final from the first render, so assertions on it do not depend on frame timing.
+  // The count-up itself is covered by BalanceAmount.test.tsx.
+  stubReducedMotion(true);
   clearPreferenceCookie();
 });
 
 afterEach(() => {
+  // Restored here, not at the end of a test, so a failing assertion cannot leak a spy.
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   clearPreferenceCookie();
 });
@@ -68,7 +73,8 @@ describe("hide / show balance", () => {
 
     await user.click(screen.getByRole("button", { name: "Ocultar saldo" }));
     expect(screen.queryByText("••••••")).not.toBeInTheDocument();
-    expect(screen.getByText("978.85")).toBeInTheDocument();
+    // Both the visible amount and the screen-reader text show the real balance again.
+    expect(screen.getAllByText("978.85")).toHaveLength(2);
   });
 
   it("remembers the choice in a cookie the server reads on the next visit", async () => {
@@ -101,6 +107,5 @@ describe("hide / show balance", () => {
     await user.click(screen.getByRole("button", { name: "Ocultar saldo" }));
 
     expect(screen.getAllByText("••••••")).toHaveLength(2);
-    vi.restoreAllMocks();
   });
 });

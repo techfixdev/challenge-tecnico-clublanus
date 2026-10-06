@@ -42,18 +42,66 @@ test("hides every balance, and the choice survives a reload", async ({
   await expect(primaryCard(page)).toContainText("978.85");
 });
 
+/**
+ * Records every value the primary balance's visible text takes, from the very first
+ * frame (installed before any page script runs). It proves what was actually painted,
+ * instead of sampling the value once and hoping to catch an intermediate frame.
+ */
+async function recordBalanceFrames(page: Page) {
+  await page.addInitScript(() => {
+    const frames: string[] = [];
+    Object.assign(window, { balanceFrames: frames });
+    new MutationObserver(() => {
+      for (const amount of document.querySelectorAll(
+        '[data-testid="balance-amount"]',
+      )) {
+        if (amount.querySelector(".sr-only")?.textContent !== "978.85")
+          continue;
+        const shown = amount.querySelector("[aria-hidden]")?.textContent ?? "";
+        if (frames.at(-1) !== shown) frames.push(shown);
+      }
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+  });
+  return async () => {
+    // Wait for the count-up (if any) to land on the final value, then read the history.
+    await expect(
+      primaryCard(page).getByTestId("balance-amount").locator("[aria-hidden]"),
+    ).toHaveText("978.85");
+    return page.evaluate(
+      () => (window as unknown as { balanceFrames: string[] }).balanceFrames,
+    );
+  };
+}
+
+test.describe("with motion allowed", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("the balance counts up to its final value", async ({ page }) => {
+    const readFrames = await recordBalanceFrames(page);
+    await login(page);
+
+    const frames = await readFrames();
+    // The recorder sees the intermediate values, so the reduced-motion case below
+    // would catch a count-up too.
+    expect(frames.length).toBeGreaterThan(2);
+    expect(frames[0]).not.toBe("978.85");
+    expect(frames.at(-1)).toBe("978.85");
+  });
+});
+
 test.describe("with prefers-reduced-motion: reduce", () => {
   test.use({ reducedMotion: "reduce" });
 
   test("the balance appears final at once, without counting up", async ({
     page,
   }) => {
+    const readFrames = await recordBalanceFrames(page);
     await login(page);
-    await expect(primaryCard(page)).toBeVisible();
 
-    // Checked right as the card appears: a count-up would still be near 0.00 here.
-    await expect(
-      primaryCard(page).getByTestId("balance-amount").locator("[aria-hidden]"),
-    ).toHaveText("978.85", { timeout: 50 });
+    expect(await readFrames()).toEqual(["978.85"]);
   });
 });
