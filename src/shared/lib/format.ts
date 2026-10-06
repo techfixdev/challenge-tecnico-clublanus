@@ -46,10 +46,16 @@ export function formatMoney(value: MoneyInput, currency = "USD"): string {
   }).format(amount);
 }
 
-/** Formats an amount without currency symbol, e.g. `978.85` (used next to a currency badge). */
-export function formatAmount(value: MoneyInput): string {
+/**
+ * Formats an amount without currency symbol, e.g. `978.85` (used next to a currency badge).
+ * `fractionDigits` forces the decimals, e.g. to keep an animated number's width stable.
+ */
+export function formatAmount(
+  value: MoneyInput,
+  options: { fractionDigits?: 0 | 2 } = {},
+): string {
   const amount = toFiniteNumber(value);
-  const digits = fractionDigits(amount);
+  const digits = options.fractionDigits ?? fractionDigits(amount);
   return new Intl.NumberFormat(LOCALE, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

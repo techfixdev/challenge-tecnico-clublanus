@@ -44,3 +44,11 @@ describe("formatAmount", () => {
     expect(formatAmount(1000)).toBe("1,000");
   });
 });
+
+describe("formatAmount with fixed fraction digits", () => {
+  it("can force the decimals, so a value keeps its width while it changes", () => {
+    expect(formatAmount(512.3, { fractionDigits: 2 })).toBe("512.30");
+    expect(formatAmount(1000, { fractionDigits: 2 })).toBe("1,000.00");
+    expect(formatAmount(978.854, { fractionDigits: 0 })).toBe("979");
+  });
+});

@@ -1,11 +1,10 @@
-import { formatAmount } from "@/shared/lib/format";
-
 import {
   describeCard,
   formatCardExpiry,
   type Card,
   type CardBrand,
 } from "../domain/card";
+import { BalanceAmount } from "./BalanceAmount";
 import { CardBrandLogo } from "./CardBrandLogo";
 
 /** Granate for the Mastercard (as in the design); the peeking Visa card is a soft pink. */
@@ -32,9 +31,7 @@ export function PaymentCard({ card }: { card: Card }) {
             <span className="rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#6b4300] shadow-sm">
               USD
             </span>
-            <span className="text-[26px] leading-none font-medium tabular-nums">
-              {formatAmount(card.balance)}
-            </span>
+            <BalanceAmount balance={card.balance} />
           </p>
         </div>
         <CardBrandLogo brand={card.brand} />
