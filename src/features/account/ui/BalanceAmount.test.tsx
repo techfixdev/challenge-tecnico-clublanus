@@ -3,79 +3,82 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BalanceAmount } from "./BalanceAmount";
-import { COUNT_UP_MS } from "./count-up";
+import { stubReducedMotion } from "@/test/reduced-motion";
 
-function stubReducedMotion(reduce: boolean) {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn((query: string) => ({
-      matches: reduce && query === "(prefers-reduced-motion: reduce)",
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
+import { BalanceAmount } from "./BalanceAmount";
+
+/** The 0–9 strips of the odometer, in reading order. */
+function strips(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      "[data-testid=balance-amount] [data-digit]",
+    ),
   );
 }
 
-/** Visible (animated) digits: hidden from screen readers. */
-function visibleAmount(container: HTMLElement) {
-  return container.querySelector(
-    '[data-testid="balance-amount"] [aria-hidden="true"]',
-  )?.textContent;
+/** Each strip's resting offset, e.g. "-90%" for a 9. */
+function offsets(container: HTMLElement) {
+  return strips(container).map(
+    (strip) => strip.style.transform.match(/translateY\((.*)\)/)?.[1] ?? "0%",
+  );
 }
+
+const FINAL_978_85 = ["-90%", "-70%", "-80%", "-80%", "-50%"];
 
 beforeEach(() => {
   stubReducedMotion(false);
 });
 
 afterEach(() => {
-  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
-describe("BalanceAmount count-up", () => {
-  it("counts up from 0 to the exact balance when it mounts on the client", () => {
-    vi.useFakeTimers({
-      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"],
-    });
+describe("BalanceAmount odometer", () => {
+  it("has one rolling column per digit, aiming at the balance's digits", () => {
     const { container } = render(<BalanceAmount balance="978.85" />);
 
-    expect(visibleAmount(container)).toBe("0.00");
-    act(() => {
-      vi.advanceTimersByTime(COUNT_UP_MS / 2);
-    });
-    expect(Number(visibleAmount(container))).toBeGreaterThan(0);
-    act(() => {
-      vi.advanceTimersByTime(COUNT_UP_MS);
-    });
-    expect(visibleAmount(container)).toBe("978.85");
+    expect(strips(container).map((strip) => strip.dataset.digit)).toEqual([
+      "9",
+      "7",
+      "8",
+      "8",
+      "5",
+    ]);
   });
 
-  it("gives screen readers only the final value", () => {
+  it("starts rolling from 0 when it mounts on the client", () => {
     const { container } = render(<BalanceAmount balance="978.85" />);
 
-    expect(visibleAmount(container)).toBe("0.00");
+    expect(offsets(container)).toEqual(["0%", "0%", "0%", "0%", "0%"]);
+  });
+
+  it("gives screen readers only the final value, never the digit strips", () => {
+    const { container } = render(<BalanceAmount balance="978.85" />);
+
     expect(screen.getByText("978.85")).toHaveClass("sr-only");
+    for (const strip of strips(container))
+      expect(strip.closest("[aria-hidden=true]")).not.toBeNull();
   });
 
-  it("shows the final value at once under prefers-reduced-motion", () => {
+  it("shows the final digits at once under prefers-reduced-motion", () => {
     stubReducedMotion(true);
     const { container } = render(<BalanceAmount balance="978.85" />);
 
-    expect(visibleAmount(container)).toBe("978.85");
+    expect(offsets(container)).toEqual(FINAL_978_85);
   });
 
   it("does not replay over a server-rendered balance while hydrating (no 978.85 → 0 flash)", async () => {
     const host = document.createElement("div");
     host.innerHTML = renderToString(<BalanceAmount balance="978.85" />);
     document.body.append(host);
+    // The server HTML already has every strip in its final place.
+    expect(offsets(host)).toEqual(FINAL_978_85);
 
     await act(async () => {
       hydrateRoot(host, <BalanceAmount balance="978.85" />);
     });
 
-    expect(visibleAmount(host)).toBe("978.85");
+    expect(offsets(host)).toEqual(FINAL_978_85);
     host.remove();
   });
 });

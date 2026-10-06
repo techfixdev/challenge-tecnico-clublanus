@@ -2,19 +2,22 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { stubReducedMotion } from "@/test/reduced-motion";
+
 import { BALANCE_HIDDEN_COOKIE } from "../domain/balance-visibility";
 import { BalanceAmount } from "./BalanceAmount";
 import { BalanceToggle, BalanceVisibilityProvider } from "./BalanceVisibility";
 
-function stubReducedMotion(reduce: boolean) {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn((query: string) => ({
-      matches: reduce && query === "(prefers-reduced-motion: reduce)",
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
+/** What each amount shows: its mask, or its digits ("shown" layer of the morph). */
+function visibleLayers(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll('[data-testid="balance-amount"]'),
+    (amount) =>
+      amount.querySelector('[data-balance-mask][data-state="shown"]')
+        ?.textContent ??
+      (amount.querySelector('[data-odometer][data-state="shown"]')
+        ? "digits"
+        : "nothing"),
   );
 }
 
@@ -33,9 +36,9 @@ function renderCard({ initialHidden = false } = {}) {
 }
 
 beforeEach(() => {
-  // These tests are about masking, not motion: without the count-up the visible amount
-  // is final from the first render, so assertions on it do not depend on frame timing.
-  // The count-up itself is covered by BalanceAmount.test.tsx.
+  // These tests are about masking, not motion: without the odometer roll the digits are
+  // final from the first render, so assertions do not depend on frame timing.
+  // The roll itself is covered by BalanceAmount.test.tsx.
   stubReducedMotion(true);
   clearPreferenceCookie();
 });
@@ -66,15 +69,21 @@ describe("hide / show balance", () => {
 
     await user.click(screen.getByRole("button", { name: "Ocultar saldo" }));
 
-    expect(screen.getAllByText("••••••")).toHaveLength(2);
+    expect(visibleLayers(container)).toEqual(["••••••", "••••••"]);
     expect(screen.getAllByText("Saldo oculto")).toHaveLength(2);
     expect(container).not.toHaveTextContent("978.85");
     expect(container).not.toHaveTextContent("250");
+    // The digit strips roll back to 0, so the hidden markup does not spell the balance.
+    expect(
+      Array.from(container.querySelectorAll("[data-digit]"), (strip) =>
+        strip.getAttribute("data-digit"),
+      ),
+    ).toEqual(Array(8).fill("0"));
 
     await user.click(screen.getByRole("button", { name: "Ocultar saldo" }));
-    expect(screen.queryByText("••••••")).not.toBeInTheDocument();
-    // Both the visible amount and the screen-reader text show the real balance again.
-    expect(screen.getAllByText("978.85")).toHaveLength(2);
+    // The mask stays mounted (faded out) so it can morph; the digits are the shown layer.
+    expect(visibleLayers(container)).toEqual(["digits", "digits"]);
+    expect(screen.getByText("978.85")).toHaveClass("sr-only");
   });
 
   it("remembers the choice in a cookie the server reads on the next visit", async () => {
@@ -89,12 +98,12 @@ describe("hide / show balance", () => {
   });
 
   it("starts hidden when the server says the user chose so", () => {
-    renderCard({ initialHidden: true });
+    const { container } = renderCard({ initialHidden: true });
 
     expect(
       screen.getByRole("button", { name: "Ocultar saldo" }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getAllByText("••••••")).toHaveLength(2);
+    expect(visibleLayers(container)).toEqual(["••••••", "••••••"]);
   });
 
   it("still toggles when cookies cannot be written", async () => {
@@ -102,10 +111,10 @@ describe("hide / show balance", () => {
     vi.spyOn(document, "cookie", "set").mockImplementation(() => {
       throw new DOMException("Blocked", "SecurityError");
     });
-    renderCard();
+    const { container } = renderCard();
 
     await user.click(screen.getByRole("button", { name: "Ocultar saldo" }));
 
-    expect(screen.getAllByText("••••••")).toHaveLength(2);
+    expect(visibleLayers(container)).toEqual(["••••••", "••••••"]);
   });
 });
