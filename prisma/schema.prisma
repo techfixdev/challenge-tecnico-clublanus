@@ -48,6 +48,11 @@ model Card {
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   brand        CardBrand
   last4        String     @db.VarChar(4)
+  /// Full card number (PAN) of a fictitious demo card: Luhn-valid, ending in `last4`
+  /// (CHECK constraint in the migration). Only sent to the client on an explicit reveal.
+  /// A real issuer keeps PANs encrypted or tokenized (PCI DSS req. 3), and never stores
+  /// the CVV: the demo derives a display-only CVV on the server instead.
+  pan          String?    @db.Char(16)
   holderName   String
   expMonth     Int
   expYear      Int

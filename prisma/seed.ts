@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
 import { buildCvu } from "../src/features/account/domain/account-identifiers";
+import { buildDemoPan } from "../src/features/account/domain/card-number";
 import { movementReference } from "../src/features/transfers/domain/transfer-reference";
 import {
   PrismaClient,
@@ -393,6 +394,8 @@ async function main() {
         userId: demo.id,
         brand: "MASTERCARD",
         last4: "1234",
+        // Fictitious, Luhn-valid and stable across re-seeds (seeded by the owner's email).
+        pan: buildDemoPan("MASTERCARD", "1234", DEMO_USER.email),
         holderName: "Soy Granate",
         expMonth: 2,
         expYear: 2030,
@@ -408,6 +411,7 @@ async function main() {
         userId: demo.id,
         brand: "VISA",
         last4: "5678",
+        pan: buildDemoPan("VISA", "5678", DEMO_USER.email),
         holderName: "Soy Granate",
         expMonth: 11,
         expYear: 2028,
@@ -422,6 +426,7 @@ async function main() {
         userId: second.id,
         brand: "VISA",
         last4: "1910",
+        pan: buildDemoPan("VISA", "1910", SECOND_USER.email),
         holderName: "Hincha Granate",
         expMonth: 1,
         expYear: 2031,
@@ -437,6 +442,7 @@ async function main() {
         userId: second.id,
         brand: "MASTERCARD",
         last4: "1915",
+        pan: buildDemoPan("MASTERCARD", "1915", SECOND_USER.email),
         holderName: "Hincha Granate",
         expMonth: 6,
         expYear: 2030,
