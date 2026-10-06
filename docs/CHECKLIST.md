@@ -63,7 +63,10 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Pantalla Recibir con alias y CVU para copiar y compartir, con alternativa para http (`79a1cfa`).
 - [x] Ninguna pantalla se desborda ni corta texto entre 240 y 1024 px (zoom de accesibilidad incluido), con un test e2e que lo vigila (`8240624`, `0dd6d7b`).
 - [x] Rendimiento medido en un celular de gama media emulado y optimizado: Transferir pasa de 2.8 s a 0.95 s en mostrarse, zod deja de viajar al navegador y Enviar, Recibir y Movimientos abren sin esqueleto (de 1.15 s a 0.29 s). Commits `f95aa01` a `1c1a392`.
-- [ ] ⏳ Sistema de luz y transiciones de expansión.
+- [x] Sistema de luz (una sola fuente, sombras teñidas, reflejo superior) y Enviar/Recibir que se expanden hasta su pantalla (`0ada6f9`, `270281c`, `94b8b6e`).
+- [x] Textos secundarios con contraste WCAG AA (`b1fc44f`).
+- [x] Los tests automáticos usan su propia base y nunca tocan los saldos de prueba manual (`3ec82d3`, `25a3dcb`).
+- [ ] ⏳ Tarjeta en pesos y formato argentino en todos los montos.
 - [ ] Tarjeta que gira al tocarla; el ojito revela saldo, número y CVU (ocultos por defecto).
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
 - [ ] Lista de pantallas y estados para capturar en Figma (requiere conectar tu cuenta de Figma).
