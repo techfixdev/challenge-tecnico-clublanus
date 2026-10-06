@@ -18,7 +18,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./vitest.setup.ts"],
+    setupFiles: ["./vitest.setup.ts", "./src/test/react-view-transition.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["src/**/*.integration.test.ts"],
     // Same time zone as the production servers (Vercel runs in UTC), on every machine.

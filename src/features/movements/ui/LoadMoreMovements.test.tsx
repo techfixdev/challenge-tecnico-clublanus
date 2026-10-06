@@ -80,6 +80,26 @@ describe("LoadMoreMovements", () => {
     ).toBeInTheDocument();
   });
 
+  it("staggers only the rows of the newest page, starting from the first of them", async () => {
+    const user = userEvent.setup();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(pageOf(2, "cursor-2")))
+      .mockResolvedValueOnce(jsonResponse(pageOf(2)));
+    renderLoadMore();
+
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+    await screen.findAllByRole("link");
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+    await waitFor(() =>
+      expect(screen.getAllByRole("listitem")).toHaveLength(4),
+    );
+
+    const steps = screen
+      .getAllByRole("listitem")
+      .map((item) => item.style.getPropertyValue("--row-enter-step"));
+    expect(steps.slice(2)).toEqual(["0", "1"]);
+  });
+
   it("hides the button after the last page and uses the singular", async () => {
     const user = userEvent.setup();
     fetchMock.mockResolvedValue(jsonResponse(pageOf(1)));

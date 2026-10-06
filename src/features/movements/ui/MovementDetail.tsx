@@ -10,6 +10,7 @@ import {
   formatSignedAmount,
 } from "../domain/movement-display";
 import { BackLink } from "./BackLink";
+import { MovementTile } from "./MovementTile";
 import { MOVEMENT_TYPE_STYLE, MovementTypeIcon } from "./MovementTypeIcon";
 import { StatusBadge } from "./StatusBadge";
 
@@ -41,7 +42,9 @@ export function MovementDetail({
       <BackLink href={backHref} />
 
       <div className="mt-8 flex flex-col items-center text-center">
-        <MovementTypeIcon type={movement.type} size="lg" />
+        <MovementTile id={movement.id}>
+          <MovementTypeIcon type={movement.type} size="lg" />
+        </MovementTile>
         <h1 className="mt-5 text-xl font-semibold text-foreground">
           {movement.counterparty}
         </h1>

@@ -80,6 +80,7 @@ export function LoadMoreMovements({
 }: LoadMoreMovementsProps) {
   const router = useRouter();
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [batchStart, setBatchStart] = useState(0);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [announcement, setAnnouncement] = useState("");
@@ -110,6 +111,7 @@ export function LoadMoreMovements({
         controller.signal,
       );
       const next = page.data.map(parseMovementDto);
+      setBatchStart(movements.length);
       setMovements((current) => [...current, ...next]);
       setCursor(page.nextCursor);
       setAnnouncement(loadedAnnouncement(next.length));
@@ -137,6 +139,7 @@ export function LoadMoreMovements({
         <MovementList
           movements={movements}
           detailSearch={toMovementSearchParams(filters).toString()}
+          enterFrom={batchStart}
         />
       )}
       {/* One polite live region: visible for errors and the redirect, screen-reader-only for progress. */}

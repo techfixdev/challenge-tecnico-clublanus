@@ -4,7 +4,7 @@ import { ROUTES } from "@/shared/lib/routes";
 
 import type { Movement } from "../domain/movement";
 import { DETAIL_FROM_HOME } from "../domain/movement-filters";
-import { movementDetailHref } from "./MovementList";
+import { movementDetailHref, rowEnterStyle } from "./MovementList";
 import { MovementRow } from "./MovementRow";
 
 /** "Últimos movimientos" on Home: a flat list, as in the design, plus a link to all. */
@@ -31,8 +31,12 @@ export function LatestMovements({ movements }: { movements: Movement[] }) {
         </p>
       ) : (
         <ul className="flex flex-col gap-4">
-          {movements.map((movement) => (
-            <li key={movement.id}>
+          {movements.map((movement, index) => (
+            <li
+              key={movement.id}
+              className="row-enter"
+              style={rowEnterStyle(index)}
+            >
               <MovementRow
                 movement={movement}
                 href={movementDetailHref(movement.id, DETAIL_FROM_HOME)}
