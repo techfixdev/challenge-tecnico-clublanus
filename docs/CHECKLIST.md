@@ -66,8 +66,8 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Sistema de luz (una sola fuente, sombras teñidas, reflejo superior) y Enviar/Recibir que se expanden hasta su pantalla (`0ada6f9`, `270281c`, `94b8b6e`).
 - [x] Textos secundarios con contraste WCAG AA (`b1fc44f`).
 - [x] Los tests automáticos usan su propia base y nunca tocan los saldos de prueba manual (`3ec82d3`, `25a3dcb`).
-- [ ] ⏳ Tarjeta en pesos y formato argentino en todos los montos.
-- [ ] Tarjeta que gira al tocarla; el ojito revela saldo, número y CVU (ocultos por defecto).
+- [x] Tarjeta en pesos y formato argentino en todos los montos; la API acepta solo montos canónicos (`da809a4` a `f72883e`).
+- [ ] ⏳ Tarjeta que gira al tocarla; un ojito por tarjeta revela saldo, número y CVV (ocultos por defecto).
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
 - [ ] Lista de pantallas y estados para capturar en Figma (requiere conectar tu cuenta de Figma).
 - [ ] Revisar todo juntos y commitear (local).
