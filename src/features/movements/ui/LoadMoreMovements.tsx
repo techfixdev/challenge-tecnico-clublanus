@@ -13,12 +13,7 @@ import {
   type MovementFilters,
 } from "../domain/movement-search-params";
 import { MovementList } from "./MovementList";
-
-/**
- * The response validator (zod/mini) is loaded on the first "Cargar más", in parallel with
- * the request, so the list page itself ships no validation library.
- */
-const loadMovementDto = () => import("../domain/movement-dto");
+import { parseMovementPage } from "../domain/movement-dto";
 
 /** A hung request must not leave the button spinning forever. */
 export const LOAD_MORE_TIMEOUT_MS = 10_000;
@@ -49,11 +44,7 @@ function loadedAnnouncement(count: number): string {
 }
 
 async function fetchMovementPage(url: string, signal: AbortSignal) {
-  const [json, { parseMovementPage }] = await Promise.all([
-    fetchJson(url, signal),
-    loadMovementDto(),
-  ]);
-  return parseMovementPage(json);
+  return parseMovementPage(await fetchJson(url, signal));
 }
 
 async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {

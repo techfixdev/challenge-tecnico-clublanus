@@ -1,5 +1,5 @@
-// zod/mini: the same validation with a tree-shakable API, so the browser (which loads this
-// module on demand, for "Cargar más") downloads a few KB instead of the full zod bundle.
+// zod/mini: the same validation with a tree-shakable API, so the movements page (which
+// validates "Cargar más" responses with it) ships a few KB instead of the full zod bundle.
 import * as z from "zod/mini";
 
 import { CARD_BRANDS } from "@/features/account/domain/card";
