@@ -83,16 +83,20 @@ async function recordViewTransitions(page: Page) {
       return transition;
     }) as typeof document.startViewTransition;
   });
-  return async () => {
+  return async ({ timeout }: { timeout?: number } = {}) => {
     // `ready` resolves a frame after the navigation commits: wait until a transition
     // started and every started one has been logged, instead of a fixed sleep.
-    const handle = await page.waitForFunction(() => {
-      const log = (window as unknown as { viewTransitionLog: TransitionLog })
-        .viewTransitionLog;
-      return log.started > 0 && log.entries.length === log.started
-        ? log.entries
-        : null;
-    });
+    const handle = await page.waitForFunction(
+      () => {
+        const log = (window as unknown as { viewTransitionLog: TransitionLog })
+          .viewTransitionLog;
+        return log.started > 0 && log.entries.length === log.started
+          ? log.entries
+          : null;
+      },
+      undefined,
+      { timeout },
+    );
     return (await handle.jsonValue()) as TransitionLog["entries"];
   };
 }
@@ -107,6 +111,30 @@ async function openFirstDetail(page: Page) {
   await link.click();
   await expect(page.getByRole("link", { name: "Volver" })).toBeVisible();
   return { id, transitions: await readLog() };
+}
+
+/** Names of the movement tiles that morphed during the recorded transitions. */
+function tileMorphs(transitions: TransitionLog["entries"]) {
+  return new Set(
+    transitions
+      .flatMap(({ names }) => names)
+      .filter((name) =>
+        name.startsWith("::view-transition-group(movement-tile"),
+      ),
+  );
+}
+
+/** Leaves the detail ("Volver" or the browser's back) and returns the transitions it started. */
+async function backToList(
+  page: Page,
+  via: "link" | "history",
+  { timeout }: { timeout?: number } = {},
+) {
+  const readLog = await recordViewTransitions(page);
+  if (via === "link") await page.getByRole("link", { name: "Volver" }).click();
+  else await page.goBack();
+  await expect(movementRows(page).first()).toBeVisible();
+  return readLog({ timeout });
 }
 
 /** Computed `animation-name` of a throwaway skeleton's shimmer highlight. */
@@ -173,16 +201,54 @@ test.describe("with motion allowed", () => {
     await skipWithoutViewTransitions(page);
     const { id, transitions } = await openFirstDetail(page);
     // Only the tapped movement's tile is named, so exactly one pair morphs.
-    const morphs = transitions
-      .flatMap(({ names }) => names)
-      .filter((name) =>
-        name.startsWith("::view-transition-group(movement-tile"),
-      );
-    expect(new Set(morphs)).toEqual(
+    expect(tileMorphs(transitions)).toEqual(
       new Set([`::view-transition-group(movement-tile-${id})`]),
     );
     expect(Math.max(...transitions.map((t) => t.longestMs))).toBeGreaterThan(0);
   });
+
+  test('"Volver" morphs the tile back into its row', async ({ page }) => {
+    // The pair only forms when the list renders in the same commit as the navigation,
+    // which needs "Volver"'s prefetch, and Next prefetches only in production (`next dev`
+    // fetches on click and shows the list skeleton first). CI runs `next start`.
+    test.skip(
+      !process.env.CI,
+      "Link prefetching only runs in production; run with CI=1 (next start)",
+    );
+    await login(page);
+    await page.goto("/movimientos");
+    await expect(movementRows(page).first()).toBeVisible();
+
+    await skipWithoutViewTransitions(page);
+    const { id } = await openFirstDetail(page);
+    const transitions = await backToList(page, "link");
+    expect(tileMorphs(transitions)).toEqual(
+      new Set([`::view-transition-group(movement-tile-${id})`]),
+    );
+  });
+
+  // Known framework limitation: the browser's back button restores the list on React's
+  // blocking (sync) lane, and React only starts view transitions for transition lanes,
+  // so no transition runs at all (no `document.startViewTransition` call). Marked as an
+  // expected failure: the body still runs, and the test turns red as soon as Next/React
+  // start animating traversals, which is the signal to drop this marker.
+  test.fail(
+    "browser back morphs the tile back into its row",
+    async ({ page }) => {
+      await login(page);
+      await page.goto("/movimientos");
+      await expect(movementRows(page).first()).toBeVisible();
+
+      await skipWithoutViewTransitions(page);
+      const { id } = await openFirstDetail(page);
+      // Bounded wait: no transition starts today, and an expected failure must fail
+      // rather than hit the test timeout (Playwright reports that as "timed out").
+      const transitions = await backToList(page, "history", { timeout: 5_000 });
+      expect(tileMorphs(transitions)).toEqual(
+        new Set([`::view-transition-group(movement-tile-${id})`]),
+      );
+    },
+  );
 });
 
 test.describe("with prefers-reduced-motion: reduce", () => {
