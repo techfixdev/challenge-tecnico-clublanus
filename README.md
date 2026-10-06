@@ -48,17 +48,18 @@ Si hay firewall, abrir el puerto 3000 solo para la red local. Con `next start` n
 
 ## Scripts
 
-| Script                               | Qué hace                                                 |
-| ------------------------------------ | -------------------------------------------------------- |
-| `pnpm dev` / `build` / `start`       | Servidor de desarrollo, build de producción y servidor   |
-| `pnpm lint` / `typecheck` / `format` | ESLint, `tsc --noEmit` (con tipos de rutas), Prettier    |
-| `pnpm format:check`                  | Verifica el formato sin modificar archivos               |
-| `pnpm test` / `test:watch`           | Tests unitarios y de componentes (sin base de datos)     |
-| `pnpm test:integration`              | Tests de integración contra PostgreSQL                   |
-| `pnpm test:e2e`                      | Tests end-to-end con Playwright                          |
-| `pnpm db:up`                         | Levanta PostgreSQL con Docker Compose                    |
-| `pnpm db:migrate` / `db:deploy`      | `prisma migrate dev` / `prisma migrate deploy`           |
-| `pnpm db:seed` / `db:reset`          | Carga los datos demo / resetea la base y vuelve a cargar |
+| Script                               | Qué hace                                                   |
+| ------------------------------------ | ---------------------------------------------------------- |
+| `pnpm dev` / `build` / `start`       | Servidor de desarrollo, build de producción y servidor     |
+| `pnpm lint` / `typecheck` / `format` | ESLint, `tsc --noEmit` (con tipos de rutas), Prettier      |
+| `pnpm format:check`                  | Verifica el formato sin modificar archivos                 |
+| `pnpm test` / `test:watch`           | Tests unitarios y de componentes (sin base de datos)       |
+| `pnpm test:integration`              | Tests de integración contra PostgreSQL                     |
+| `pnpm test:e2e`                      | Tests end-to-end con Playwright                            |
+| `pnpm db:up`                         | Levanta PostgreSQL con Docker Compose                      |
+| `pnpm db:migrate` / `db:deploy`      | `prisma migrate dev` / `prisma migrate deploy`             |
+| `pnpm db:seed` / `db:reset`          | Carga los datos demo / resetea la base y vuelve a cargar   |
+| `pnpm db:test [comando]`             | Prepara la base de tests y, opcional, corre un comando ahí |
 
 ## Estructura del proyecto
 
@@ -152,7 +153,16 @@ Hay un segundo usuario demo para probar transferencias en los dos sentidos: `hin
 | Integración | `pnpm test:integration` | SQL real: transferencias (atomicidad, sin sobregiro con N transferencias en paralelo, idempotencia, sin deadlock A↔B); búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes | 40       |
 | End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones y CLS < 0.05 en Home (con y sin movimiento reducido), transferencias y ninguna pantalla con scroll lateral ni texto cortado de 180 a 1024 px, en Chromium móvil                                                  | 46       |
 
-Integración necesita la base levantada con las migraciones: crea y borra sus propios datos, así que no depende del seed. E2E necesita además el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
+**Base de datos de los tests.** Integración y e2e corren contra su propia base, `granabank_test`, en el mismo PostgreSQL: así una transferencia de un test nunca mueve los saldos demo con los que alguien está probando la app a mano. Solo hace falta `pnpm db:up`; cada corrida crea la base si no existe y aplica las migraciones (`scripts/test-database.ts`).
+
+| Comando                              | Base             | Qué prepara                                                                                                                    |
+| ------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm dev` / `start`, `pnpm db:seed` | `granabank`      | La de `DATABASE_URL` (`.env`): la de uso manual. `db:seed` y `db:reset` apuntan a esta                                         |
+| `pnpm test:integration`              | `granabank_test` | Crea y migra (sin seed: cada test crea y borra sus datos)                                                                      |
+| `pnpm test:e2e`                      | `granabank_test` | Crea, migra y carga el seed en cada corrida (`globalSetup`); el servidor de Next y los fixtures que leen la base usan esa URL  |
+| `pnpm db:test [comando]`             | `granabank_test` | Crea, migra y carga el seed; con un comando, lo corre apuntando ahí (p. ej. `pnpm db:test next start -p 3200` para mediciones) |
+
+La URL de prueba es `TEST_DATABASE_URL` si está definida y, si no, `DATABASE_URL` con `_test` agregado al nombre de la base; por seguridad, el nombre tiene que terminar en `_test`. Next no pisa una variable que ya está en el entorno con la de `.env`, así que el servidor de los e2e (`pnpm start`/`pnpm dev` lanzado por Playwright con `DATABASE_URL` de prueba) no toca la base de desarrollo. Playwright nunca reutiliza un servidor que ya escucha en el puerto (no sabría a qué base apunta): si está ocupado, falla. Como Next no permite un segundo `next dev` en la misma carpeta, localmente los e2e se corren sobre el build: `pnpm build && CI=1 E2E_PORT=3110 pnpm test:e2e`. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
 ## Accesibilidad y UX
 
@@ -161,6 +171,7 @@ Integración necesita la base levantada con las migraciones: crea y borra sus pr
 - Estados de carga (esqueletos), error con "Reintentar" y dos estados vacíos (sin movimientos / sin resultados).
 - Mobile-first; en desktop, columna centrada como un teléfono.
 - En el celular: inputs de 16px (iOS no hace zoom al enfocarlos), zoom del usuario habilitado, márgenes para el notch y la barra inferior (`viewport-fit=cover` + `env(safe-area-inset-*)`), ícono propio y color de la barra del navegador.
+- **Texto secundario más oscuro que el diseño (desvío justificado por accesibilidad):** el gris `#8A8D9B` del Figma da 3,3:1 sobre blanco y 3,2:1 sobre el fondo `#F9FAFC`, debajo del mínimo AA (4,5:1) para texto chico. `--color-muted` pasó a `#707382`, el gris más claro del mismo tono que llega a 4,5:1 sobre el fondo de página y el degradé de las superficies (`lit-surface`, su punto más oscuro) y 4,7:1 sobre blanco. Los _placeholders_ usan el mismo token (y nunca son la única etiqueta: cada campo tiene su `label`); los botones deshabilitados bajan a 70 % de opacidad, y WCAG no exige contraste en controles inactivos.
 - Limitación conocida (diseño): el violeta de suscripción del diseño (`#C76DFF`) no llega a contraste AA en texto chico; se respetó el diseño.
 
 ## Movimiento y accesibilidad
