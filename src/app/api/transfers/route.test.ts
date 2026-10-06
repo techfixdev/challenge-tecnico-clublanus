@@ -112,6 +112,38 @@ describe("POST /api/transfers", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
+  // Machine input: only canonical amounts. "12.500" is never read as 12500 here.
+  it.each(["10.555", "12.500", "1.234,56", "12,30", "1e3", " 10.55"])(
+    "refuses the non-canonical amount %j: 400 and no money moves",
+    async (amount) => {
+      const response = await post({ ...BODY, amount });
+
+      expect(response.status).toBe(400);
+      const { error } = await response.json();
+      expect(error.code).toBe("INVALID_INPUT");
+      expect(error.details.fieldErrors).toEqual({
+        amount: [TRANSFER_MESSAGES.amountInvalid],
+      });
+      expect(mocks.execute).not.toHaveBeenCalled();
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["10.55", 1055],
+    [10.55, 1055],
+    ["12500", 1250000],
+    [12500, 1250000],
+  ])("accepts the canonical amount %j", async (amount, amountCents) => {
+    const response = await post({ ...BODY, amount });
+
+    expect(response.status).toBe(201);
+    expect(mocks.execute).toHaveBeenCalledWith(
+      "user_1",
+      expect.objectContaining({ amountCents }),
+    );
+  });
+
   it("answers 400 with every invalid field, in Spanish", async () => {
     const response = await post({ recipient: "x", amount: "0" });
 

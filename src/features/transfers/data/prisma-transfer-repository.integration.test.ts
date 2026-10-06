@@ -127,7 +127,7 @@ describe("prismaTransferRepository (PostgreSQL)", () => {
 
       const result = await send(sender, {
         recipient: recipient.alias,
-        amount: "12.400,50",
+        amount: "12400.50",
         cardId: senderPesos,
       });
 
@@ -210,19 +210,36 @@ describe("prismaTransferRepository (PostgreSQL)", () => {
       await addCard(recipient, { currency: "ARS", balance: "0.00" });
 
       await expect(
-        send(sender, { recipient: recipient.alias, amount: "100.000,01" }),
+        send(sender, { recipient: recipient.alias, amount: "100000.01" }),
       ).resolves.toEqual({ ok: false, reason: "amount_over_limit" });
       expect(await balanceOf(sender.cardId)).toBe("200000.00");
 
       await expect(
         send(sender, {
           recipient: recipient.alias,
-          amount: "100.000,01",
+          amount: "100000.01",
           cardId: senderPesos,
         }),
       ).resolves.toMatchObject({ ok: true });
     });
   });
+
+  it.each(["12.500", "10.555", "1.234,56"])(
+    "refuses the non-canonical amount %j before touching any card",
+    async (amount) => {
+      const sender = await createAccount("Sender", "20000.00");
+      const recipient = await createAccount("Recipient", "1.00");
+
+      const result = await send(sender, { recipient: recipient.alias, amount });
+
+      expect(result).toMatchObject({ ok: false, reason: "invalid_input" });
+      expect(await balanceOf(sender.cardId)).toBe("20000.00");
+      expect(await balanceOf(recipient.cardId)).toBe("1.00");
+      expect(
+        await db.transfer.count({ where: { senderId: sender.userId } }),
+      ).toBe(0);
+    },
+  );
 
   it("moves the money and records both movements, linked to the transfer", async () => {
     const sender = await createAccount("Sender", "100.00");

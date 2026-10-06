@@ -42,7 +42,7 @@ function sanitizeAmount(raw: string): string {
 /**
  * Step 2: how much, from which card, and an optional reason. The amount is in the chosen
  * card's currency (its symbol leads the field) and accepts the Argentine "1.234,56" as
- * well as "12,30" and "12.30" (see `parseAmount`); it is checked against that card's
+ * well as "12,30" and "12.30" (see `checkTypedAmount`); it is checked against that card's
  * balance and currency cap while typing, so "Continuar" is only enabled for a transfer
  * that can go through.
  */

@@ -85,9 +85,10 @@ describe("submitTransfer", () => {
       formData(FIELDS),
     );
 
+    // The typed "12,30" reaches the domain as the canonical amount.
     expect(mocks.sendTransferAs).toHaveBeenCalledWith(USER.id, {
       recipient: "hincha.granate",
-      amount: "12,30",
+      amount: "12.30",
       description: undefined,
       cardId: "card_mc",
       idempotencyKey: KEY,
@@ -101,6 +102,33 @@ describe("submitTransfer", () => {
       KEY,
     );
   });
+
+  it.each([
+    ["1.234,56", "1234.56"],
+    ["312.400,50", "312400.50"],
+    ["12.500", "12500.00"],
+    ["1234.56", "1234.56"],
+    ["abc", "abc"],
+  ])(
+    "reads the typed amount %j the Argentine way and sends %j on",
+    async (typed, canonical) => {
+      mocks.sendTransferAs.mockResolvedValue({
+        ok: true,
+        receipt: RECEIPT,
+        replayed: false,
+      });
+
+      await submitTransfer(
+        INITIAL_SEND_TRANSFER_STATE,
+        formData({ ...FIELDS, amount: typed }),
+      );
+
+      expect(mocks.sendTransferAs).toHaveBeenCalledWith(
+        USER.id,
+        expect.objectContaining({ amount: canonical }),
+      );
+    },
+  );
 
   it("shows a replayed transfer as the same success (the money moved once)", async () => {
     mocks.sendTransferAs.mockResolvedValue({

@@ -14,6 +14,7 @@ import {
   type RecipientLookup,
   type SendTransferState,
 } from "../domain/transfer-form";
+import { toCanonicalAmount } from "../domain/transfer-rules";
 import { TRANSFER_MESSAGES } from "../domain/transfer-schema";
 import { sendTransferAs } from "./send-transfer";
 
@@ -64,6 +65,16 @@ function textField(formData: FormData, name: string): string | undefined {
 }
 
 /**
+ * The amount as a person typed it, turned canonical here: the send form posts it already
+ * canonical, but a Server Action is a public endpoint and keeps the human rules on the
+ * human side of the boundary.
+ */
+function canonicalAmountField(formData: FormData): string | undefined {
+  const amount = textField(formData, "amount");
+  return amount === undefined ? undefined : toCanonicalAmount(amount);
+}
+
+/**
  * Step 3: send the money. The idempotency key comes from the form; it was generated on
  * the server when the flow rendered (a LAN `http://` page has no `crypto.randomUUID`), and
  * a retry of the same attempt reuses it, so a double submit or a retry after a lost
@@ -86,7 +97,8 @@ export async function submitTransfer(
   try {
     result = await sendTransferAs(user.id, {
       recipient: textField(formData, "recipient"),
-      amount: textField(formData, "amount"),
+      // Typed the Argentine way ("1.234,56"); the domain only reads canonical amounts.
+      amount: canonicalAmountField(formData),
       description: textField(formData, "description"),
       cardId: textField(formData, "cardId"),
       idempotencyKey: textField(formData, "idempotencyKey"),

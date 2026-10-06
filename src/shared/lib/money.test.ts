@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fromCents, parseAmount, toCents } from "./money";
+import { fromCents, parseAmount, parseCanonicalAmount, toCents } from "./money";
 
 describe("toCents / fromCents", () => {
   it("round-trips fixed decimal strings exactly", () => {
@@ -108,5 +108,53 @@ describe("parseAmount", () => {
     expect(parseAmount(1e21)).toBeNull();
     expect(parseAmount(10.005)).toBeNull();
     expect(parseAmount(-1)).toBeNull();
+  });
+});
+
+describe("parseCanonicalAmount (machine input: the REST API)", () => {
+  it.each([
+    ["10.55", "10.55", 1055],
+    ["12500", "12500.00", 1250000],
+    ["0.5", "0.50", 50],
+    ["9999999999.99", "9999999999.99", 999999999999],
+  ])("reads the plain decimal %j", (input, amount, cents) => {
+    expect(parseCanonicalAmount(input)).toEqual({ amount, cents });
+  });
+
+  it("reads a JSON number through its shortest decimal form", () => {
+    expect(parseCanonicalAmount(10.55)).toEqual({
+      amount: "10.55",
+      cents: 1055,
+    });
+    expect(parseCanonicalAmount(12500)).toEqual({
+      amount: "12500.00",
+      cents: 1250000,
+    });
+  });
+
+  // Never the Argentine thousands rule: "12.500" is no 12500 for a machine.
+  it.each([
+    "10.555",
+    "12.500",
+    "1.234",
+    "1.234,56",
+    "12,30",
+    " 10.55",
+    "10.",
+    ".5",
+    "+1",
+    "-1",
+    "1e3",
+    "12345678901",
+    "",
+  ])("rejects %j", (input) => {
+    expect(parseCanonicalAmount(input)).toBeNull();
+  });
+
+  it("rejects numbers that are not plain decimals", () => {
+    expect(parseCanonicalAmount(Number.NaN)).toBeNull();
+    expect(parseCanonicalAmount(1e21)).toBeNull();
+    expect(parseCanonicalAmount(10.555)).toBeNull();
+    expect(parseCanonicalAmount(-1)).toBeNull();
   });
 });

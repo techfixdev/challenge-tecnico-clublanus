@@ -6,7 +6,7 @@ import {
 } from "@/features/account/domain/account-identifiers";
 import { isCurrency, type Currency } from "@/shared/lib/currency";
 import { formatMoney } from "@/shared/lib/format";
-import { parseAmount } from "@/shared/lib/money";
+import { parseAmount, parseCanonicalAmount } from "@/shared/lib/money";
 
 /**
  * The transfer rules as plain functions, with no validation library: the send form runs
@@ -96,16 +96,13 @@ export function checkTransferRecipient(
   return { ok: true, key: { kind: "alias", alias } };
 }
 
-/**
- * An amount as typed ("1.234,56", "12,30" or "12.30") or sent as a number: format and
- * limit. With the card's currency (the send form knows it) the cap is that currency's;
- * without it (the server's schema, before reading the card) it is the highest one.
- */
-export function checkTransferAmount(
-  raw: string | number,
+type ExactAmount = { amount: string; cents: number };
+
+/** Positive, within the currency's cap: the one place amount limits are checked. */
+function checkAmountLimits(
+  parsed: ExactAmount | null,
   currency?: string,
-): Checked<{ amount: string; cents: number }> {
-  const parsed = parseAmount(raw);
+): Checked<ExactAmount> {
   if (!parsed) return { ok: false, message: TRANSFER_MESSAGES.amountInvalid };
   if (parsed.cents === 0) {
     return { ok: false, message: TRANSFER_MESSAGES.amountPositive };
@@ -117,4 +114,37 @@ export function checkTransferAmount(
     return { ok: false, message: TRANSFER_MESSAGES.amountTooLarge };
   }
   return { ok: true, ...parsed };
+}
+
+/**
+ * A canonical amount ("1234.56" or the JSON number 1234.56): what the domain, the
+ * server's schema and the REST API accept. A dot is always the decimal point, so
+ * "12.500" is refused, never read as 12500. With the card's currency the cap is that
+ * currency's; without it (the schema, before reading the card) it is the highest one.
+ */
+export function checkTransferAmount(
+  raw: string | number,
+  currency?: string,
+): Checked<ExactAmount> {
+  return checkAmountLimits(parseCanonicalAmount(raw), currency);
+}
+
+/**
+ * An amount as a person types it in the send form ("1.234,56", "12,30" or "12.30"), with
+ * the same limits and messages as `checkTransferAmount`. Human input only: the form
+ * sends `toCanonicalAmount` of it on, so the server never applies these rules.
+ */
+export function checkTypedAmount(
+  raw: string,
+  currency?: string,
+): Checked<ExactAmount> {
+  return checkAmountLimits(parseAmount(raw), currency);
+}
+
+/**
+ * The typed amount as the canonical one the server accepts ("1.234,56" → "1234.56").
+ * Text it cannot read goes on unchanged, for the server's schema to refuse.
+ */
+export function toCanonicalAmount(raw: string): string {
+  return parseAmount(raw)?.amount ?? raw;
 }

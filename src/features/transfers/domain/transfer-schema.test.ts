@@ -24,7 +24,7 @@ describe("parseTransferRequest", () => {
   it("normalizes a valid request (alias lowercased, amount fixed, description trimmed)", () => {
     const result = parseTransferRequest({
       recipient: "  Hincha.Granate ",
-      amount: "12,5",
+      amount: "12.5",
       description: "  Entradas del sábado  ",
       idempotencyKey: KEY.toUpperCase(),
     });
@@ -87,6 +87,11 @@ describe("parseTransferRequest", () => {
     ["0", TRANSFER_MESSAGES.amountPositive],
     ["0.00", TRANSFER_MESSAGES.amountPositive],
     ["10,555", TRANSFER_MESSAGES.amountInvalid],
+    // Only canonical amounts: a dot is always the decimal point, never thousands.
+    ["10.555", TRANSFER_MESSAGES.amountInvalid],
+    ["12.500", TRANSFER_MESSAGES.amountInvalid],
+    ["1.234,56", TRANSFER_MESSAGES.amountInvalid],
+    ["12,5", TRANSFER_MESSAGES.amountInvalid],
     ["-5", TRANSFER_MESSAGES.amountInvalid],
     [(MAX_TRANSFER_CENTS + 1) / 100, TRANSFER_MESSAGES.amountTooLarge],
   ])("rejects the amount %j", (amount, message) => {

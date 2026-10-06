@@ -37,6 +37,7 @@ const recipientSchema = z
     return result.key;
   });
 
+/** Canonical amounts only ("1234.56" or a number): the form converts what people type. */
 const amountSchema = z
   .union([z.string(), z.number()], { error: TRANSFER_MESSAGES.amountInvalid })
   .transform((raw, ctx) => {

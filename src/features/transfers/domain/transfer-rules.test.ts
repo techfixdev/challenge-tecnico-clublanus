@@ -10,6 +10,8 @@ import {
   TRANSFER_MESSAGES,
   checkTransferAmount,
   checkTransferRecipient,
+  checkTypedAmount,
+  toCanonicalAmount,
   transferLimitCents,
   transferLimitMessage,
 } from "./transfer-rules";
@@ -35,20 +37,39 @@ const RECIPIENT_CASES: [string, string | null][] = [
   ["x".repeat(65), TRANSFER_MESSAGES.aliasInvalid],
 ];
 
+/** Canonical amounts, the only ones the domain and the server's schema read. */
 const AMOUNT_CASES: [string | number, string | null][] = [
   ["1", null],
-  ["12,30", null],
-  ["1.234,56", null],
-  ["1.234", null],
+  ["12.30", null],
+  ["12500", null],
+  [10.55, null],
   [MAX_TRANSFER_CENTS / 100, null],
   ["0", TRANSFER_MESSAGES.amountPositive],
   ["0.00", TRANSFER_MESSAGES.amountPositive],
-  ["10,555", TRANSFER_MESSAGES.amountInvalid],
-  ["1,234", TRANSFER_MESSAGES.amountInvalid],
+  // Argentine forms are the form's business, never the domain's: refused, not guessed.
+  ["10.555", TRANSFER_MESSAGES.amountInvalid],
+  ["12.500", TRANSFER_MESSAGES.amountInvalid],
+  ["1.234,56", TRANSFER_MESSAGES.amountInvalid],
+  ["12,30", TRANSFER_MESSAGES.amountInvalid],
   ["-5", TRANSFER_MESSAGES.amountInvalid],
   ["abc", TRANSFER_MESSAGES.amountInvalid],
   ["", TRANSFER_MESSAGES.amountInvalid],
   [(MAX_TRANSFER_CENTS + 1) / 100, TRANSFER_MESSAGES.amountTooLarge],
+];
+
+/** Amounts as a person types them in the send form (Argentine format). */
+const TYPED_AMOUNT_CASES: [string, string | null][] = [
+  ["1", null],
+  ["12,30", null],
+  ["12.30", null],
+  ["1.234,56", null],
+  ["1.234", null],
+  ["0", TRANSFER_MESSAGES.amountPositive],
+  ["10,555", TRANSFER_MESSAGES.amountInvalid],
+  ["1,234", TRANSFER_MESSAGES.amountInvalid],
+  ["-5", TRANSFER_MESSAGES.amountInvalid],
+  ["", TRANSFER_MESSAGES.amountInvalid],
+  ["100.000.000,01", TRANSFER_MESSAGES.amountTooLarge],
 ];
 
 describe("checkTransferRecipient", () => {
@@ -78,9 +99,9 @@ describe("checkTransferRecipient", () => {
   );
 });
 
-describe("checkTransferAmount", () => {
+describe("checkTransferAmount (canonical amounts)", () => {
   it("returns the normalized amount and its cents", () => {
-    expect(checkTransferAmount("12,3")).toEqual({
+    expect(checkTransferAmount("12.3")).toEqual({
       ok: true,
       amount: "12.30",
       cents: 1230,
@@ -105,6 +126,50 @@ describe("checkTransferAmount", () => {
   );
 });
 
+describe("checkTypedAmount (the send form, Argentine format)", () => {
+  it("reads thousands dots and the decimal comma", () => {
+    expect(checkTypedAmount("1.234,56")).toEqual({
+      ok: true,
+      amount: "1234.56",
+      cents: 123456,
+    });
+  });
+
+  it.each(TYPED_AMOUNT_CASES)("checks %j", (raw, message) => {
+    const result = checkTypedAmount(raw);
+    expect(result.ok ? null : result.message).toBe(message);
+  });
+
+  // What the form sends on is canonical, so the server reads the same amount.
+  it.each(TYPED_AMOUNT_CASES.filter(([, message]) => message === null))(
+    "converts %j to an amount the server's schema accepts unchanged",
+    (raw) => {
+      const typed = checkTypedAmount(raw);
+      const server = parseTransferRequest({
+        recipient: "hincha.granate",
+        amount: toCanonicalAmount(raw),
+        idempotencyKey: KEY,
+      });
+      expect(server.success && server.data.amountCents).toBe(
+        typed.ok && typed.cents,
+      );
+    },
+  );
+});
+
+describe("toCanonicalAmount", () => {
+  it("turns a typed amount into the canonical one", () => {
+    expect(toCanonicalAmount("1.234,56")).toBe("1234.56");
+    expect(toCanonicalAmount("12.500")).toBe("12500.00");
+    expect(toCanonicalAmount(" 12,3 ")).toBe("12.30");
+  });
+
+  it("leaves text it cannot read as is, for the server to refuse", () => {
+    expect(toCanonicalAmount("abc")).toBe("abc");
+    expect(toCanonicalAmount("10,555")).toBe("10,555");
+  });
+});
+
 describe("per-currency limits", () => {
   it("caps a transfer at US$ 100.000 and $ 100.000.000", () => {
     expect(TRANSFER_LIMIT_CENTS).toEqual({
@@ -121,17 +186,23 @@ describe("per-currency limits", () => {
   });
 
   it("applies the card's currency cap when the currency is known", () => {
-    expect(checkTransferAmount("100.000", "USD").ok).toBe(true);
-    expect(checkTransferAmount("100.000,01", "USD")).toEqual({
+    expect(checkTypedAmount("100.000", "USD").ok).toBe(true);
+    expect(checkTypedAmount("100.000,01", "USD")).toEqual({
       ok: false,
       message: transferLimitMessage("USD"),
     });
-    expect(checkTransferAmount("100.000,01", "ARS").ok).toBe(true);
-    expect(checkTransferAmount("100.000.000", "ARS").ok).toBe(true);
-    expect(checkTransferAmount("100.000.000,01", "ARS")).toEqual({
+    expect(checkTypedAmount("100.000,01", "ARS").ok).toBe(true);
+    expect(checkTypedAmount("100.000.000", "ARS").ok).toBe(true);
+    expect(checkTypedAmount("100.000.000,01", "ARS")).toEqual({
       ok: false,
       message: transferLimitMessage("ARS"),
     });
+    // The canonical check applies the very same caps.
+    expect(checkTransferAmount("100000.01", "USD")).toEqual({
+      ok: false,
+      message: transferLimitMessage("USD"),
+    });
+    expect(checkTransferAmount("100000.01", "ARS").ok).toBe(true);
   });
 
   it("uses the strictest cap for a currency it does not know", () => {
@@ -139,6 +210,6 @@ describe("per-currency limits", () => {
   });
 
   it("checks only the highest cap without a currency (the server, before the card)", () => {
-    expect(checkTransferAmount("100.000,01").ok).toBe(true);
+    expect(checkTransferAmount("100000.01").ok).toBe(true);
   });
 });

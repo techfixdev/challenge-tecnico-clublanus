@@ -14,7 +14,7 @@ import {
   type TransferFailureReason,
   type TransferReceipt,
 } from "./transfer-model";
-import { checkTransferAmount, checkTransferRecipient } from "./transfer-rules";
+import { checkTransferRecipient, checkTypedAmount } from "./transfer-rules";
 
 /**
  * The send flow as the UI sees it: steps, the Server Actions' results and the instant
@@ -92,7 +92,7 @@ export function amountInputError(
   raw: string,
   card?: { balance: string; currency: string },
 ): string | null {
-  const parsed = checkTransferAmount(raw, card?.currency);
+  const parsed = checkTypedAmount(raw, card?.currency);
   if (!parsed.ok) return parsed.message;
   if (card !== undefined && parsed.cents > toCents(card.balance)) {
     return TRANSFER_FAILURE_MESSAGE.insufficient_funds;
