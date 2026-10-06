@@ -119,9 +119,9 @@ curl -b cookies.txt 'http://localhost:3000/api/movements?q=jose&type=recibido'
 
 | Tipo        | Comando                 | Qué cubre                                                                                                                                                                                               | Cantidad |
 | ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario                                                                            | 210      |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario                                                                            | 212      |
 | Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión) | 17       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404 y estados vacíos en Chromium móvil                                                                                   | 13       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404 y estados vacíos en Chromium móvil                                                                                   | 16       |
 
 Integración necesita la base levantada con las migraciones: crea y borra sus propios datos, así que no depende del seed. E2E necesita además el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
@@ -131,7 +131,21 @@ Integración necesita la base levantada con las migraciones: crea y borra sus pr
 - Regiones `role="status"` para resultados y carga; errores con `role="alert"`.
 - Estados de carga (esqueletos), error con "Reintentar" y dos estados vacíos (sin movimientos / sin resultados).
 - Mobile-first; en desktop, columna centrada como un teléfono.
+- En el celular: inputs de 16px (iOS no hace zoom al enfocarlos), zoom del usuario habilitado, márgenes para el notch y la barra inferior (`viewport-fit=cover` + `env(safe-area-inset-*)`), ícono propio y color de la barra del navegador.
 - Limitación conocida: el violeta de suscripción del diseño (`#C76DFF`) no llega a contraste AA en texto chico; se respetó el diseño.
+
+## Cómo ver los estados
+
+Con la app corriendo e iniciada la sesión:
+
+| Estado                      | Cómo verlo                                                                                                                                                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sin resultados (búsqueda)   | En Movimientos, buscar `zzz`. Aparece "No encontramos movimientos para “zzz”" con "Limpiar filtros".                                                                                                                                                               |
+| Sin resultados (con filtro) | Combinar búsqueda y filtro sin coincidencias, por ejemplo `/movimientos?q=adobe&type=recibido`.                                                                                                                                                                    |
+| Sin movimientos             | Es el mensaje de una cuenta sin movimientos ("Todavía no tenés movimientos"). El usuario demo tiene 26, así que se prueba en `MovementsEmptyState.test.tsx`.                                                                                                       |
+| Carga                       | DevTools → Network → throttling "Slow 4G". Desde Inicio, tocar Movimientos en la barra inferior: se ven los esqueletos. "Cargar más" muestra "Cargando…".                                                                                                          |
+| Error                       | `docker stop granabank-db` y abrir Movimientos: aparece "No pudimos cargar tus movimientos" con "Reintentar". Después `docker start granabank-db` y tocar "Reintentar". Iniciar sesión antes de detener la base. ([captura](docs/screenshots/movements-error.png)) |
+| No encontrado (404)         | Abrir `/movimientos/abc`.                                                                                                                                                                                                                                          |
 
 ## Qué mejoraría con más tiempo
 
