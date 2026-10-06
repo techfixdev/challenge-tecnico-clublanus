@@ -18,13 +18,16 @@ const CHIPS: { label: string; type: MovementType | undefined }[] = [
 /**
  * Quick filters as plain links: each one is a URL (shareable, back-button friendly, no
  * client JavaScript). The search text is preserved when switching type.
+ *
+ * The right edge fades out to hint that the row scrolls horizontally. The fade is as wide
+ * as the row's end padding, so the last chip is fully visible once scrolled to the end.
  */
 export function FilterChips({ filters }: { filters: MovementFilters }) {
   return (
     <nav aria-label="Filtrar por tipo" className="-mx-6">
       <ScrollActiveIntoView
         activeKey={filters.type ?? "all"}
-        className="flex snap-x scroll-px-6 [scrollbar-width:none] gap-3 overflow-x-auto px-6 pt-1 pb-3"
+        className="flex snap-x scroll-px-6 [scrollbar-width:none] gap-3 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)] px-6 pt-1 pb-3"
       >
         {CHIPS.map(({ label, type }) => {
           const isActive = filters.type === type;
