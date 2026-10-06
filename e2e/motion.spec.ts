@@ -20,7 +20,9 @@ function movementRows(page: Page) {
 }
 
 /** Computed `animation-name` of each movement row (their staggered entrance). */
-function rowAnimations(page: Page) {
+async function rowAnimations(page: Page) {
+  // The rows stream in after the page shell; wait for them before reading styles.
+  await expect(movementRows(page).first()).toBeVisible();
   return movementRows(page).evaluateAll((rows) =>
     rows.map((row) => getComputedStyle(row).animationName),
   );
