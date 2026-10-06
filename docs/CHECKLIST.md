@@ -57,6 +57,10 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Morph de vuelta (detalle → lista): con "Volver" funciona en producción, porque el prefetch trae la lista antes de navegar (e2e en verde). En `next dev` no hay prefetch y por eso no se ve. Con el botón atrás del navegador no se anima: React no inicia la transición. Queda como limitación conocida, documentada en el README y con un test que fija el comportamiento actual y avisa cuando el framework lo soporte.
 - [x] Bitácora T7 con la tabla local vs. producción (`docs/BITACORA.md`).
 - [x] Puntos de entrevista en `ENTREVISTA.md` (solo local, no se versiona).
+- [x] Pulido de las tarjetas: odómetro sin huecos en el "1" (Poppins no trae cifras de ancho fijo), asteriscos centrados con los dígitos, logo Visa real y bordes alineados, medido en capturas a 3x (`9285923`). Con el saldo oculto el ancho no delata el monto (`b5f347f`).
+- [x] Login por API: mensajes en español aunque falten campos (`089f354`).
+- [ ] ⏳ Transferencias reales entre usuarios demo, en una transacción atómica que impide saldo negativo.
+- [ ] Pantalla Recibir con alias y CVU para copiar y compartir.
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
 - [ ] Lista de pantallas y estados para capturar en Figma (requiere conectar tu cuenta de Figma).
 - [ ] Revisar todo juntos y commitear (local).
