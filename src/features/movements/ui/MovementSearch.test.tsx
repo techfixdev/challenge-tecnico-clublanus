@@ -8,8 +8,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
-
 import { MovementSearch, SEARCH_DEBOUNCE_MS } from "./MovementSearch";
 
 const replace = vi.fn();
@@ -40,8 +38,14 @@ describe("MovementSearch", () => {
   it("keeps the search box at 16px so iOS Safari does not zoom on focus", () => {
     render(<MovementSearch filters={{}} />);
 
-    expect(INPUT_TEXT_CLASS).toBe("text-base");
-    expect(screen.getByRole("searchbox")).toHaveClass(INPUT_TEXT_CLASS);
+    // jsdom has no Tailwind, so assert the rendered utilities: the input's own text size
+    // is 16px (`text-base`) and no smaller size overrides it; only the placeholder (a
+    // `placeholder:` variant, which does not trigger the zoom) may be smaller. The real
+    // computed size is checked in the browser by e2e/movements.spec.ts.
+    const sizeUtilities = [...screen.getByRole("searchbox").classList].filter(
+      (name) => /^text-(xs|sm|base|lg|\[)/.test(name),
+    );
+    expect(sizeUtilities).toEqual(["text-base"]);
   });
 
   it("renders a labelled search box with the design placeholder", () => {
