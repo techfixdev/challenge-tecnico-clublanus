@@ -105,3 +105,25 @@ test("login inputs are at least 16px so iOS does not zoom on focus", async ({
     expect(fontSize).toBeGreaterThanOrEqual(16);
   }
 });
+
+test("declares a safe-area viewport, theme color and branded icons", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    "content",
+    /viewport-fit=cover/,
+  );
+  await expect(page.locator('meta[name="viewport"]')).not.toHaveAttribute(
+    "content",
+    /user-scalable=no|maximum-scale=1\b/,
+  );
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    "content",
+    "#f9fafc",
+  );
+  await expect(
+    page.locator('link[rel="icon"][type="image/svg+xml"]'),
+  ).toHaveCount(1);
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+});
