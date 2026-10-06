@@ -1,10 +1,13 @@
 import type { Card } from "../domain/card";
 import { BalanceVisibilityProvider } from "./BalanceVisibility";
+import { CardDeck } from "./CardDeck";
+import { LivingCard } from "./LivingCard";
 import { PaymentCard } from "./PaymentCard";
 
 /**
- * Horizontal carousel with CSS scroll-snap only (no JS): the next card peeks from the right,
- * as in the design, and the list scrolls natively with touch, trackpad or keyboard.
+ * Home card carousel. The cards themselves stay server-rendered; the client islands only
+ * add behavior around them: `CardDeck` (scroll-linked depth and the dots) and
+ * `LivingCard` (tilt, sheen and shadow under the finger).
  */
 export function CardCarousel({
   cards,
@@ -24,17 +27,20 @@ export function CardCarousel({
 
   return (
     <BalanceVisibilityProvider initialHidden={balanceHidden}>
-      <ul
-        aria-label="Tus tarjetas"
-        tabIndex={0}
-        className="flex snap-x snap-mandatory scroll-px-6 [scrollbar-width:none] gap-4 overflow-x-auto px-6 pt-2 pb-8 focus-visible:outline-none"
-      >
-        {cards.map((card) => (
-          <li key={card.id} className="w-[84%] shrink-0 snap-start">
-            <PaymentCard card={card} />
-          </li>
-        ))}
-      </ul>
+      <CardDeck
+        label="Tus tarjetas"
+        slides={cards.map((card) => ({
+          id: card.id,
+          content: (
+            <LivingCard
+              tone={card.brand === "VISA" ? "pink" : "primary"}
+              sweep={card.isPrimary}
+            >
+              <PaymentCard card={card} />
+            </LivingCard>
+          ),
+        }))}
+      />
     </BalanceVisibilityProvider>
   );
 }

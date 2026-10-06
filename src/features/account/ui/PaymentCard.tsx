@@ -8,11 +8,19 @@ import { BalanceAmount } from "./BalanceAmount";
 import { BalanceToggle } from "./BalanceVisibility";
 import { CardBrandLogo } from "./CardBrandLogo";
 
-/** Granate for the Mastercard (as in the design); the peeking Visa card is a soft pink. */
+/**
+ * Granate for the Mastercard (as in the design); the peeking Visa card is a soft pink.
+ * Each base color carries a soft light from the top-left and a slightly deeper bottom
+ * edge, plus a hairline inner highlight, so the card reads as a material, not a flat
+ * fill, while the base color stays the design's.
+ */
 const BRAND_THEME: Record<CardBrand, { card: string; label: string }> = {
-  MASTERCARD: { card: "bg-primary text-white", label: "text-white/75" },
+  MASTERCARD: {
+    card: "bg-primary bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.16),transparent_55%),linear-gradient(155deg,transparent_45%,rgb(40_6_14/0.35))] text-white",
+    label: "text-white/75",
+  },
   VISA: {
-    card: "bg-card-pink text-primary-dark",
+    card: "bg-card-pink bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.5),transparent_55%),linear-gradient(155deg,transparent_45%,rgb(122_29_45/0.12))] text-primary-dark",
     label: "text-primary-dark/70",
   },
 };
@@ -23,7 +31,7 @@ export function PaymentCard({ card }: { card: Card }) {
     <section
       aria-label={describeCard(card)}
       data-brand={card.brand}
-      className={`flex h-[180px] flex-col justify-between rounded-3xl p-5 shadow-[0_12px_24px_-12px_rgb(122_29_45/0.45)] ${theme.card}`}
+      className={`flex h-[180px] flex-col justify-between rounded-3xl p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.22),inset_0_0_0_1px_rgb(255_255_255/0.06)] ${theme.card}`}
     >
       <div className="flex items-start justify-between">
         <div>
