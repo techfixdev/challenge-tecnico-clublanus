@@ -5,6 +5,7 @@ import {
   type CardBrand,
 } from "../domain/card";
 import { BalanceAmount } from "./BalanceAmount";
+import { BalanceToggle } from "./BalanceVisibility";
 import { CardBrandLogo } from "./CardBrandLogo";
 
 /** Granate for the Mastercard (as in the design); the peeking Visa card is a soft pink. */
@@ -26,7 +27,11 @@ export function PaymentCard({ card }: { card: Card }) {
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className={`text-xs ${theme.label}`}>Balance</p>
+          {/* The eye toggle hides every balance; it lives on the primary card only. */}
+          <div className="flex items-center gap-2">
+            <p className={`text-xs ${theme.label}`}>Balance</p>
+            {card.isPrimary && <BalanceToggle />}
+          </div>
           <p className="mt-2 flex items-center gap-3">
             <span className="rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#6b4300] shadow-sm">
               USD

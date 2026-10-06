@@ -14,6 +14,34 @@ function primaryCard(page: Page) {
   });
 }
 
+test("hides every balance, and the choice survives a reload", async ({
+  page,
+}) => {
+  await login(page);
+  const toggle = page.getByRole("button", { name: "Ocultar saldo" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(primaryCard(page)).toContainText("978.85");
+
+  await toggle.click();
+
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const cards = page.getByRole("list", { name: "Tus tarjetas" });
+  await expect(cards.getByText("••••••")).toHaveCount(2);
+  await expect(cards).not.toContainText("978.85");
+
+  // The server renders the choice (cookie): the HTML already carries the mask and no
+  // rendered balance, so a hidden balance never flashes before hydration.
+  const html = await (await page.request.get("/")).text();
+  expect(html).toContain(">••••••<");
+  expect(html).not.toContain(">978.85<");
+
+  await page.reload();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+  await toggle.click();
+  await expect(primaryCard(page)).toContainText("978.85");
+});
+
 test.describe("with prefers-reduced-motion: reduce", () => {
   test.use({ reducedMotion: "reduce" });
 

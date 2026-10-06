@@ -38,4 +38,18 @@ describe("PaymentCard", () => {
     ).toBeInTheDocument();
     expect(container.firstElementChild).toHaveAttribute("data-brand", "VISA");
   });
+
+  it("shows the hide-balance toggle on the primary card only", () => {
+    const { rerender } = render(<PaymentCard card={makeCard()} />);
+    expect(
+      screen.getByRole("button", { name: "Ocultar saldo" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <PaymentCard card={makeCard({ brand: "VISA", isPrimary: false })} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Ocultar saldo" }),
+    ).not.toBeInTheDocument();
+  });
 });
