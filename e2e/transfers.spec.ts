@@ -41,7 +41,17 @@ async function login(page: Page, user: { email: string; password: string }) {
 function primaryCard(page: Page) {
   return page.getByRole("region", {
     name: "Tarjeta Mastercard terminada en 1234",
+    exact: true,
   });
+}
+
+/** Balances are masked on load: the card's eye fetches and shows its balance. */
+async function revealPrimaryCard(page: Page) {
+  await page
+    .getByRole("button", {
+      name: "Mostrar datos de la tarjeta Mastercard terminada en 1234",
+    })
+    .click();
 }
 
 function latestMovements(page: Page) {
@@ -125,6 +135,7 @@ test("sends money to hincha.granate, who receives it", async ({
 
   // Home shows the new balance and the movement on top.
   await page.goto("/");
+  await revealPrimaryCard(page);
   await expect(primaryCard(page)).toContainText(
     centsToAmount(amountToCents(senderBalance) - 1230),
   );
@@ -215,6 +226,7 @@ test("refuses an amount above the balance, in Spanish, and moves nothing", async
   await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled();
 
   await page.goto("/");
+  await revealPrimaryCard(page);
   await expect(primaryCard(page)).toContainText(formatAmount(senderBalance));
   expect(await primaryCardBalance(SENDER.email)).toBe(senderBalance);
 });

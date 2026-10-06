@@ -49,11 +49,23 @@ test("home → search → filter → detail → back", async ({ page }) => {
   // Two currencies, one format: the dollar Mastercard and the peso Visa (es-AR digits,
   // the chip names the currency, screen readers hear it in words).
   await expect(card).toContainText("USD");
+  // Balances are masked until each card's eye reveals them.
+  await expect(card).toContainText("Saldo oculto");
+  await page
+    .getByRole("button", {
+      name: "Mostrar datos de la tarjeta Mastercard terminada en 1234",
+    })
+    .click();
   await expect(card).toContainText("978,85 dólares");
   const pesos = page.getByRole("region", {
     name: "Tarjeta Visa terminada en 5678",
   });
   await expect(pesos).toContainText("ARS");
+  await page
+    .getByRole("button", {
+      name: "Mostrar datos de la tarjeta Visa terminada en 5678",
+    })
+    .click();
   await expect(pesos).toContainText("312.400,50 pesos");
   const latest = page.getByRole("region", { name: "Últimos movimientos" });
   await expect(latest.getByRole("listitem")).toHaveCount(5);

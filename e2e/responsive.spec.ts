@@ -21,8 +21,8 @@ async function login(page: Page) {
 }
 
 /**
- * Elements of each card that leave the card's content box (its padding excluded), plus
- * a clipped number line. The odometer strips are taller than their row on purpose (the
+ * Elements of each card face (front and back) that leave the face's content box (its
+ * padding excluded), plus a clipped number line. The odometer strips are taller than their row on purpose (the
  * row clips them), and the screen-reader texts are visually hidden, so both are skipped.
  */
 function cardOverflows(page: Page) {
@@ -55,10 +55,11 @@ function cardOverflows(page: Page) {
             (element) =>
               `${card.dataset.brand}: <${element.tagName.toLowerCase()}> "${element.textContent?.trim() ?? ""}"`,
           );
+        // The back face has no number line.
         const number = card.querySelector<HTMLElement>(
           "[data-testid=card-number]",
-        )!;
-        if (number.scrollWidth > number.clientWidth) {
+        );
+        if (number && number.scrollWidth > number.clientWidth) {
           escaping.push(`${card.dataset.brand}: clipped card number`);
         }
         return escaping;
@@ -67,24 +68,59 @@ function cardOverflows(page: Page) {
   );
 }
 
-test("the cards fit their content at every width and the page never scrolls sideways", async ({
-  page,
-}) => {
-  await login(page);
-  await page.evaluate(() => document.fonts.ready);
-
+async function expectCardsFit(page: Page, state: string) {
   for (const width of CARD_WIDTHS) {
     await page.setViewportSize({ width, height: 844 });
     await expect
-      .poll(() => cardOverflows(page), { message: `cards at ${width}px` })
+      .poll(() => cardOverflows(page), {
+        message: `cards at ${width}px (${state})`,
+      })
       .toEqual([]);
     const overflow = await page.evaluate(
       () =>
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     );
-    expect(overflow, `horizontal overflow at ${width}px`).toBe(0);
+    expect(overflow, `horizontal overflow at ${width}px (${state})`).toBe(0);
   }
+}
+
+test("the cards fit their content at every width and the page never scrolls sideways", async ({
+  page,
+}) => {
+  await login(page);
+  await page.evaluate(() => document.fonts.ready);
+  await expectCardsFit(page, "masked");
+
+  // Revealed (the full 16-digit number is the widest line) and turned over to the back.
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const card of [
+    "Mastercard terminada en 1234",
+    "Visa terminada en 5678",
+  ]) {
+    await page
+      .getByRole("button", { name: `Mostrar datos de la tarjeta ${card}` })
+      .click();
+    await expect(
+      page.getByRole("button", { name: `Mostrar datos de la tarjeta ${card}` }),
+    ).toHaveAttribute("aria-pressed", "true");
+  }
+  await expect(
+    page.locator("[data-testid=card-number][data-revealed]"),
+  ).toHaveCount(2);
+  await expectCardsFit(page, "revealed");
+
+  await page
+    .getByRole("button", {
+      name: "Ver reverso de la tarjeta Mastercard terminada en 1234",
+    })
+    .click();
+  await expect(
+    page.getByRole("region", {
+      name: "Reverso de la tarjeta Mastercard terminada en 1234",
+    }),
+  ).toBeVisible();
+  await expectCardsFit(page, "back side");
 });
 
 test.describe("every screen fits every width", () => {
