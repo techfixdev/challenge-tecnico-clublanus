@@ -399,7 +399,12 @@ La barra del navegador usa el color de fondo y no el granate: todas las pantalla
 
 **Verificación:** unitarios 263/263 ✅ · integración 21/21 ✅ · e2e 24/24 (dev y producción) ✅ · build ✅. Video de las animaciones en `docs/screenshots/motion-demo.webm`.
 
-**Revisión en 3 tramos: los 3 aprobados, sin bloqueantes.** Quedan observaciones menores: la validación del mes acepta años fuera de rango (por ejemplo `0000-01`), y algunos tests usan esperas fijas o podrían ser inestables.
+**Revisión en 3 tramos: los 3 aprobados, sin bloqueantes.** Las observaciones menores se cerraron en T6b:
+- `da04d2d`: el mes del resumen se limita a 2000-01…2100-12, una ventana fija para que los tests no dependan de la fecha actual.
+- `4eb6814`: el hover de las filas respeta "reducir movimiento".
+- `8a67dfd`: los tests son deterministas, sin esperas fijas.
+
+Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsdom y el test verificaba `0.00` en vez del saldo real. Ahora verifica 978.85. Los e2e se corrieron 3 veces seguidas (25/25 en las tres) y la revisión salió aprobada.
 
 ---
 
