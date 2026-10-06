@@ -70,6 +70,8 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
 | T4 | Pulido: hallazgos de revisión, estructura, CI, README final | ✅ Hecha |
 | — | Inspección ocular, limpieza de historial, alternativa desktop | ✅ Hecha (desktop archivada) |
+| — | Fixes de mobile real | ✅ Hecha |
+| T6 | Animaciones, ocultar saldo, resumen del mes | ✅ Hecha |
 | T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
 
 ---
@@ -363,6 +365,41 @@ Se hizo antes de publicar, porque reescribir el historial de algo ya publicado r
 **Verificación:** 216 tests unitarios y 16 e2e (13 mobile sin cambios + 3 desktop) ✅
 
 **Trade-off:** es diseño propio (el Figma no tiene desktop). Argumento para la entrevista: "extendí el sistema de diseño a desktop sin tocar la versión mobile del Figma".
+
+### Fixes de mobile real (05/10/2026)
+
+| Commit | Cambio | Por qué |
+|---|---|---|
+| `94ed88e` | Inputs a 16px; safe areas con `viewport-fit=cover`; `theme-color` | iOS Safari hace zoom al enfocar inputs de menos de 16px. El placeholder sigue chico como en el Figma, porque el zoom depende del tamaño del input, no del placeholder. Sin `viewport-fit=cover`, `env(safe-area-inset-*)` vale 0. |
+| `8c47d3a` | Íconos de GranaBank (SVG, apple-icon, `.ico`) y web manifest | Reemplaza el ícono por defecto de Next. El `.ico` se mantiene para Safari viejo, que ignora los favicons SVG. |
+| `e7b3e2b` | README "Cómo ver los estados" | El evaluador puede provocar cada estado: vacío, carga, error y 404. Cada instrucción se probó contra el build de producción. |
+
+La barra del navegador usa el color de fondo y no el granate: todas las pantallas arrancan con un header claro y una franja granate arriba quedaría cortada.
+
+**Revisión (4 enfoques): aprobada, sin bloqueantes.**
+
+### T6 — Animaciones y valor agregado (05/10/2026)
+
+**Criterio:** cada animación *comunica* algo (de dónde viene un elemento, que algo cambió, que se tocó un botón). Duran entre 150 y 300 ms, animan solo `transform` y `opacity` (sin recalcular el layout) y **se desactivan con "reducir movimiento"**, con tests que lo verifican. No se agregaron librerías.
+
+| Feature | Decisión y por qué |
+|---|---|
+| Tokens de movimiento en `globals.css` | Duraciones y curvas definidas una sola vez, como el resto del sistema de diseño. |
+| Feedback al tocar | Filas, chips y botones se achican a 0.97: confirma el toque como en una app nativa. |
+| Esqueletos con brillo | Indican que algo está cargando y no que la pantalla está rota. |
+| Ícono que viaja de la lista al detalle | React `<ViewTransition>`, incluido en el App Router de Next 16. Solo se anima el par tocado. Los navegadores sin soporte navegan normal. |
+| Filas que entran escalonadas | Animación CSS que corre solo cuando una fila se inserta: al cargar y solo las nuevas con "Cargar más". Nunca se repite en un re-render. |
+| Saldo que cuenta hacia arriba | El último cuadro usa el formateador real, así que el valor final es exacto. Los lectores de pantalla solo escuchan el valor final. No se repite al recargar la página (no muestra 978.85 → 0 → 978.85). |
+| **Ocultar saldo** (👁) | La preferencia vive en una **cookie** que lee el servidor, no en localStorage: el saldo oculto nunca parpadea visible al cargar. El botón usa `aria-pressed` con un nombre fijo (patrón WAI-ARIA de toggle). |
+| **Resumen del mes** | Ingresos = recibidos; egresos = enviados + suscripciones. Solo movimientos completados (un pendiente todavía puede fallar). La suma la hace la base con `groupBy` sobre `Decimal`, y los centavos se combinan como enteros, nunca como float. El mes empieza a medianoche de Buenos Aires (03:00 UTC). Tiene su endpoint `GET /api/movements/summary?month=AAAA-MM`. |
+
+**Limitación conocida:** con el saldo oculto, el valor igual viaja en los datos de la página. La función protege de quien mira la pantalla, no de quien inspecciona el código; es el mismo criterio que usan las apps bancarias.
+
+**Commits:** 11, de `5a6ed87` a `dd9eb60`, cada uno verificado por separado.
+
+**Verificación:** unitarios 263/263 ✅ · integración 21/21 ✅ · e2e 24/24 (dev y producción) ✅ · build ✅. Video de las animaciones en `docs/screenshots/motion-demo.webm`.
+
+**Revisión en 3 tramos: los 3 aprobados, sin bloqueantes.** Quedan observaciones menores: la validación del mes acepta años fuera de rango (por ejemplo `0000-01`), y algunos tests usan esperas fijas o podrían ser inestables.
 
 ---
 
