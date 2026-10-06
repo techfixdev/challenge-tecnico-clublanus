@@ -10,6 +10,7 @@ import { Button } from "@/shared/ui/Button";
 
 import {
   amountInputError,
+  normalizeAmountInput,
   type ConfirmedRecipient,
 } from "../domain/transfer-form";
 import { DESCRIPTION_MAX_LENGTH } from "../domain/transfer-schema";
@@ -96,14 +97,14 @@ export function AmountStep({
         back={{ onBack }}
       />
 
-      <div className="mt-8 flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-card">
+      <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface p-4 shadow-card">
         <RecipientAvatar fullName={recipient.fullName} />
         <span className="sr-only">Para: </span>
         <RecipientIdentity recipient={recipient} />
         <button
           type="button"
           onClick={onChangeRecipient}
-          className="rounded-md text-xs font-medium text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
+          className="ml-auto rounded-md text-xs font-medium text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
         >
           Cambiar
         </button>
@@ -133,7 +134,12 @@ export function AmountStep({
               onChange={(event) =>
                 onAmountChange(sanitizeAmount(event.target.value))
               }
-              onBlur={() => setShowErrors(true)}
+              onBlur={() => {
+                setShowErrors(true);
+                // "12,3" → "12.30", as the review and the receipt write it.
+                const normalized = normalizeAmountInput(amount);
+                if (normalized !== amount) onAmountChange(normalized);
+              }}
               inputMode="decimal"
               autoComplete="off"
               enterKeyHint="next"
@@ -163,7 +169,7 @@ export function AmountStep({
           />
         </div>
 
-        <fieldset className="mt-8">
+        <fieldset className="mt-8 min-w-0">
           <legend className="text-sm font-medium text-foreground">Desde</legend>
           <div className="mt-2 flex flex-col gap-3">
             {cards.map((option) => {
@@ -172,7 +178,7 @@ export function AmountStep({
                 <label
                   key={option.id}
                   data-selected={selected}
-                  className="flex cursor-pointer items-center gap-4 rounded-2xl bg-surface p-4 shadow-card ring-2 ring-transparent transition-shadow has-focus-visible:ring-primary/40 data-[selected=true]:ring-primary"
+                  className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface p-4 shadow-card ring-2 ring-transparent transition-shadow has-focus-visible:ring-primary/40 data-[selected=true]:ring-primary"
                 >
                   <input
                     type="radio"
@@ -188,8 +194,8 @@ export function AmountStep({
                   >
                     <CardBrandLogo brand={option.brand} />
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[15px] font-medium text-foreground">
+                  <span className="flex min-w-0 flex-1 basis-24 flex-col">
+                    <span className="text-[15px] font-medium text-foreground">
                       {CARD_BRAND_LABEL[option.brand]}{" "}
                       <span aria-hidden="true">•••• </span>
                       <span className="sr-only">terminada en </span>
@@ -204,7 +210,7 @@ export function AmountStep({
                   </span>
                   <span
                     aria-hidden="true"
-                    className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${selected ? "border-primary" : "border-border"}`}
+                    className={`ml-auto flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${selected ? "border-primary" : "border-border"}`}
                   >
                     {selected ? (
                       <span className="size-2.5 rounded-full bg-primary" />

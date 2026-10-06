@@ -7,10 +7,12 @@ import { db } from "@/shared/lib/db";
 
 import { sendTransfer } from "../domain/transfer";
 import {
+  createPrismaTransferRepository,
   prismaRecentTransfersRepository,
   prismaTransferRepository as repository,
 } from "./prisma-transfer-repository";
 import { getRecentRecipients } from "../domain/transfer-form";
+import { newTransferCode } from "../domain/transfer-reference";
 
 /*
  * Runs real transfers against PostgreSQL: atomicity, the conditional debit under
@@ -154,9 +156,75 @@ describe("prismaTransferRepository (PostgreSQL)", () => {
     expect(result.ok && result.receipt.movementId).toBe(
       movements.find((m) => m.type === "SENT")?.id,
     );
-    expect(result.ok && result.receipt.reference).toBe(
-      `TRF-${result.ok ? result.receipt.id.toUpperCase() : ""}-E`,
-    );
+    // Both sides share one short code; each movement keeps a unique reference.
+    const code = /^ENV-([0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4})$/.exec(
+      result.ok ? (result.receipt.reference ?? "") : "",
+    )?.[1];
+    expect(code).toBeDefined();
+    expect(movements.map((m) => m.reference)).toEqual([
+      `REC-${code}`,
+      `ENV-${code}`,
+    ]);
+  });
+
+  it("draws a new code when the reference is already taken", async () => {
+    const sender = await createAccount("Sender", "10.00");
+    const recipient = await createAccount("Recipient", "0.00");
+    const taken = newTransferCode();
+    const fresh = newTransferCode();
+    const first = await send(sender, { recipient: recipient.alias, amount: 1 });
+    expect(first.ok).toBe(true);
+    await db.movement.update({
+      where: { id: first.ok ? (first.receipt.movementId ?? "") : "" },
+      data: { reference: `ENV-${taken}` },
+    });
+
+    const codes = [taken, fresh];
+    const unlucky = createPrismaTransferRepository({
+      newCode: () => codes.shift() ?? newTransferCode(),
+    });
+    const result = await sendTransfer(unlucky, sender.userId, {
+      idempotencyKey: randomUUID(),
+      recipient: recipient.alias,
+      amount: 2,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      receipt: { reference: `ENV-${fresh}` },
+    });
+    expect(await balanceOf(sender.cardId)).toBe("7.00");
+    expect(await balanceOf(recipient.cardId)).toBe("3.00");
+  });
+
+  it("orders transfers made at the same instant deterministically", async () => {
+    const me = await createAccount("Me", "50.00");
+    const first = await createAccount("First", "50.00");
+    const second = await createAccount("Second", "50.00");
+    const createdAt = new Date("2026-01-01T12:00:00Z");
+    const ids: string[] = [];
+    for (const recipient of [first, second]) {
+      const transfer = await db.transfer.create({
+        data: {
+          senderId: me.userId,
+          recipientId: recipient.userId,
+          amount: "1.00",
+          currency: "USD",
+          idempotencyKey: randomUUID(),
+          createdAt,
+        },
+      });
+      ids.push(transfer.id);
+    }
+    const newestFirst = [...ids].sort().reverse();
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const transfers =
+        await prismaRecentTransfersRepository.findRecentTransfers(me.userId, 2);
+      expect(transfers.map((transfer) => transfer.recipient.id)).toEqual(
+        newestFirst.map((id) => (id === ids[0] ? first.userId : second.userId)),
+      );
+    }
   });
 
   it("lists recent counterparties both ways, newest first, once each", async () => {

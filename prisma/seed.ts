@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
 import { buildCvu } from "../src/features/account/domain/account-identifiers";
+import { movementReference } from "../src/features/transfers/domain/transfer-reference";
 import {
   PrismaClient,
   type MovementType,
@@ -279,6 +280,21 @@ const SECOND_USER_MOVEMENTS: MovementSeed[] = [
   },
 ];
 
+/**
+ * One past transfer from the demo user to the second one, so "Recientes" on the send
+ * screen is not empty on a fresh seed. Older than every other movement: Home and the
+ * first page of Movements stay as in the design. Card balances are seed facts that
+ * already include it (it moves no money now). Fixed code and key: deterministic.
+ */
+const DEMO_TRANSFER = {
+  code: "SEED-0001",
+  idempotencyKey: "00000000-0000-4000-8000-000000000001",
+  amount: "25.00",
+  description: "Entradas para la cancha",
+  daysAgo: 60,
+  hour: 18,
+} as const;
+
 function dateDaysAgo(daysAgo: number, hour: number): Date {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
@@ -411,10 +427,56 @@ async function main() {
         "GB-H",
       ),
     });
-    return { demo: demoMovements.count, second: secondMovements.count };
+
+    const transferAt = dateDaysAgo(DEMO_TRANSFER.daysAgo, DEMO_TRANSFER.hour);
+    const transferMovement = {
+      amount: DEMO_TRANSFER.amount,
+      currency: "USD",
+      description: DEMO_TRANSFER.description,
+      status: "COMPLETED",
+      occurredAt: transferAt,
+    } as const;
+    await tx.transfer.create({
+      data: {
+        senderId: demo.id,
+        recipientId: second.id,
+        sourceCardId: primary.id,
+        destinationCardId: secondPrimary.id,
+        amount: DEMO_TRANSFER.amount,
+        currency: "USD",
+        description: DEMO_TRANSFER.description,
+        idempotencyKey: DEMO_TRANSFER.idempotencyKey,
+        createdAt: transferAt,
+        movements: {
+          create: [
+            {
+              ...transferMovement,
+              userId: demo.id,
+              cardId: primary.id,
+              counterparty: `${SECOND_USER.firstName} ${SECOND_USER.lastName}`,
+              type: "SENT",
+              reference: movementReference(DEMO_TRANSFER.code, "SENT"),
+            },
+            {
+              ...transferMovement,
+              userId: second.id,
+              cardId: secondPrimary.id,
+              counterparty: `${DEMO_USER.firstName} ${DEMO_USER.lastName}`,
+              type: "RECEIVED",
+              reference: movementReference(DEMO_TRANSFER.code, "RECEIVED"),
+            },
+          ],
+        },
+      },
+    });
+
+    return { demo: demoMovements.count + 1, second: secondMovements.count + 1 };
   });
 
   console.log(`Seeded ${DEMO_USER.email}: 2 cards, ${counts.demo} movements.`);
+  console.log(
+    `Seeded 1 transfer ${DEMO_USER.alias} → ${SECOND_USER.alias} (${movementReference(DEMO_TRANSFER.code, "SENT")}).`,
+  );
   console.log(
     `Seeded ${SECOND_USER.email}: 1 card, ${counts.second} movements.`,
   );

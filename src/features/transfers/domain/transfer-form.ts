@@ -2,7 +2,7 @@ import {
   maskCvu,
   normalizeCvu,
 } from "@/features/account/domain/account-identifiers";
-import { toCents } from "@/shared/lib/money";
+import { parseAmount, toCents } from "@/shared/lib/money";
 import type { ValidationDetails } from "@/shared/lib/validation";
 
 import {
@@ -98,6 +98,16 @@ export function amountInputError(
     return TRANSFER_FAILURE_MESSAGE.insufficient_funds;
   }
   return null;
+}
+
+/**
+ * The amount as the app writes it, once the field is left: "12,3" → "12.30", like the
+ * review and the receipt show it. A whole amount stays as typed ("12"), and so does text
+ * the field flags as invalid, so the user can still see and fix what they wrote.
+ */
+export function normalizeAmountInput(raw: string): string {
+  if (!/[.,]/.test(raw)) return raw;
+  return parseAmount(raw)?.amount ?? raw;
 }
 
 const FAILURE_STEP: Record<TransferFailureReason, TransferStep> = {

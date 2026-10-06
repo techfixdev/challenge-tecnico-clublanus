@@ -42,7 +42,7 @@ const RECEIPT: TransferReceipt = {
     balance: "948.35",
   },
   movementId: "cmovement1",
-  reference: "TRF-CTRANSFER1-E",
+  reference: "ENV-7Q4K-92XA",
 };
 
 const BODY = {

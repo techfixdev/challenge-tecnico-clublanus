@@ -56,7 +56,7 @@ const RECEIPT: TransferReceipt = {
     balance: "966.55",
   },
   movementId: "cmovement1",
-  reference: "TRF-CTRANSFER1-E",
+  reference: "ENV-7Q4K-92XA",
 };
 
 function renderFlow({
@@ -204,6 +204,22 @@ describe("TransferFlow", () => {
     expect(amount).toHaveAttribute("aria-invalid", "false");
   });
 
+  it("writes a decimal comma amount the app's way once the field is left", async () => {
+    const { user } = renderFlow();
+    await toAmountStep(user);
+    const amount = screen.getByLabelText("Monto en USD");
+
+    await user.type(amount, "12,3");
+    expect(amount).toHaveValue("12,3");
+    await user.tab();
+    expect(amount).toHaveValue("12.30");
+
+    await user.clear(amount);
+    await user.type(amount, "40");
+    await user.tab();
+    expect(amount).toHaveValue("40");
+  });
+
   it("accepts a decimal comma and submits the normalized transfer with the server's key", async () => {
     const { user, send, key } = renderFlow();
     await toReviewStep(user);
@@ -228,7 +244,7 @@ describe("TransferFlow", () => {
     expect(
       screen.getByRole("link", { name: "Volver al inicio" }),
     ).toHaveAttribute("href", "/");
-    expect(screen.getByText("TRF-CTRANSFER1-E")).toBeInTheDocument();
+    expect(screen.getByText("ENV-7Q4K-92XA")).toBeInTheDocument();
   });
 
   it("disables the button while sending, so a double tap sends once", async () => {
@@ -283,6 +299,35 @@ describe("TransferFlow", () => {
     );
     await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
     expect(send.mock.calls[1][1].get("idempotencyKey")).toBe(key);
+  });
+
+  it("asks the server again for a recipient the transfer was refused for", async () => {
+    const send = vi.fn<SendTransferAction>(async () => ({
+      status: "error",
+      message: TRANSFER_FAILURE_MESSAGE.recipient_not_found,
+      step: "recipient",
+    }));
+    const lookup = vi
+      .fn<LookupRecipientAction>()
+      .mockResolvedValueOnce({ ok: true, recipient: HINCHA })
+      .mockResolvedValueOnce({
+        ok: false,
+        message: TRANSFER_FAILURE_MESSAGE.recipient_not_found,
+      });
+    const { user } = renderFlow({ send, lookup });
+    await toReviewStep(user);
+
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar y enviar" }),
+    );
+    await screen.findByRole("heading", { name: "¿A quién le enviás?" });
+
+    // Same text: the confirmed recipient is gone, so it is looked up again.
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "¿A quién le enviás?",
+    );
   });
 
   it("retries with the fresh key the server hands out after a key conflict", async () => {

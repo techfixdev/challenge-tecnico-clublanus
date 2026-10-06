@@ -13,6 +13,10 @@ import {
   type TransferRepository,
 } from "../domain/transfer";
 import type { RecentTransfersRepository } from "../domain/transfer-form";
+import {
+  movementReference,
+  newTransferCode,
+} from "../domain/transfer-reference";
 import type { RecipientKey, TransferRequest } from "../domain/transfer-schema";
 
 /*
@@ -128,6 +132,7 @@ async function runTransfer(
   tx: Prisma.TransactionClient,
   senderId: string,
   request: TransferRequest,
+  code: string,
 ): Promise<TransferReceipt> {
   const [sender, recipient, sourceCard] = await Promise.all([
     tx.user.findUniqueOrThrow({
@@ -213,7 +218,6 @@ async function runTransfer(
     await debit();
   }
 
-  const reference = `TRF-${transfer.id.toUpperCase()}`;
   const movement = {
     amount: request.amount,
     currency: sourceCard.currency,
@@ -229,7 +233,7 @@ async function runTransfer(
       counterparty: fullNameOf(sender),
       description: request.description ?? RECEIVED_DESCRIPTION,
       type: "RECEIVED",
-      reference: `${reference}-R`,
+      reference: movementReference(code, "RECEIVED"),
     },
   });
   await tx.movement.create({
@@ -240,7 +244,7 @@ async function runTransfer(
       counterparty: fullNameOf(recipient),
       description: request.description ?? SENT_DESCRIPTION,
       type: "SENT",
-      reference: `${reference}-E`,
+      reference: movementReference(code, "SENT"),
     },
   });
 
@@ -258,59 +262,94 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
-export const prismaTransferRepository: TransferRepository = {
-  findRecipient(key) {
-    return db.user.findUnique({
-      where: recipientWhere(key),
-      select: recipientSelect,
-    });
-  },
+/**
+ * A new code collides with an existing reference about once in 2^40 / (transfers so far):
+ * a second draw practically always succeeds; the third attempt is a safety margin.
+ */
+const MAX_REFERENCE_ATTEMPTS = 3;
 
-  async execute(senderId, request) {
-    const existing = await findByIdempotencyKey(
-      db,
-      senderId,
-      request.idempotencyKey,
+/** `newCode` is injectable so a test can force a reference collision. */
+export function createPrismaTransferRepository({
+  newCode = () => newTransferCode(),
+}: { newCode?: () => string } = {}): TransferRepository {
+  return {
+    findRecipient,
+    async execute(senderId, request) {
+      for (let attempt = 1; ; attempt += 1) {
+        const outcome = await executeOnce(senderId, request, newCode());
+        if (outcome !== REFERENCE_TAKEN) return outcome;
+        if (attempt === MAX_REFERENCE_ATTEMPTS) {
+          throw new Error("Could not draw a free transfer reference");
+        }
+      }
+    },
+  };
+}
+
+function findRecipient(key: RecipientKey) {
+  return db.user.findUnique({
+    where: recipientWhere(key),
+    select: recipientSelect,
+  });
+}
+
+/** The transaction rolled back on a unique violation that was not the idempotency key. */
+const REFERENCE_TAKEN = Symbol("reference taken");
+
+async function executeOnce(
+  senderId: string,
+  request: TransferRequest,
+  code: string,
+): Promise<TransferOutcome | typeof REFERENCE_TAKEN> {
+  const existing = await findByIdempotencyKey(
+    db,
+    senderId,
+    request.idempotencyKey,
+  );
+  if (existing) return replay(existing, request);
+
+  try {
+    const receipt = await db.$transaction((tx) =>
+      runTransfer(tx, senderId, request, code),
     );
-    if (existing) return replay(existing, request);
-
-    try {
-      const receipt = await db.$transaction((tx) =>
-        runTransfer(tx, senderId, request),
+    return { ok: true, receipt, replayed: false };
+  } catch (error) {
+    if (error instanceof TransferRejected) {
+      // A duplicate can pass the key check above while its twin is still running, then
+      // read the balance after the twin committed and plan against the debited value
+      // ("insufficient funds"). If the key is committed by now, the twin won: replay it.
+      const twin = await findByIdempotencyKey(
+        db,
+        senderId,
+        request.idempotencyKey,
       );
-      return { ok: true, receipt, replayed: false };
-    } catch (error) {
-      if (error instanceof TransferRejected) {
-        // A duplicate can pass the key check above while its twin is still running, then
-        // read the balance after the twin committed and plan against the debited value
-        // ("insufficient funds"). If the key is committed by now, the twin won: replay it.
-        const twin = await findByIdempotencyKey(
-          db,
-          senderId,
-          request.idempotencyKey,
-        );
-        if (twin) return replay(twin, request);
-        return { ok: false, reason: error.reason };
-      }
-      // Lost the race for the idempotency key: the winner has committed by now.
-      if (isUniqueViolation(error)) {
-        const winner = await findByIdempotencyKey(
-          db,
-          senderId,
-          request.idempotencyKey,
-        );
-        if (winner) return replay(winner, request);
-      }
-      throw error;
+      if (twin) return replay(twin, request);
+      return { ok: false, reason: error.reason };
     }
-  },
-};
+    if (isUniqueViolation(error)) {
+      // Lost the race for the idempotency key: the winner has committed by now.
+      const winner = await findByIdempotencyKey(
+        db,
+        senderId,
+        request.idempotencyKey,
+      );
+      if (winner) return replay(winner, request);
+      // Otherwise the only other unique value written is the reference: draw again.
+      return REFERENCE_TAKEN;
+    }
+    throw error;
+  }
+}
+
+export const prismaTransferRepository = createPrismaTransferRepository();
 
 export const prismaRecentTransfersRepository: RecentTransfersRepository = {
   findRecentTransfers(userId, take) {
     return db.transfer.findMany({
       where: { OR: [{ senderId: userId }, { recipientId: userId }] },
-      orderBy: { createdAt: "desc" },
+      // The id breaks ties between transfers stored with the same timestamp, so the
+      // order (and the quick picks built from it) never changes between two reads.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take,
       select: {
         sender: { select: recipientSelect },

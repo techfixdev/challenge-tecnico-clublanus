@@ -9,6 +9,7 @@ import { TRANSFER_FAILURE_MESSAGE } from "./transfer";
 import {
   amountInputError,
   firstErrorMessage,
+  normalizeAmountInput,
   pickRecentRecipients,
   recipientInputError,
   recipientInputHint,
@@ -72,6 +73,25 @@ describe("amountInputError", () => {
   it("skips the balance check when no card is known", () => {
     expect(amountInputError("5000")).toBeNull();
   });
+});
+
+describe("normalizeAmountInput", () => {
+  it.each([
+    ["12,30", "12.30"],
+    ["12,3", "12.30"],
+    ["12.3", "12.30"],
+    ["0,5", "0.50"],
+    ["  7,05 ", "7.05"],
+  ])("writes %j with a decimal point and two decimals: %j", (raw, shown) => {
+    expect(normalizeAmountInput(raw)).toBe(shown);
+  });
+
+  it.each(["12", "", "abc", "12,", "1,234", "12,345", "1.2.3"])(
+    "leaves %j as typed (a whole amount, or one the field flags as invalid)",
+    (raw) => {
+      expect(normalizeAmountInput(raw)).toBe(raw);
+    },
+  );
 });
 
 describe("stepForFailure", () => {

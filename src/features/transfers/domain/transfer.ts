@@ -70,7 +70,7 @@ export type TransferReceipt = {
   } | null;
   /** The sender's SENT movement, for the movement detail link. */
   movementId: string | null;
-  /** That movement's reference, as printed on its receipt ("TRF-…-E"). */
+  /** That movement's reference, as printed on its receipt ("ENV-7Q4K-92XA"). */
   reference: string | null;
 };
 

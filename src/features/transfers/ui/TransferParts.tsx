@@ -99,25 +99,40 @@ export function lastFourDigits(cvuMasked: string): string {
   return cvuMasked.replace(/\D/g, "").slice(-4);
 }
 
-/** Name, alias and "CVU •••• 0255": who the money goes to (fits 360px wide). */
+/**
+ * "•••• 0255", read out as "terminado en 0255": the one way the send flow shows a masked
+ * CVU (recents, amount, review), so every step looks the same.
+ */
+export function MaskedCvu({ cvuMasked }: { cvuMasked: string }) {
+  return (
+    <span className="whitespace-nowrap tabular-nums">
+      <span className="sr-only">terminado en </span>
+      <span aria-hidden="true">•••• </span>
+      {lastFourDigits(cvuMasked)}
+    </span>
+  );
+}
+
+/**
+ * Name, alias and "CVU •••• 0255": who the money goes to. On narrow screens the texts wrap
+ * instead of being cut, so a name is never half shown.
+ */
 export function RecipientIdentity({
   recipient,
 }: {
   recipient: Pick<ConfirmedRecipient, "fullName" | "alias" | "cvuMasked">;
 }) {
   return (
-    <span className="flex min-w-0 flex-1 flex-col">
-      <span className="truncate text-[15px] font-medium text-foreground">
+    <span className="flex min-w-0 flex-1 basis-24 flex-col">
+      <span className="text-[15px] font-medium text-foreground">
         {recipient.fullName}
       </span>
       {recipient.alias ? (
-        <span className="truncate text-xs text-muted">{recipient.alias}</span>
+        <span className="text-xs text-muted">{recipient.alias}</span>
       ) : null}
       {recipient.cvuMasked ? (
-        <span className="truncate text-xs text-muted tabular-nums">
-          <span className="sr-only">CVU terminado en </span>
-          <span aria-hidden="true">CVU •••• </span>
-          {lastFourDigits(recipient.cvuMasked)}
+        <span className="text-xs text-muted">
+          CVU <MaskedCvu cvuMasked={recipient.cvuMasked} />
         </span>
       ) : null}
     </span>
