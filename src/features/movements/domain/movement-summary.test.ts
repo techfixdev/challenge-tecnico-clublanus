@@ -6,10 +6,19 @@ import {
   type MovementTotalsRepository,
 } from "./movement-summary";
 
+type Totals = Awaited<ReturnType<MovementTotalsRepository["sumByType"]>>;
+
+/** One currency (USD) unless `byCurrency` says otherwise. */
 function repositoryReturning(
-  totals: Awaited<ReturnType<MovementTotalsRepository["sumByType"]>>,
+  totals: Totals,
+  byCurrency: Record<string, Totals> = { USD: totals },
 ) {
-  return { sumByType: vi.fn().mockResolvedValue(totals) };
+  return {
+    currenciesOf: vi.fn().mockResolvedValue(Object.keys(byCurrency)),
+    sumByType: vi.fn(({ currency }: { currency: string }) =>
+      Promise.resolve(byCurrency[currency] ?? {}),
+    ),
+  } satisfies MovementTotalsRepository;
 }
 
 const OCTOBER_15 = new Date("2026-10-15T15:00:00Z");
@@ -55,10 +64,14 @@ describe("getMonthlySummary", () => {
 
     expect(summary).toEqual({
       month: "2026-10",
-      currency: "USD",
-      income: "1000.10",
-      // 0.1 + 0.2 in floating point is 0.30000000000000004; cents are exact.
-      expenses: "0.30",
+      totals: [
+        {
+          currency: "USD",
+          income: "1000.10",
+          // 0.1 + 0.2 in floating point is 0.30000000000000004; cents are exact.
+          expenses: "0.30",
+        },
+      ],
     });
   });
 
@@ -72,7 +85,7 @@ describe("getMonthlySummary", () => {
       now: OCTOBER_15,
     });
 
-    expect(summary.expenses).toBe("19999999999.98");
+    expect(summary.totals[0]?.expenses).toBe("19999999999.98");
   });
 
   it("is zero, not missing, for a month without movements", async () => {
@@ -80,7 +93,49 @@ describe("getMonthlySummary", () => {
       now: OCTOBER_15,
     });
 
-    expect(summary).toMatchObject({ income: "0.00", expenses: "0.00" });
+    expect(summary.totals).toEqual([
+      { currency: "USD", income: "0.00", expenses: "0.00" },
+    ]);
+  });
+
+  it("totals each currency on its own, in the account's order, never adding pesos to dollars", async () => {
+    const repository = repositoryReturning(
+      {},
+      {
+        USD: { RECEIVED: "95.00", SUBSCRIPTION: "125.00" },
+        ARS: {
+          RECEIVED: "185000.00",
+          SENT: "45000.00",
+          SUBSCRIPTION: "11999.00",
+        },
+      },
+    );
+
+    const summary = await getMonthlySummary(repository, "user_1", {
+      now: OCTOBER_15,
+    });
+
+    expect(repository.currenciesOf).toHaveBeenCalledWith("user_1");
+    expect(repository.sumByType).toHaveBeenCalledTimes(2);
+    expect(repository.sumByType).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: "ARS", status: "COMPLETED" }),
+    );
+    expect(summary.totals).toEqual([
+      { currency: "USD", income: "95.00", expenses: "125.00" },
+      { currency: "ARS", income: "185000.00", expenses: "56999.00" },
+    ]);
+  });
+
+  it("falls back to dollars for an account with no card and no movement yet", async () => {
+    const repository = repositoryReturning({}, {});
+
+    const summary = await getMonthlySummary(repository, "u", {
+      now: OCTOBER_15,
+    });
+
+    expect(summary.totals).toEqual([
+      { currency: "USD", income: "0.00", expenses: "0.00" },
+    ]);
   });
 });
 

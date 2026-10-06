@@ -156,6 +156,15 @@ test.describe("every screen fits every width", () => {
       ).toBeVisible();
       await expectFitsEveryWidth(page, "transfer amount above the balance");
 
+      // The widest amount the field takes: pesos, up to the peso cap.
+      await page.locator("label", { hasText: "Visa" }).click();
+      await page.getByLabel("Monto en ARS").fill("100.000.000,01");
+      await expect(
+        page.getByText("El monto máximo por transferencia es $ 100.000.000"),
+      ).toBeVisible();
+      await expectFitsEveryWidth(page, "transfer peso amount above the cap");
+      await page.locator("label", { hasText: "Mastercard" }).click();
+
       await page.getByLabel("Monto en USD").fill("12,30");
       await page
         .getByLabel(/Motivo/)

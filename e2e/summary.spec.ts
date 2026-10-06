@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { formatSignedMoney } from "../src/shared/lib/format";
+
 async function login(page: Page) {
   await page.goto("/login");
   await page.getByLabel("Email").fill("soygranate@clublanus.com");
@@ -8,14 +10,7 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-function amountText(amount: string, sign: "+" | "−") {
-  const value = Number(amount);
-  const money = `$${value.toLocaleString("en-US", {
-    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
-    maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
-  })}`;
-  return value === 0 ? money : `${sign}${money}`;
-}
+type CurrencyTotals = { currency: string; income: string; expenses: string };
 
 test("shows this month's income and expenses, whatever the filters", async ({
   page,
@@ -25,14 +20,23 @@ test("shows this month's income and expenses, whatever the filters", async ({
   expect(api.status()).toBe(200);
   const { data } = await api.json();
 
+  // One total per currency of the account, dollars (primary card) first: never summed.
+  expect(data.totals.map((t: CurrencyTotals) => t.currency)).toEqual([
+    "USD",
+    "ARS",
+  ]);
+
   await page.goto("/movimientos");
   const summary = page.getByRole("region", { name: /^Resumen de / });
-  await expect(summary).toContainText(
-    `Ingresos${amountText(data.income, "+")}`,
-  );
-  await expect(summary).toContainText(
-    `Egresos${amountText(data.expenses, "−")}`,
-  );
+  for (const totals of data.totals as CurrencyTotals[]) {
+    const line = summary.locator(`dl[data-currency="${totals.currency}"]`);
+    await expect(line).toContainText(
+      `Ingresos${formatSignedMoney(totals.income, totals.currency, "in")}`,
+    );
+    await expect(line).toContainText(
+      `Egresos${formatSignedMoney(totals.expenses, totals.currency, "out")}`,
+    );
+  }
   const unfiltered = await summary.textContent();
 
   // The summary describes the month, not the current view.
@@ -64,9 +68,10 @@ test("the summary API validates the month", async ({ page }) => {
   expect(await past.json()).toEqual({
     data: {
       month: "2000-01",
-      currency: "USD",
-      income: "0.00",
-      expenses: "0.00",
+      totals: [
+        { currency: "USD", income: "0.00", expenses: "0.00" },
+        { currency: "ARS", income: "0.00", expenses: "0.00" },
+      ],
     },
   });
 });

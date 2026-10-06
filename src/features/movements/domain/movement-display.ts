@@ -1,6 +1,6 @@
-import { formatMoney } from "@/shared/lib/format";
+import type { MoneyDirection } from "@/shared/lib/format";
 
-import type { Movement, MovementStatus, MovementType } from "./movement";
+import type { MovementStatus, MovementType } from "./movement";
 
 export const MOVEMENT_TYPE_LABEL: Record<MovementType, string> = {
   SUBSCRIPTION: "Débito automático",
@@ -13,25 +13,9 @@ export const MOVEMENT_STATUS_LABEL: Record<MovementStatus, string> = {
   PENDING: "Pendiente",
 };
 
-// U+2212 MINUS SIGN: typographically correct and read as "menos" by screen readers.
-const MINUS = "−";
-
-/** "+$95" for money in, "−$125" for money out (detail screen). */
-export function formatSignedAmount(
-  movement: Pick<Movement, "type" | "amount">,
-): string {
-  const sign = movement.type === "RECEIVED" ? "+" : MINUS;
-  return `${sign}${formatMoney(movement.amount)}`;
-}
-
-/** Monthly summary totals: "+$95" in, "−$250" out, and a plain "$0" when empty. */
-export function formatSummaryAmount(
-  amount: string,
-  direction: "in" | "out",
-): string {
-  const money = formatMoney(amount);
-  if (Number(amount) === 0) return money;
-  return `${direction === "in" ? "+" : MINUS}${money}`;
+/** The direction of a movement's money: received comes in, the rest goes out. */
+export function movementDirection(type: MovementType): MoneyDirection {
+  return type === "RECEIVED" ? "in" : "out";
 }
 
 /** "1 movimiento", "26 movimientos". */

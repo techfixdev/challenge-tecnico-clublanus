@@ -46,10 +46,19 @@ test("home → search → filter → detail → back", async ({ page }) => {
   const card = page.getByRole("region", {
     name: "Tarjeta Mastercard terminada en 1234",
   });
-  await expect(card).toContainText("978.85");
+  // Two currencies, one format: the dollar Mastercard and the peso Visa (es-AR digits,
+  // the chip names the currency, screen readers hear it in words).
+  await expect(card).toContainText("USD");
+  await expect(card).toContainText("978,85 dólares");
+  const pesos = page.getByRole("region", {
+    name: "Tarjeta Visa terminada en 5678",
+  });
+  await expect(pesos).toContainText("ARS");
+  await expect(pesos).toContainText("312.400,50 pesos");
   const latest = page.getByRole("region", { name: "Últimos movimientos" });
   await expect(latest.getByRole("listitem")).toHaveCount(5);
   await expect(latest.getByRole("listitem").first()).toContainText("Adobe");
+  await expect(latest.getByRole("listitem").first()).toContainText("US$ 125");
 
   // The search icon opens Movements with the search box focused.
   await page.getByRole("link", { name: "Buscar movimientos" }).click();
@@ -85,7 +94,7 @@ test("home → search → filter → detail → back", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Ronaldo" }),
   ).toBeVisible();
-  await expect(page.getByText("+$95")).toBeVisible();
+  await expect(page.getByText("+US$ 95")).toBeVisible();
   await expect(page.getByText("GB-000002")).toBeVisible();
 
   await page.getByRole("link", { name: "Volver" }).click();

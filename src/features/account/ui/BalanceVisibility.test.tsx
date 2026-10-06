@@ -29,8 +29,8 @@ function renderCard({ initialHidden = false } = {}) {
   return render(
     <BalanceVisibilityProvider initialHidden={initialHidden}>
       <BalanceToggle />
-      <BalanceAmount balance="978.85" />
-      <BalanceAmount balance="250.00" />
+      <BalanceAmount balance="978.85" currency="USD" />
+      <BalanceAmount balance="250.00" currency="USD" />
     </BalanceVisibilityProvider>,
   );
 }
@@ -71,7 +71,7 @@ describe("hide / show balance", () => {
 
     expect(visibleLayers(container)).toEqual(["••••••", "••••••"]);
     expect(screen.getAllByText("Saldo oculto")).toHaveLength(2);
-    expect(container).not.toHaveTextContent("978.85");
+    expect(container).not.toHaveTextContent("978,85");
     expect(container).not.toHaveTextContent("250");
     // The digit strips roll back to 0, so the hidden markup does not spell the balance.
     expect(
@@ -83,7 +83,7 @@ describe("hide / show balance", () => {
     await user.click(screen.getByRole("button", { name: "Ocultar saldo" }));
     // The mask stays mounted (faded out) so it can morph; the digits are the shown layer.
     expect(visibleLayers(container)).toEqual(["digits", "digits"]);
-    expect(screen.getByText("978.85")).toHaveClass("sr-only");
+    expect(screen.getByText("978,85 dólares")).toHaveClass("sr-only");
   });
 
   it("remembers the choice in a cookie the server reads on the next visit", async () => {

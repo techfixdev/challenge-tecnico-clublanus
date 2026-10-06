@@ -16,19 +16,20 @@ function shape(balance: string) {
 
 describe("odometer cells", () => {
   it("maps a balance to one column per digit and fixed separators", () => {
-    expect(shape("978.85")).toEqual([9, 7, 8, ".", 8, 5]);
-    expect(odometerText(odometerCells("978.85"))).toBe("978.85");
+    expect(shape("978.85")).toEqual([9, 7, 8, ",", 8, 5]);
+    expect(odometerText(odometerCells("978.85"))).toBe("978,85");
   });
 
-  it("uses the app's money format: thousands, two decimals, whole amounts", () => {
-    expect(odometerText(odometerCells("1234.56"))).toBe("1,234.56");
-    expect(odometerText(odometerCells("12.5"))).toBe("12.50");
+  it("uses the app's (Argentine) money format: dot thousands, comma decimals, whole amounts", () => {
+    expect(odometerText(odometerCells("1234.56"))).toBe("1.234,56");
+    expect(shape("312400.50")).toEqual([3, 1, 2, ".", 4, 0, 0, ",", 5, 0]);
+    expect(odometerText(odometerCells("12.5"))).toBe("12,50");
     expect(odometerText(odometerCells("0"))).toBe("0");
     expect(odometerText(odometerCells("0.00"))).toBe("0");
   });
 
   it("keeps one cell per character, so the width is fixed by the final text", () => {
-    expect(odometerCells("1234.56")).toHaveLength("1,234.56".length);
+    expect(odometerCells("1234.56")).toHaveLength("1.234,56".length);
   });
 
   it("staggers the roll from right to left", () => {

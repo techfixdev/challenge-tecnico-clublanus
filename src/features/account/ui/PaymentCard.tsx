@@ -76,10 +76,14 @@ export function PaymentCard({ card }: { card: Card }) {
             {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
               the chip follows the ink, so it sits centered on the figures. */}
             <p className="mt-2 flex items-center gap-3">
-              <span className="-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide text-[#6b4300] shadow-sm">
-                USD
+              {/* Decorative for screen readers: the balance says its currency in words. */}
+              <span
+                aria-hidden="true"
+                className="-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide text-[#6b4300] shadow-sm"
+              >
+                {card.currency}
               </span>
-              <BalanceAmount balance={card.balance} />
+              <BalanceAmount balance={card.balance} currency={card.currency} />
             </p>
           </div>
           <CardBrandLogo brand={card.brand} />

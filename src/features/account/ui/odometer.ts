@@ -9,7 +9,7 @@ export type OdometerCell =
 
 /**
  * Splits a balance into odometer cells: one rolling column per digit and a fixed cell
- * per separator, from the same formatter as the rest of the app ("1,234.56", "12.50",
+ * per separator, from the same formatter as the rest of the app ("1.234,56", "12,50",
  * "0"). Keys and delays count from the right, so a column keeps its identity (and its
  * spring) when the number gains a digit on the left, and the cents roll first.
  */

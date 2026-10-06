@@ -21,14 +21,14 @@ test("hides every balance, and the choice survives a reload", async ({
   await login(page);
   const toggle = page.getByRole("button", { name: "Ocultar saldo" });
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await expect(primaryCard(page)).toContainText("978.85");
+  await expect(primaryCard(page)).toContainText("978,85");
 
   await toggle.click();
 
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   const cards = page.getByRole("list", { name: "Tus tarjetas" });
   await expect(shownMasks(page)).toHaveCount(2);
-  await expect(cards).not.toContainText("978.85");
+  await expect(cards).not.toContainText("978,85");
 
   // The server renders the choice (cookie): the HTML already shows the mask, tells
   // screen readers "Saldo oculto" and has no rendered balance, so a hidden balance
@@ -36,17 +36,17 @@ test("hides every balance, and the choice survives a reload", async ({
   const html = await (await page.request.get("/")).text();
   expect(html).toContain('data-balance-mask="true" data-state="shown"');
   expect(html).toContain(">Saldo oculto<");
-  expect(html).not.toContain(">978.85<");
+  expect(html).not.toContain("978,85");
 
   await page.reload();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(shownMasks(page)).toHaveCount(2);
 
   await toggle.click();
-  await expect(primaryCard(page)).toContainText("978.85");
+  await expect(primaryCard(page)).toContainText("978,85");
   await expect(shownMasks(page)).toHaveCount(0);
   // Showing it again rolls the digits back up to the exact balance.
-  await expect.poll(() => readPrimaryOdometer(page)).toBe("978.85");
+  await expect.poll(() => readPrimaryOdometer(page)).toBe("978,85");
 });
 
 function shownMasks(page: Page) {
@@ -107,7 +107,7 @@ async function recordBalanceFrames(page: Page) {
       for (const amount of document.querySelectorAll(
         '[data-testid="balance-amount"]',
       )) {
-        if (amount.querySelector(".sr-only")?.textContent !== "978.85")
+        if (amount.querySelector(".sr-only")?.textContent !== "978,85 dólares")
           continue;
         const shown = read(amount);
         if (frames.at(-1) !== shown) frames.push(shown);
@@ -117,7 +117,7 @@ async function recordBalanceFrames(page: Page) {
   });
   return async () => {
     // Wait for the roll (if any) to land on the final value, then read the history.
-    await expect.poll(() => readPrimaryOdometer(page)).toBe("978.85");
+    await expect.poll(() => readPrimaryOdometer(page)).toBe("978,85");
     // Two frames later the sampler has recorded the settled value too.
     return page.evaluate(async () => {
       for (let frame = 0; frame < 2; frame += 1)
@@ -140,8 +140,8 @@ test.describe("with motion allowed", () => {
     // The recorder sees the digits mid-roll, so the reduced-motion case below would
     // catch a roll too.
     expect(frames.length).toBeGreaterThan(2);
-    expect(frames[0]).not.toBe("978.85");
-    expect(frames.at(-1)).toBe("978.85");
+    expect(frames[0]).not.toBe("978,85");
+    expect(frames.at(-1)).toBe("978,85");
   });
 });
 
@@ -154,6 +154,6 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     const readFrames = await recordBalanceFrames(page);
     await login(page);
 
-    expect(await readFrames()).toEqual(["978.85"]);
+    expect(await readFrames()).toEqual(["978,85"]);
   });
 });

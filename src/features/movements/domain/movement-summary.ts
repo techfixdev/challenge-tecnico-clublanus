@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 import { monthOf, monthRange } from "@/shared/lib/dates";
+import { CURRENCIES } from "@/shared/lib/currency";
 import { fromCents, toCents } from "@/shared/lib/money";
 
 import type { MovementStatus, MovementType } from "./movement";
 
 /**
- * Monthly summary ("Octubre · Ingresos +$X · Egresos −$Y") for the movements screen.
+ * Monthly summary ("Octubre · Ingresos +US$ X · Egresos −US$ Y", then the same in pesos)
+ * for the movements screen.
  *
  * Rules:
  * - Income is RECEIVED; expenses are SENT plus SUBSCRIPTION (automatic debits).
@@ -17,10 +19,13 @@ import type { MovementStatus, MovementType } from "./movement";
  *   current view.
  * - Money stays exact: the database sums the decimals and this module only adds them
  *   as integer cents, never as floating-point money.
+ * - One total per currency, never a sum across them: there is no FX, so adding pesos
+ *   to dollars would be meaningless. The currencies are the account's (its cards',
+ *   primary first, then any other one with movements).
  */
 
-/** The account currency; amounts in another currency must not be added to these. */
-export const SUMMARY_CURRENCY = "USD";
+/** What an account with no card and no movement yet shows: its default currency. */
+export const DEFAULT_SUMMARY_CURRENCY: string = CURRENCIES[0];
 
 const COUNTED_STATUS: MovementStatus = "COMPLETED";
 const INCOME_TYPES: readonly MovementType[] = ["RECEIVED"];
@@ -38,18 +43,25 @@ export type MovementTotalsQuery = {
 
 /** Port: sums per movement type, as fixed 2-decimal strings (types with no rows are absent). */
 export interface MovementTotalsRepository {
+  /** The currencies the user's money is in: the cards' (primary first), then the rest. */
+  currenciesOf(userId: string): Promise<string[]>;
   sumByType(
     query: MovementTotalsQuery,
   ): Promise<Partial<Record<MovementType, string>>>;
 }
 
-export type MonthlySummary = {
-  /** "2026-10". */
-  month: string;
+export type CurrencyTotals = {
   currency: string;
   /** Fixed 2-decimal strings, e.g. "95.00". */
   income: string;
   expenses: string;
+};
+
+export type MonthlySummary = {
+  /** "2026-10". */
+  month: string;
+  /** One entry per currency, in the account's order; never empty. */
+  totals: CurrencyTotals[];
 };
 
 function sumOf(
@@ -67,18 +79,28 @@ export async function getMonthlySummary(
   { month, now = new Date() }: { month?: string; now?: Date } = {},
 ): Promise<MonthlySummary> {
   const summaryMonth = month ?? monthOf(now);
-  const totals = await repository.sumByType({
-    userId,
-    status: COUNTED_STATUS,
-    currency: SUMMARY_CURRENCY,
-    ...monthRange(summaryMonth),
-  });
-  return {
-    month: summaryMonth,
-    currency: SUMMARY_CURRENCY,
-    income: sumOf(totals, INCOME_TYPES),
-    expenses: sumOf(totals, EXPENSE_TYPES),
-  };
+  const range = monthRange(summaryMonth);
+  const accountCurrencies = await repository.currenciesOf(userId);
+  const currencies =
+    accountCurrencies.length > 0
+      ? accountCurrencies
+      : [DEFAULT_SUMMARY_CURRENCY];
+  const totals = await Promise.all(
+    currencies.map(async (currency): Promise<CurrencyTotals> => {
+      const byType = await repository.sumByType({
+        userId,
+        status: COUNTED_STATUS,
+        currency,
+        ...range,
+      });
+      return {
+        currency,
+        income: sumOf(byType, INCOME_TYPES),
+        expenses: sumOf(byType, EXPENSE_TYPES),
+      };
+    }),
+  );
+  return { month: summaryMonth, totals };
 }
 
 /**

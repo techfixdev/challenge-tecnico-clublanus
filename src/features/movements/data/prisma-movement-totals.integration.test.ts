@@ -123,10 +123,41 @@ describe("prismaMovementRepository.sumByType (PostgreSQL)", () => {
       getMonthlySummary(repository, ownerId, { month: "2026-10" }),
     ).resolves.toEqual({
       month: "2026-10",
-      currency: "USD",
-      income: "100.30",
-      expenses: "15.79",
+      // Pesos on their own line, never added to the dollars.
+      totals: [
+        { currency: "USD", income: "100.30", expenses: "15.79" },
+        { currency: "ARS", income: "500.00", expenses: "0.00" },
+      ],
     });
+  });
+
+  it("lists the cards' currencies primary first, then the movements' others", async () => {
+    await db.card.createMany({
+      data: [
+        { currency: "ARS", isPrimary: false },
+        { currency: "EUR", isPrimary: true },
+      ].map((card) => ({
+        ...card,
+        userId: otherUserId,
+        brand: "VISA" as const,
+        last4: "0000",
+        holderName: "Integration",
+        expMonth: 1,
+        expYear: 2031,
+        balance: "0.00",
+      })),
+    });
+
+    await expect(repository.currenciesOf(otherUserId)).resolves.toEqual([
+      "EUR",
+      "ARS",
+      "USD",
+    ]);
+    await expect(repository.currenciesOf(ownerId)).resolves.toEqual([
+      "USD",
+      "ARS",
+    ]);
+    await expect(repository.currenciesOf(emptyUserId)).resolves.toEqual([]);
   });
 
   it("puts the movements on the Buenos Aires month edges where they belong", async () => {
@@ -137,13 +168,21 @@ describe("prismaMovementRepository.sumByType (PostgreSQL)", () => {
       month: "2026-11",
     });
 
-    expect(september.income).toBe("700.00");
-    expect(november.expenses).toBe("800.00");
+    expect(september.totals[0]).toMatchObject({
+      currency: "USD",
+      income: "700.00",
+    });
+    expect(november.totals[0]).toMatchObject({
+      currency: "USD",
+      expenses: "800.00",
+    });
   });
 
   it("is zero for a month without movements", async () => {
     await expect(
       getMonthlySummary(repository, emptyUserId, { month: "2026-10" }),
-    ).resolves.toMatchObject({ income: "0.00", expenses: "0.00" });
+    ).resolves.toMatchObject({
+      totals: [{ currency: "USD", income: "0.00", expenses: "0.00" }],
+    });
   });
 });

@@ -3,12 +3,13 @@ import type { ReactNode } from "react";
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
 import { BackLink } from "@/shared/ui/BackLink";
+import { Money } from "@/shared/ui/Money";
 
 import type { Movement } from "../domain/movement";
 import {
   MOVEMENT_STATUS_LABEL,
   MOVEMENT_TYPE_LABEL,
-  formatSignedAmount,
+  movementDirection,
 } from "../domain/movement-display";
 import { MovementTile } from "./MovementTile";
 import { MOVEMENT_TYPE_STYLE, MovementTypeIcon } from "./MovementTypeIcon";
@@ -53,7 +54,11 @@ export function MovementDetail({
         <p
           className={`mt-4 text-4xl font-semibold tabular-nums ${MOVEMENT_TYPE_STYLE[movement.type].text}`}
         >
-          {formatSignedAmount(movement)}
+          <Money
+            value={movement.amount}
+            currency={movement.currency}
+            direction={movementDirection(movement.type)}
+          />
         </p>
         <p className="mt-3">
           <StatusBadge status={movement.status} size="md" />

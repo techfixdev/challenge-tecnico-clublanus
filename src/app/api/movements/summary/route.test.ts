@@ -8,6 +8,7 @@ import { OWNER_ID } from "@/test/movement-fixtures";
 const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   sumByType: vi.fn(),
+  currenciesOf: vi.fn(),
 }));
 
 vi.mock("@/features/auth/server/current-user", () => ({
@@ -15,7 +16,10 @@ vi.mock("@/features/auth/server/current-user", () => ({
 }));
 
 vi.mock("@/features/movements/data/prisma-movement-repository", () => ({
-  prismaMovementRepository: { sumByType: mocks.sumByType },
+  prismaMovementRepository: {
+    sumByType: mocks.sumByType,
+    currenciesOf: mocks.currenciesOf,
+  },
 }));
 
 const { GET: summaryRoute } = await import("./route");
@@ -31,6 +35,7 @@ beforeEach(() => {
     firstName: "Granate",
     lastName: "Lanús",
   });
+  mocks.currenciesOf.mockReset().mockResolvedValue(["USD"]);
   mocks.sumByType.mockReset().mockResolvedValue({
     RECEIVED: "95.00",
     SENT: "50.00",
@@ -62,9 +67,7 @@ describe("GET /api/movements/summary", () => {
     await expect(response.json()).resolves.toEqual({
       data: {
         month: "2026-09",
-        currency: "USD",
-        income: "95.00",
-        expenses: "60.99",
+        totals: [{ currency: "USD", income: "95.00", expenses: "60.99" }],
       },
     });
     expect(mocks.sumByType).toHaveBeenCalledWith(

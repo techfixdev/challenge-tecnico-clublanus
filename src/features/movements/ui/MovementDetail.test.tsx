@@ -24,7 +24,10 @@ describe("MovementDetail", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Ronaldo" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("+$95")).toHaveClass("text-received");
+    expect(screen.getByText("+US$ 95").parentElement).toHaveClass(
+      "text-received",
+    );
+    expect(screen.getByText("más 95 dólares")).toHaveClass("sr-only");
     expect(screen.getByText("4 de octubre de 2026")).toBeInTheDocument();
     expect(screen.getByText("18:00 h")).toBeInTheDocument();
     expect(screen.getByText("GB-000002")).toBeInTheDocument();
@@ -47,7 +50,9 @@ describe("MovementDetail", () => {
       />,
     );
 
-    expect(screen.getByText("−$35.50")).toHaveClass("text-sent");
+    expect(screen.getByText("−US$ 35,50").parentElement).toHaveClass(
+      "text-sent",
+    );
     expect(screen.getAllByText("Pendiente")).toHaveLength(2); // badge + status row
     expect(screen.getByText(/Mastercard/)).toHaveTextContent(
       "Mastercard •••• terminada en 1234",

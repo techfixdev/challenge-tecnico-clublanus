@@ -21,13 +21,28 @@ describe("PaymentCard", () => {
 
     expect(screen.getByText("Balance")).toBeInTheDocument();
     expect(screen.getByText("USD")).toBeInTheDocument();
-    expect(screen.getByText("978.85")).toBeInTheDocument();
+    expect(screen.getByText("978,85 dólares")).toBeInTheDocument();
     expect(screen.getByTestId("card-number")).toHaveTextContent(
       "**** **** **** 1234",
     );
     expect(screen.getByText("Soy Granate")).toBeInTheDocument();
     expect(screen.getByText("Exp. Date")).toBeInTheDocument();
     expect(screen.getByText("02/30")).toBeInTheDocument();
+  });
+
+  it("shows a peso card's currency on its chip and says the balance in pesos", () => {
+    render(
+      <PaymentCard
+        card={makeCard({
+          brand: "VISA",
+          balance: "312400.50",
+          currency: "ARS",
+        })}
+      />,
+    );
+
+    expect(screen.getByText("ARS")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("312.400,50 pesos")).toHaveClass("sr-only");
   });
 
   it("lays the card number out as four groups, the masked ones apart from the digits", () => {

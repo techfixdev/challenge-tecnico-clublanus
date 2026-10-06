@@ -2,6 +2,7 @@ import "server-only";
 
 import type { CardBrand } from "@/features/account/domain/card";
 import { Prisma } from "@/generated/prisma/client";
+import { CURRENCIES } from "@/shared/lib/currency";
 import { db } from "@/shared/lib/db";
 import { containsPattern, LIKE_ESCAPE_CHAR } from "@/shared/lib/like-pattern";
 
@@ -113,6 +114,33 @@ export const prismaMovementRepository: MovementRepository &
       select: movementSelect,
     });
     return row ? toMovement(row) : null;
+  },
+
+  /**
+   * The cards' currencies, primary first, then any other currency the user has movements
+   * in (e.g. from a card deleted since), in the app's currency order.
+   */
+  async currenciesOf(userId: string) {
+    const [cards, movements] = await Promise.all([
+      db.card.findMany({
+        where: { userId },
+        select: { currency: true },
+        orderBy: [{ isPrimary: "desc" }, { id: "asc" }],
+      }),
+      db.movement.findMany({
+        where: { userId },
+        distinct: ["currency"],
+        select: { currency: true },
+      }),
+    ]);
+    const order = (code: string) => {
+      const index = (CURRENCIES as readonly string[]).indexOf(code);
+      return index === -1 ? CURRENCIES.length : index;
+    };
+    const others = movements
+      .map((movement) => movement.currency)
+      .sort((a, b) => order(a) - order(b) || a.localeCompare(b));
+    return [...new Set([...cards.map((card) => card.currency), ...others])];
   },
 
   /**

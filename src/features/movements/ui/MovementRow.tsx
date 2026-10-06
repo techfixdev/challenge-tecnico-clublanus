@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { formatMoney } from "@/shared/lib/format";
+import { Money } from "@/shared/ui/Money";
 
 import type { Movement } from "../domain/movement";
 import { MOVEMENT_TYPE_LABEL } from "../domain/movement-display";
@@ -50,7 +50,8 @@ export function MovementRow({ movement, href }: MovementRowProps) {
       <span
         className={`ml-auto text-sm font-semibold tabular-nums ${MOVEMENT_TYPE_STYLE[type].text}`}
       >
-        {formatMoney(amount, currency)}
+        {/* Unsigned, as in the design: the tile and the color tell the direction. */}
+        <Money value={amount} currency={currency} />
       </span>
     </Link>
   );

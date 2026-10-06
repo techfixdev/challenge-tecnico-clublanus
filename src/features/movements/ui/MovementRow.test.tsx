@@ -25,7 +25,14 @@ describe("MovementRow", () => {
 
     expect(screen.getByText("Adobe")).toBeInTheDocument();
     expect(screen.getByText("Pago de suscripción")).toBeInTheDocument();
-    expect(screen.getByText("$125")).toBeInTheDocument();
+    expect(screen.getByText("US$ 125")).toBeInTheDocument();
+  });
+
+  it("writes a peso amount with its own symbol and says its currency", () => {
+    const { link } = renderRow({ amount: "11999.00", currency: "ARS" });
+
+    expect(screen.getByText("$ 11.999")).toBeInTheDocument();
+    expect(link).toHaveAccessibleName(expect.stringContaining("11.999 pesos"));
   });
 
   it.each([
@@ -43,7 +50,8 @@ describe("MovementRow", () => {
       const { link } = renderRow({ type, amount: "95.00" });
 
       expect(link).toHaveAccessibleName(expect.stringContaining(label));
-      expect(screen.getByText("$95")).toHaveClass(textClass);
+      expect(screen.getByText("US$ 95").parentElement).toHaveClass(textClass);
+      expect(link).toHaveAccessibleName(expect.stringContaining("95 dólares"));
       expect(screen.getByTestId("movement-icon")).toHaveClass(tileClass);
     },
   );
