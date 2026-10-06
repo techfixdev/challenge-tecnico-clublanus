@@ -8,7 +8,9 @@ import "./globals.css";
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  // Only the weights the UI uses (font-normal, font-medium, font-semibold): each one is
+  // a font file the browser may download.
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
