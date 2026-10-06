@@ -12,6 +12,10 @@ import {
   lookupRecipient,
   submitTransfer,
 } from "@/features/transfers/server/actions";
+import {
+  QUICK_ACTION_MORPH,
+  QuickActionMorph,
+} from "@/features/transfers/ui/QuickActionMorph";
 import { TransferFlow } from "@/features/transfers/ui/TransferFlow";
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
@@ -46,17 +50,20 @@ export default async function TransferPage() {
     );
   }
 
+  // Home's "Enviar" tile grows into this screen (see QuickActionMorph).
   return (
-    <main className="flex flex-col px-6 pt-8">
-      <TransferFlow
-        cards={cards}
-        recentRecipients={recentRecipients}
-        // Generated here, on the server: a phone on the LAN dev URL (plain http) is not a
-        // secure context and has no `crypto.randomUUID`.
-        idempotencyKey={randomUUID()}
-        lookupAction={lookupRecipient}
-        sendAction={submitTransfer}
-      />
-    </main>
+    <QuickActionMorph name={QUICK_ACTION_MORPH.transfer}>
+      <main className="flex flex-col px-6 pt-8">
+        <TransferFlow
+          cards={cards}
+          recentRecipients={recentRecipients}
+          // Generated here, on the server: a phone on the LAN dev URL (plain http) is not a
+          // secure context and has no `crypto.randomUUID`.
+          idempotencyKey={randomUUID()}
+          lookupAction={lookupRecipient}
+          sendAction={submitTransfer}
+        />
+      </main>
+    </QuickActionMorph>
   );
 }

@@ -126,16 +126,24 @@ async function openFirstDetail(page: Page) {
  * (`next-url: /movimientos/<id>`) without `next-router-prefetch` (that header marks the
  * partial, loading-only prefetch, which also goes out and carries no list).
  */
-function isFullListPrefetch(request: Request) {
+function isFullPrefetch(
+  request: Request,
+  pathname: string,
+  fromPrefix: string,
+) {
   const url = new URL(request.url());
   const headers = request.headers();
   return (
-    url.pathname === "/movimientos" &&
+    url.pathname === pathname &&
     url.searchParams.has("_rsc") &&
     headers.rsc === "1" &&
     !("next-router-prefetch" in headers) &&
-    (headers["next-url"] ?? "").startsWith("/movimientos/")
+    (headers["next-url"] ?? "/").startsWith(fromPrefix)
   );
+}
+
+function isFullListPrefetch(request: Request) {
+  return isFullPrefetch(request, "/movimientos", "/movimientos/");
 }
 
 /**
@@ -146,13 +154,18 @@ function isFullListPrefetch(request: Request) {
  * started (the router judged its cache fresh enough), after a short quiet period.
  */
 function watchFullListPrefetch(page: Page) {
+  return watchPrefetch(page, isFullListPrefetch);
+}
+
+/** `watchFullListPrefetch` for any full prefetch that `matches`. */
+function watchPrefetch(page: Page, matches: (request: Request) => boolean) {
   let started = false;
   let ended = false;
   const onStart = (request: Request) => {
-    if (isFullListPrefetch(request)) started = true;
+    if (matches(request)) started = true;
   };
   const onEnd = (request: Request) => {
-    if (isFullListPrefetch(request)) ended = true;
+    if (matches(request)) ended = true;
   };
   page.on("request", onStart);
   page.on("requestfinished", onEnd);
@@ -163,7 +176,7 @@ function watchFullListPrefetch(page: Page) {
       if (!started) await page.waitForTimeout(1_000);
       if (started) {
         await expect
-          .poll(() => ended, { message: "the list prefetch ends" })
+          .poll(() => ended, { message: "the prefetch ends" })
           .toBe(true);
       }
       page.off("request", onStart);
@@ -180,6 +193,49 @@ function tileMorphs(transitions: TransitionLog["entries"]) {
       .flatMap(({ names }) => names)
       .filter((name) =>
         name.startsWith("::view-transition-group(movement-tile"),
+      ),
+  );
+}
+
+/** Home's quick actions and the view-transition name each one shares with its screen. */
+const QUICK_ACTIONS = [
+  { label: "Enviar", path: "/transferir", name: "quick-action-transfer" },
+  { label: "Recibir", path: "/recibir", name: "quick-action-receive" },
+] as const;
+
+/** Opens Home and waits until it has fully prefetched the quick action's screen. */
+async function openHomePrefetched(
+  page: Page,
+  { path }: (typeof QUICK_ACTIONS)[number],
+) {
+  const prefetch = watchPrefetch(page, (request) =>
+    isFullPrefetch(request, path, "/"),
+  );
+  await page.goto("/");
+  await prefetch.done();
+}
+
+/** Taps a Home quick action and returns the view transitions its navigation started. */
+async function openQuickAction(
+  page: Page,
+  { label, path }: (typeof QUICK_ACTIONS)[number],
+) {
+  const readLog = await recordViewTransitions(page);
+  await page
+    .getByRole("navigation", { name: "Acciones rápidas" })
+    .getByRole("link", { name: label })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`${path}$`));
+  return readLog();
+}
+
+/** Names of the quick-action containers that morphed during the recorded transitions. */
+function quickActionMorphs(transitions: TransitionLog["entries"]) {
+  return new Set(
+    transitions
+      .flatMap(({ names }) => names)
+      .filter((name) =>
+        name.startsWith("::view-transition-group(quick-action"),
       ),
   );
 }
@@ -287,6 +343,31 @@ test.describe("with motion allowed", () => {
     );
   });
 
+  test("Enviar and Recibir expand into their screens (container transform)", async ({
+    page,
+  }) => {
+    // Like "Volver": the pair forms only when the screen commits without its skeleton,
+    // which needs the quick actions' full prefetch, and Next prefetches only in production.
+    test.skip(
+      !process.env.CI,
+      "Link prefetching only runs in production; run with CI=1 (next start)",
+    );
+    await login(page);
+    await skipWithoutViewTransitions(page);
+
+    for (const action of QUICK_ACTIONS) {
+      await openHomePrefetched(page, action);
+      const transitions = await openQuickAction(page, action);
+      expect(quickActionMorphs(transitions)).toEqual(
+        new Set([`::view-transition-group(${action.name})`]),
+      );
+      const longest = Math.max(...transitions.map((t) => t.longestMs));
+      expect(longest).toBeGreaterThan(0);
+      // Masks latency without adding any: the morph stays short.
+      expect(longest).toBeLessThanOrEqual(300);
+    }
+  });
+
   // Known framework limitation: the browser's back button restores the list on React's
   // blocking (sync) lane, and React only starts view transitions for transition lanes,
   // so no transition runs at all (no `document.startViewTransition` call). This pins the
@@ -337,6 +418,20 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     await skipWithoutViewTransitions(page);
     const { transitions } = await openFirstDetail(page);
     // The transition still runs (state changes stay atomic), with zero-length animations.
+    expect(transitions.length).toBeGreaterThan(0);
+    for (const { longestMs } of transitions) expect(longestMs).toBe(0);
+  });
+
+  test("quick actions open their screens without a morph", async ({ page }) => {
+    test.skip(
+      !process.env.CI,
+      "Link prefetching only runs in production; run with CI=1 (next start)",
+    );
+    await login(page);
+    await skipWithoutViewTransitions(page);
+    await openHomePrefetched(page, QUICK_ACTIONS[0]);
+
+    const transitions = await openQuickAction(page, QUICK_ACTIONS[0]);
     expect(transitions.length).toBeGreaterThan(0);
     for (const { longestMs } of transitions) expect(longestMs).toBe(0);
   });
