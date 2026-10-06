@@ -144,6 +144,20 @@ export function parseTransferRequest(input: unknown): Parsed<TransferRequest> {
     : { success: false, details: validationDetails(result.error) };
 }
 
+/** One amount as typed in the send form ("12,30" or "12.30"), with the same rules. */
+export function parseTransferAmount(
+  raw: string,
+): { success: true; cents: number } | { success: false; message: string } {
+  const result = amountSchema.safeParse(raw);
+  return result.success
+    ? { success: true, cents: result.data.cents }
+    : {
+        success: false,
+        message:
+          result.error.issues[0]?.message ?? TRANSFER_MESSAGES.amountInvalid,
+      };
+}
+
 const recipientQuerySchema = z.object({ q: recipientSchema });
 
 /** `?q=` of the recipient preview (confirm step): an alias or a CVU. */

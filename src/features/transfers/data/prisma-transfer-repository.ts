@@ -12,6 +12,7 @@ import {
   type TransferReceipt,
   type TransferRepository,
 } from "../domain/transfer";
+import type { RecentTransfersRepository } from "../domain/transfer-form";
 import type { RecipientKey, TransferRequest } from "../domain/transfer-schema";
 
 /*
@@ -65,7 +66,7 @@ const storedTransferSelect = {
   sourceCard: {
     select: { id: true, brand: true, last4: true, balance: true },
   },
-  movements: { where: { type: "SENT" }, select: { id: true } },
+  movements: { where: { type: "SENT" }, select: { id: true, reference: true } },
 } satisfies Prisma.TransferSelect;
 
 type StoredTransfer = Prisma.TransferGetPayload<{
@@ -90,6 +91,7 @@ function toReceipt(transfer: StoredTransfer): TransferReceipt {
         }
       : null,
     movementId: transfer.movements[0]?.id ?? null,
+    reference: transfer.movements[0]?.reference ?? null,
   };
 }
 
@@ -301,5 +303,19 @@ export const prismaTransferRepository: TransferRepository = {
       }
       throw error;
     }
+  },
+};
+
+export const prismaRecentTransfersRepository: RecentTransfersRepository = {
+  findRecentTransfers(userId, take) {
+    return db.transfer.findMany({
+      where: { OR: [{ senderId: userId }, { recipientId: userId }] },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: {
+        sender: { select: recipientSelect },
+        recipient: { select: recipientSelect },
+      },
+    });
   },
 };

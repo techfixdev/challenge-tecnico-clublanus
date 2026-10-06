@@ -13,4 +13,6 @@ export const ROUTES = {
   loginExpired: `/login?${LOGIN_EXPIRED_PARAM}=1`,
   movements: "/movimientos",
   movement: (id: string) => `/movimientos/${encodeURIComponent(id)}`,
+  transfer: "/transferir",
+  receive: "/recibir",
 } as const;

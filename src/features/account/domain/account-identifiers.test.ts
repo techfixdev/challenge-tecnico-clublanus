@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  receiveShareText,
   buildCvu,
   formatCvu,
   getReceiveDetails,
@@ -97,5 +98,25 @@ describe("getReceiveDetails", () => {
         "x",
       ),
     ).resolves.toBeNull();
+  });
+});
+
+describe("receiveShareText", () => {
+  it("is a ready-to-send message with the raw CVU (easy to paste)", () => {
+    expect(
+      receiveShareText({
+        holderName: "Granate Lanús",
+        alias: "soy.granate.lanus",
+        cvu: KNOWN_VALID,
+        cvuFormatted: "2850 5909 4009 0418 1352 01",
+      }),
+    ).toBe(
+      [
+        "Te paso mis datos de GranaBank para que me transfieras:",
+        "Titular: Granate Lanús",
+        "Alias: soy.granate.lanus",
+        `CVU: ${KNOWN_VALID}`,
+      ].join("\n"),
+    );
   });
 });

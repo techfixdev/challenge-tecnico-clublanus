@@ -100,3 +100,13 @@ export async function getReceiveDetails(
     cvuFormatted: formatCvu(row.cvu),
   };
 }
+
+/** What "Compartir" sends (or copies): the raw CVU, so it pastes cleanly anywhere. */
+export function receiveShareText(details: ReceiveDetails): string {
+  return [
+    "Te paso mis datos de GranaBank para que me transfieras:",
+    `Titular: ${details.holderName}`,
+    `Alias: ${details.alias}`,
+    `CVU: ${details.cvu}`,
+  ].join("\n");
+}

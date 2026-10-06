@@ -6,7 +6,11 @@ import { buildCvu } from "@/features/account/domain/account-identifiers";
 import { db } from "@/shared/lib/db";
 
 import { sendTransfer } from "../domain/transfer";
-import { prismaTransferRepository as repository } from "./prisma-transfer-repository";
+import {
+  prismaRecentTransfersRepository,
+  prismaTransferRepository as repository,
+} from "./prisma-transfer-repository";
+import { getRecentRecipients } from "../domain/transfer-form";
 
 /*
  * Runs real transfers against PostgreSQL: atomicity, the conditional debit under
@@ -150,6 +154,29 @@ describe("prismaTransferRepository (PostgreSQL)", () => {
     expect(result.ok && result.receipt.movementId).toBe(
       movements.find((m) => m.type === "SENT")?.id,
     );
+    expect(result.ok && result.receipt.reference).toBe(
+      `TRF-${result.ok ? result.receipt.id.toUpperCase() : ""}-E`,
+    );
+  });
+
+  it("lists recent counterparties both ways, newest first, once each", async () => {
+    const me = await createAccount("Me", "50.00");
+    const friend = await createAccount("Friend", "50.00");
+    const other = await createAccount("Other", "50.00");
+
+    await send(me, { recipient: friend.alias, amount: "1" });
+    await send(other, { recipient: me.alias, amount: "2" });
+    await send(me, { recipient: friend.alias, amount: "3" });
+
+    const recipients = await getRecentRecipients(
+      prismaRecentTransfersRepository,
+      me.userId,
+    );
+    expect(recipients.map((recipient) => recipient.query)).toEqual([
+      friend.alias,
+      other.alias,
+    ]);
+    expect(recipients[0]).toMatchObject({ fullName: "Integration Friend" });
   });
 
   it("finds the recipient by CVU and describes the movements by default", async () => {

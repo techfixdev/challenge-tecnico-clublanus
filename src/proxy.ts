@@ -75,5 +75,11 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Private pages plus /login. API routes authenticate themselves and answer 401, not redirects.
-  matcher: ["/", "/login", "/movimientos/:path*"],
+  matcher: [
+    "/",
+    "/login",
+    "/movimientos/:path*",
+    "/transferir/:path*",
+    "/recibir/:path*",
+  ],
 };

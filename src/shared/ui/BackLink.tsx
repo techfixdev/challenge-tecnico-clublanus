@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { ChevronLeftIcon } from "@/shared/ui/icons";
+import { BACK_CONTROL_CLASSES } from "./back-control";
+import { ChevronLeftIcon } from "./icons";
 
 /**
  * A real link (not `history.back()`): works on a fresh tab or a shared URL too.
@@ -10,11 +11,7 @@ import { ChevronLeftIcon } from "@/shared/ui/icons";
  */
 export function BackLink({ href }: { href: string }) {
   return (
-    <Link
-      href={href}
-      prefetch
-      className="inline-flex h-10 pressable items-center gap-1 self-start rounded-2xl bg-surface pr-4 pl-2.5 text-sm font-medium text-foreground shadow-card hover:text-primary focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
-    >
+    <Link href={href} prefetch className={BACK_CONTROL_CLASSES}>
       <ChevronLeftIcon className="size-5" />
       Volver
     </Link>

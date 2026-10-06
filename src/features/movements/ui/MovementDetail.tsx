@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
+import { BackLink } from "@/shared/ui/BackLink";
 
 import type { Movement } from "../domain/movement";
 import {
@@ -9,7 +10,6 @@ import {
   MOVEMENT_TYPE_LABEL,
   formatSignedAmount,
 } from "../domain/movement-display";
-import { BackLink } from "./BackLink";
 import { MovementTile } from "./MovementTile";
 import { MOVEMENT_TYPE_STYLE, MovementTypeIcon } from "./MovementTypeIcon";
 import { StatusBadge } from "./StatusBadge";

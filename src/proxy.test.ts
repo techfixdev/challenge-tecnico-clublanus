@@ -10,7 +10,7 @@ import {
 } from "@/features/auth/server/session-token";
 import { ROUTES } from "@/shared/lib/routes";
 
-import { proxy } from "./proxy";
+import { config, proxy } from "./proxy";
 
 const SECRET = "a-test-secret-that-is-at-least-32-characters";
 const ORIGIN = "http://localhost:3000";
@@ -46,6 +46,17 @@ afterEach(() => {
 });
 
 describe("proxy", () => {
+  it("guards every private page, including the transfer screens", () => {
+    expect(config.matcher).toEqual(
+      expect.arrayContaining([
+        "/",
+        "/movimientos/:path*",
+        `${ROUTES.transfer}/:path*`,
+        `${ROUTES.receive}/:path*`,
+      ]),
+    );
+  });
+
   it("redirects anonymous visitors of private pages to /login", async () => {
     const response = await proxy(request("/movimientos"));
 

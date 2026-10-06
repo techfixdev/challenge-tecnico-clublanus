@@ -20,6 +20,10 @@ export default function HomeLoading() {
       <div className="mt-8 px-6">
         <Skeleton className="h-[180px] w-[84%] rounded-3xl" />
       </div>
+      <div className="mt-8 grid grid-cols-2 gap-4 px-6">
+        <Skeleton className="h-14 rounded-2xl" />
+        <Skeleton className="h-14 rounded-2xl" />
+      </div>
       <div className="mt-8 flex flex-col gap-4 px-6">
         <Skeleton className="h-4 w-40" />
         {Array.from({ length: 4 }, (_, index) => (

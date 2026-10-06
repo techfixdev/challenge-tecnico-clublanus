@@ -7,6 +7,7 @@ import { requireUser } from "@/features/auth/server/current-user";
 import { prismaMovementRepository } from "@/features/movements/data/prisma-movement-repository";
 import { getLatestMovements } from "@/features/movements/domain/movement-queries";
 import { LatestMovements } from "@/features/movements/ui/LatestMovements";
+import { TransferShortcuts } from "@/features/transfers/ui/TransferShortcuts";
 
 export default async function HomePage() {
   const user = await requireUser();
@@ -25,7 +26,10 @@ export default async function HomePage() {
       <div className="mt-3">
         <CardCarousel cards={cards} balanceHidden={balanceHidden} />
       </div>
-      <div className="mt-2">
+      <div className="mt-5">
+        <TransferShortcuts />
+      </div>
+      <div className="mt-6">
         <LatestMovements movements={latestMovements} />
       </div>
     </main>
