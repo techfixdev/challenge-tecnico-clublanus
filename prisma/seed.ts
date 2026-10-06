@@ -105,6 +105,17 @@ const MOVEMENTS: MovementSeed[] = [
     hour: 11,
     pending: true,
   },
+  // A peso debit this month, so the summary's peso line is not empty. Right after the
+  // pending transfer: older than the five Home shows. In the current month from the
+  // 6th on (dates are relative to the seed run, like every other movement).
+  {
+    counterparty: "Disney+",
+    type: "SUBSCRIPTION",
+    amount: "9499.00",
+    daysAgo: 5,
+    hour: 9,
+    card: "secondary",
+  },
   {
     counterparty: "Julio César",
     type: "RECEIVED",

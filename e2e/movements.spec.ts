@@ -6,13 +6,13 @@ const DEMO_USER = {
 };
 
 /**
- * Seed facts (prisma/seed.ts): 27 movements (26 plus the demo transfer sent to the second
- * user), 8 received, 10 subscriptions, 2 from Adobe.
+ * Seed facts (prisma/seed.ts): 28 movements (27 plus the demo transfer sent to the second
+ * user), 8 received, 11 subscriptions, 2 from Adobe.
  */
 const SEED = {
-  total: 27,
+  total: 28,
   received: 8,
-  subscriptions: 10,
+  subscriptions: 11,
   adobe: 2,
   pageSize: 20,
 };
