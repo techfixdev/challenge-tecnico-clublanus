@@ -25,29 +25,38 @@ enum MovementStatus {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  createdAt    DateTime   @default(now())
-  cards        Card[]
-  movements    Movement[]
+  id                String     @id @default(cuid())
+  email             String     @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  /// Account identifiers for transfers, issued when the account opens (the seed assigns
+  /// them; there is no sign-up flow). Nullable: a user without them simply cannot be found
+  /// as a recipient. Format checks live in the migration (CHECK constraints).
+  alias             String?    @unique @db.VarChar(20)
+  cvu               String?    @unique @db.Char(22)
+  createdAt         DateTime   @default(now())
+  cards             Card[]
+  movements         Movement[]
+  transfersSent     Transfer[] @relation("TransferSender")
+  transfersReceived Transfer[] @relation("TransferRecipient")
 }
 
 model Card {
-  id         String     @id @default(cuid())
-  userId     String
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brand      CardBrand
-  last4      String     @db.VarChar(4)
-  holderName String
-  expMonth   Int
-  expYear    Int
-  balance    Decimal    @db.Decimal(12, 2)
-  currency   String     @default("USD") @db.VarChar(3)
-  isPrimary  Boolean    @default(false)
-  movements  Movement[]
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand        CardBrand
+  last4        String     @db.VarChar(4)
+  holderName   String
+  expMonth     Int
+  expYear      Int
+  balance      Decimal    @db.Decimal(12, 2)
+  currency     String     @default("USD") @db.VarChar(3)
+  isPrimary    Boolean    @default(false)
+  movements    Movement[]
+  transfersOut Transfer[] @relation("TransferSourceCard")
+  transfersIn  Transfer[] @relation("TransferDestinationCard")
 
   @@index([userId])
 }
@@ -66,7 +75,37 @@ model Movement {
   status       MovementStatus @default(COMPLETED)
   reference    String         @unique
   occurredAt   DateTime
+  /// Set for both sides of a transfer (the sender's SENT, the recipient's RECEIVED).
+  transferId   String?
+  transfer     Transfer?      @relation(fields: [transferId], references: [id], onDelete: SetNull)
 
+  /// At most one movement per side of a transfer (NULLs are distinct in PostgreSQL).
+  @@unique([transferId, type])
   @@index([userId, occurredAt(sort: Desc)])
   @@index([counterparty])
+}
+
+/// A money transfer between two users. Both resulting movements point back to it.
+model Transfer {
+  id                String     @id @default(cuid())
+  senderId          String
+  sender            User       @relation("TransferSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId       String
+  recipient         User       @relation("TransferRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sourceCardId      String?
+  sourceCard        Card?      @relation("TransferSourceCard", fields: [sourceCardId], references: [id], onDelete: SetNull)
+  destinationCardId String?
+  destinationCard   Card?      @relation("TransferDestinationCard", fields: [destinationCardId], references: [id], onDelete: SetNull)
+  amount            Decimal    @db.Decimal(12, 2)
+  currency          String     @db.VarChar(3)
+  description       String?    @db.VarChar(60)
+  /// Client-generated UUID: a retried or double-tapped request with the same key is a
+  /// replay, not a second transfer. Unique per sender, not globally.
+  idempotencyKey    String     @db.Uuid
+  createdAt         DateTime   @default(now())
+  movements         Movement[]
+
+  @@unique([senderId, idempotencyKey])
+  @@index([recipientId, createdAt(sort: Desc)])
+  @@index([senderId, createdAt(sort: Desc)])
 }
