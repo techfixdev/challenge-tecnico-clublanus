@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
+  experimental: {
+    // Links that prefetch in full (Enviar, Recibir, Movimientos) cache the page for
+    // `static` seconds (default 5 min). Balances and movements can change from outside
+    // (money received from someone else), so a prefetched page is reused for 30s at most.
+    staleTimes: { static: 30 },
+  },
 };
 
 export default nextConfig;
