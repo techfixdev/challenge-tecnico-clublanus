@@ -149,7 +149,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 
 **Verificación:** lint ✅ · typecheck ✅ · tests 39/39 ✅ · e2e 5/5 ✅ · build ✅ · prettier ✅
 
-**Commit:** `797e7d2` — `feat(auth): add login, jwt session cookie and route protection`
+**Commit:** `3134de9` — `feat(auth): add login, jwt session cookie and route protection`
 
 **Revisión automática (4 enfoques: seguridad, resiliencia, legibilidad, confiabilidad): aprobada sin bloqueantes**, con 15 observaciones. Las importantes se corrigen en T3:
 - La API de login acepta cualquier `Content-Type` que *contenga* `application/json` (chequeo por substring).
@@ -199,30 +199,30 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 **Historial de commits:** T3 se hizo primero como un solo commit (95 archivos, ~4.500 líneas). La revisión automática no pudo procesarlo por tamaño, y además un commit así es difícil de revisar para cualquier persona. Se partió en 14 commits temáticos de ~400 líneas, cada uno con sus tests, y se verificó que cada uno compile y pase los tests por sí solo. El código final quedó idéntico byte a byte (mismo hash de árbol de git).
 
 ```
-4d936a5 refactor(shared): add api error helpers, validation and route constants
-80935b0 fix(auth): harden login and logout routes and proxy
-df9c46c feat(account): add card domain and prisma card repository
-28e7006 feat(movements): add movement domain model, filters and cursor
-3ae1a86 feat(movements): add movement use cases and dto
-6ba588c feat(movements): add prisma repository with accent-insensitive search
-fd31938 feat(api): add cards and movements rest endpoints
-c76419d feat(ui): add shared bottom nav, icons, skeleton and error state
-be8e193 feat(account): add home header and card carousel
-21ea4f3 feat(movements): add movement row and list components
-acaca96 feat(movements): add filter chips and search
-0a39e06 feat(movements): add empty states, detail view and load more
-02c1f91 feat(app): add home, movements and detail pages with loading and error boundaries
-5e9dd5a docs: update project log and screenshots
+87b5e5a refactor(shared): add api error helpers, validation and route constants
+cdf3dcb fix(auth): harden login and logout routes and proxy
+e09aa1c feat(account): add card domain and prisma card repository
+cf4534a feat(movements): add movement domain model, filters and cursor
+fd60dd6 feat(movements): add movement use cases and dto
+c93af86 feat(movements): add prisma repository with accent-insensitive search
+bc95fba feat(api): add cards and movements rest endpoints
+ac28de2 feat(ui): add shared bottom nav, icons, skeleton and error state
+8bb36e8 feat(account): add home header and card carousel
+2e35ee8 feat(movements): add movement row and list components
+6ab2167 feat(movements): add filter chips and search
+6772e5b feat(movements): add empty states, detail view and load more
+633b41d feat(app): add home, movements and detail pages with loading and error boundaries
+c36f451 docs: update project log and screenshots
 ```
 
 **Revisión automática por tramos: los 4 aprobados, sin bloqueantes.**
 
 | Tramo | Commits | Enfoques | Observaciones relevantes (no bloqueantes) |
 |---|---|---|---|
-| A — shared + hardening auth | `4d936a5`…`80935b0` | seguridad, resiliencia, legibilidad, confiabilidad | El manejo de errores convierte *cualquier* error en 503: un bug de programación debería ser 500, y se tragan los `redirect()`/`notFound()` de Next. |
-| B — dominio, datos y API | `df9c46c`…`fd31938` | confiabilidad | El SQL crudo de búsqueda no tiene un test contra la base real; conviene verificar el cast del cursor. |
-| C — componentes UI | `c76419d`…`acaca96` | confiabilidad | En el buscador, si cambiás de filtro mientras tipeás, la búsqueda pendiente puede aplicarse con el filtro anterior. |
-| D — estados y páginas | `0a39e06`…`02c1f91` | seguridad, resiliencia, legibilidad, confiabilidad | "Reintentar" no usa bien la función de Next; "Cargar más" ignora errores en silencio y, con la sesión vencida, puede reintentar sin parar. |
+| A — shared + hardening auth | `87b5e5a`…`cdf3dcb` | seguridad, resiliencia, legibilidad, confiabilidad | El manejo de errores convierte *cualquier* error en 503: un bug de programación debería ser 500, y se tragan los `redirect()`/`notFound()` de Next. |
+| B — dominio, datos y API | `e09aa1c`…`bc95fba` | confiabilidad | El SQL crudo de búsqueda no tiene un test contra la base real; conviene verificar el cast del cursor. |
+| C — componentes UI | `ac28de2`…`6ab2167` | confiabilidad | En el buscador, si cambiás de filtro mientras tipeás, la búsqueda pendiente puede aplicarse con el filtro anterior. |
+| D — estados y páginas | `6772e5b`…`633b41d` | seguridad, resiliencia, legibilidad, confiabilidad | "Reintentar" no usa bien la función de Next; "Cargar más" ignora errores en silencio y, con la sesión vencida, puede reintentar sin parar. |
 
 Todas se corrigen en T4.
 
@@ -273,26 +273,26 @@ Todas se corrigen en T4.
 
 **Commits:**
 ```
-0b2c073 refactor: move prisma client to shared and layer the auth feature
-d2050e5 fix(api): answer 503 only for database outages and rethrow next control flow
-c1ddf88 test(movements): run the sql repository against postgresql
-ac77447 fix(movements): apply the latest filters in the debounced search
-666708a fix(movements): recover from load more failures
-99b9475 fix(ui): share error boundary, button styles and notification timer
-878d5f3 ci: add github actions workflow
-864d872 docs: rewrite readme and update project log
-efd50d4 test(auth): isolate missing-secret test from the environment
+97590c4 refactor: move prisma client to shared and layer the auth feature
+9562bd6 fix(api): answer 503 only for database outages and rethrow next control flow
+70f5d85 test(movements): run the sql repository against postgresql
+815e835 fix(movements): apply the latest filters in the debounced search
+2285768 fix(movements): recover from load more failures
+1e078bc fix(ui): share error boundary, button styles and notification timer
+c490b77 ci: add github actions workflow
+dbe5dea docs: rewrite readme and update project log
+876b44e test(auth): isolate missing-secret test from the environment
 ```
 
-**Bug encontrado al commitear:** el CI define `SESSION_SECRET`, y el test "falla si falta el secreto" leía esa variable del entorno, así que en GitHub Actions iba a fallar. Se reprodujo con las mismas variables del CI (RED), se aisló el test con `vi.stubEnv` (GREEN) y se agregó `efd50d4`. Lección: un test no debe depender del entorno en el que corre.
+**Bug encontrado al commitear:** el CI define `SESSION_SECRET`, y el test "falla si falta el secreto" leía esa variable del entorno, así que en GitHub Actions iba a fallar. Se reprodujo con las mismas variables del CI (RED), se aisló el test con `vi.stubEnv` (GREEN) y se agregó `876b44e`. Lección: un test no debe depender del entorno en el que corre.
 
 **Revisión automática por tramos: los 3 aprobados, sin bloqueantes.**
 
 | Tramo | Commits | Observaciones relevantes (no bloqueantes) |
 |---|---|---|
-| E — estructura + errores de la API | `0b2c073`…`d2050e5` | Algunos errores de Prisma desconocidos no se clasifican; un error de credenciales de la base se trata como caída (503) cuando es de configuración (500). |
-| F — integración, buscador, "Cargar más" | `c1ddf88`…`666708a` | Con la sesión vencida, "Cargar más" puede quedar en estado de carga mientras redirige; el test de integración depende de los datos del seed. |
-| G — UI, CI, docs | `99b9475`…`efd50d4` | CI: fijar las acciones por hash y limitar los permisos del token (buenas prácticas de seguridad de supply chain). |
+| E — estructura + errores de la API | `97590c4`…`9562bd6` | Algunos errores de Prisma desconocidos no se clasifican; un error de credenciales de la base se trata como caída (503) cuando es de configuración (500). |
+| F — integración, buscador, "Cargar más" | `70f5d85`…`2285768` | Con la sesión vencida, "Cargar más" puede quedar en estado de carga mientras redirige; el test de integración depende de los datos del seed. |
+| G — UI, CI, docs | `1e078bc`…`876b44e` | CI: fijar las acciones por hash y limitar los permisos del token (buenas prácticas de seguridad de supply chain). |
 
 **Nota:** en el clon limpio, un test falló una vez y no se repitió en 17 corridas más. El sospechoso era un test del buscador que dependía del tiempo real; se reescribió con timers simulados.
 
@@ -300,10 +300,10 @@ efd50d4 test(auth): isolate missing-secret test from the environment
 
 | Commit | Cambio | Por qué |
 |---|---|---|
-| `63c1494` | "Cargar más" pasa a un estado final "Tu sesión venció. Redirigiendo…" ante un 401 | El usuario entiende por qué se cortó la lista, en lugar de ver un botón trabado en "Cargando…". |
-| `39f3051` | Errores de base clasificados en *no disponible* (503), *mal configurada* (500) y *no clasificado* (500) | Una contraseña de base incorrecta no se arregla reintentando: es un error de configuración. |
-| `a3900f6` | El test de integración crea y borra sus propios datos, y verifica que la zona horaria sea la de Buenos Aires | Un test no debe depender del seed ni del entorno: tiene que poder correr en cualquier base. |
-| `44ca0bf` | CI: acciones fijadas por hash de commit, permisos de solo lectura y `persist-credentials: false` | Seguridad de *supply chain*: un tag (`v4`) se puede mover a código malicioso, un hash no. |
+| `aee4565` | "Cargar más" pasa a un estado final "Tu sesión venció. Redirigiendo…" ante un 401 | El usuario entiende por qué se cortó la lista, en lugar de ver un botón trabado en "Cargando…". |
+| `5fc30b8` | Errores de base clasificados en *no disponible* (503), *mal configurada* (500) y *no clasificado* (500) | Una contraseña de base incorrecta no se arregla reintentando: es un error de configuración. |
+| `011f56b` | El test de integración crea y borra sus propios datos, y verifica que la zona horaria sea la de Buenos Aires | Un test no debe depender del seed ni del entorno: tiene que poder correr en cualquier base. |
+| `952ad3e` | CI: acciones fijadas por hash de commit, permisos de solo lectura y `persist-credentials: false` | Seguridad de *supply chain*: un tag (`v4`) se puede mover a código malicioso, un hash no. |
 
 **Clasificador basado en evidencia:** se probó contra el Postgres local con contraseña incorrecta, base inexistente, puerto cerrado y host desconocido, y se registró el error real de cada caso. Por ejemplo, una contraseña incorrecta da `P1000` en consultas normales y `P2010` (con `AuthenticationFailed` / `28P01`) en SQL crudo. Hay 6 tests de integración que reproducen esos casos.
 
