@@ -13,6 +13,10 @@ import type {
   MovementListQuery,
   MovementRepository,
 } from "../domain/movement-queries";
+import type {
+  MovementTotalsQuery,
+  MovementTotalsRepository,
+} from "../domain/movement-summary";
 
 const movementSelect = {
   id: true,
@@ -79,7 +83,8 @@ function whereClause(
   return Prisma.join(conditions, " AND ");
 }
 
-export const prismaMovementRepository: MovementRepository = {
+export const prismaMovementRepository: MovementRepository &
+  MovementTotalsRepository = {
   async findMany({ userId, filters, after, take }: MovementListQuery) {
     const rows = await db.$queryRaw<MovementSqlRow[]>`
       SELECT m."id", m."counterparty", m."description", m."type", m."status", m."amount",
@@ -108,5 +113,20 @@ export const prismaMovementRepository: MovementRepository = {
       select: movementSelect,
     });
     return row ? toMovement(row) : null;
+  },
+
+  /**
+   * The database adds the amounts (`SUM` over `Decimal(12,2)`), so the totals are exact;
+   * they leave as fixed 2-decimal strings, like every amount in the app.
+   */
+  async sumByType({ userId, status, currency, from, to }: MovementTotalsQuery) {
+    const rows = await db.movement.groupBy({
+      by: ["type"],
+      where: { userId, status, currency, occurredAt: { gte: from, lt: to } },
+      _sum: { amount: true },
+    });
+    return Object.fromEntries(
+      rows.map((row) => [row.type, (row._sum.amount ?? 0).toFixed(2)]),
+    );
   },
 };
