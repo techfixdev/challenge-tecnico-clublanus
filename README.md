@@ -70,8 +70,9 @@ src/
 ├── features/
 │   ├── auth/            domain/ data/ server/ ui/
 │   ├── movements/       domain/ data/ ui/
-│   └── account/         domain/ data/ ui/
-├── shared/              lib/ (db, errores de API, fechas, formato) · ui/ (Button, BottomNav…)
+│   ├── account/         domain/ data/ server/ ui/
+│   └── transfers/       domain/ data/ server/   (UI en camino)
+├── shared/              lib/ (db, errores de API, fechas, formato, dinero exacto) · ui/ (Button, BottomNav…)
 ├── proxy.ts             protección optimista de rutas
 └── test/                fixtures y repositorio en memoria
 prisma/                  schema, migraciones y seed
@@ -105,6 +106,10 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 - **Zona horaria de Buenos Aires** para mostrar fechas: Vercel corre en UTC y un pago de las 22 h aparecería al día siguiente.
 - **Ocultar saldo:** el ojo de la tarjeta principal enmascara los saldos de todas las tarjetas. La preferencia se guarda en una cookie (no en `localStorage`) que lee el servidor: un saldo oculto nunca se ve un instante al cargar y servidor y cliente renderizan lo mismo (sin _hydration mismatch_).
 - **Resumen del mes en Movimientos:** "Octubre · Ingresos +$X · Egresos −$Y". Ingresos = recibidos; egresos = enviados + débitos automáticos; solo movimientos **completados** (un pendiente todavía puede fallar). Mes calendario de Buenos Aires (empieza a las 03:00 UTC). No depende de la búsqueda ni del filtro: describe el mes. La base suma los `Decimal` (`groupBy`) y la app solo los combina como centavos enteros, nunca como `float`.
+- **Transferencias entre usuarios** (`src/features/transfers`): por alias o CVU (el CVU se valida con sus dígitos verificadores, como un CBU). Todo ocurre en **una sola transacción**: se reclama la clave de idempotencia, se debita, se acredita en la tarjeta principal del destinatario y se crean los dos movimientos (`SENT` y `RECEIVED`, enlazados a un `Transfer`); si algo falla, no queda nada a medias.
+  - **Sin sobregiro con concurrencia:** el débito es un `UPDATE` condicional (`WHERE balance >= monto`). PostgreSQL bloquea la fila y reevalúa la condición con el saldo ya confirmado, así que de N transferencias simultáneas solo pasan las que alcanzan. Se eligió esto en lugar de `SERIALIZABLE`, que obligaría a reintentar ante cada conflicto sin dar más garantías para una invariante de una sola fila. Un `CHECK (balance >= 0)` en la base es la red de seguridad. Las dos tarjetas se actualizan siempre en el mismo orden (por id) para que A→B y B→A simultáneas no se bloqueen entre sí.
+  - **Idempotencia:** el cliente manda un UUID por intento (`idempotencyKey`, único por emisor). Un reintento o doble toque con la misma clave devuelve la transferencia original (200, `replayed: true`) sin mover plata dos veces, incluso si las dos requests llegan a la vez; la misma clave con otros datos responde 409.
+  - Los rechazos de negocio (saldo insuficiente, destinatario inexistente, a uno mismo, otra moneda) son valores de una unión discriminada, no excepciones, y responden 404/422 con mensaje en español.
 - **Errores de API clasificados:** base caída → 503 (reintentable); bug → 500 genérico con log; `redirect()`/`notFound()` de Next se dejan pasar.
 
 El razonamiento completo, tarea por tarea, está en [`docs/BITACORA.md`](docs/BITACORA.md).
@@ -113,29 +118,37 @@ El razonamiento completo, tarea por tarea, está en [`docs/BITACORA.md`](docs/BI
 
 Todas las respuestas son JSON. Éxito: `{ "data": … }`. Error: `{ "error": { "code", "message", "details"? } }`, donde `code` es estable (`INVALID_INPUT`, `UNAUTHORIZED`, `NOT_FOUND`, `SERVICE_UNAVAILABLE`, …) y `details` trae los errores por campo.
 
-| Método | Ruta                     | Auth   | Parámetros                                                     | Respuestas                                                                     |
-| ------ | ------------------------ | ------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| POST   | `/api/auth/login`        | —      | JSON `{ email, password, remember? }`                          | 200 `{ data: { userId } }` + cookie · 400 · 401 · 415 (no es JSON) · 500 · 503 |
-| POST   | `/api/auth/logout`       | Cookie | — (rechaza otro `Origin`)                                      | 204 · 403                                                                      |
-| GET    | `/api/movements`         | Cookie | `q` (≤ 50), `type` (`debito`, `recibido`, `enviado`), `cursor` | 200 `{ data: Movement[], total, nextCursor }` · 400 · 401 · 503                |
-| GET    | `/api/movements/:id`     | Cookie | —                                                              | 200 `{ data: Movement }` · 401 · 404 (inexistente, mal formado o ajeno) · 503  |
-| GET    | `/api/movements/summary` | Cookie | `month` (`AAAA-MM`, por defecto el mes actual en Buenos Aires) | 200 `{ data: { month, currency, income, expenses } }` · 400 · 401 · 503        |
-| GET    | `/api/account/cards`     | Cookie | —                                                              | 200 `{ data: Card[] }` (principal primero) · 401 · 503                         |
+| Método | Ruta                       | Auth   | Parámetros                                                                                  | Respuestas                                                                                                                                                                                   |
+| ------ | -------------------------- | ------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/auth/login`          | —      | JSON `{ email, password, remember? }`                                                       | 200 `{ data: { userId } }` + cookie · 400 · 401 · 415 (no es JSON) · 500 · 503                                                                                                               |
+| POST   | `/api/auth/logout`         | Cookie | — (rechaza otro `Origin`)                                                                   | 204 · 403                                                                                                                                                                                    |
+| GET    | `/api/movements`           | Cookie | `q` (≤ 50), `type` (`debito`, `recibido`, `enviado`), `cursor`                              | 200 `{ data: Movement[], total, nextCursor }` · 400 · 401 · 503                                                                                                                              |
+| GET    | `/api/movements/:id`       | Cookie | —                                                                                           | 200 `{ data: Movement }` · 401 · 404 (inexistente, mal formado o ajeno) · 503                                                                                                                |
+| GET    | `/api/movements/summary`   | Cookie | `month` (`AAAA-MM`, por defecto el mes actual en Buenos Aires)                              | 200 `{ data: { month, currency, income, expenses } }` · 400 · 401 · 503                                                                                                                      |
+| GET    | `/api/account/cards`       | Cookie | —                                                                                           | 200 `{ data: Card[] }` (principal primero) · 401 · 503                                                                                                                                       |
+| GET    | `/api/account/receive`     | Cookie | —                                                                                           | 200 `{ data: { holderName, alias, cvu, cvuFormatted } }` · 401 · 404 · 503                                                                                                                   |
+| GET    | `/api/transfers/recipient` | Cookie | `q` (alias o CVU)                                                                           | 200 `{ data: { fullName, alias, cvuMasked } }` · 400 · 401 · 404 · 422 (a uno mismo) · 503                                                                                                   |
+| POST   | `/api/transfers`           | Cookie | JSON `{ recipient, amount, description?, cardId?, idempotencyKey }` (rechaza otro `Origin`) | 201 `{ data: Transfer }` con el saldo nuevo · 200 (reintento, `replayed: true`) · 400 · 401 · 403 · 404 · 409 · 415 · 422 (`INSUFFICIENT_FUNDS`, `SELF_TRANSFER`, `CURRENCY_MISMATCH`) · 503 |
 
 ```bash
 curl -i -c cookies.txt -H 'content-type: application/json' \
   -d '{"email":"soygranate@clublanus.com","password":"GRANATE1@"}' \
   http://localhost:3000/api/auth/login
 curl -b cookies.txt 'http://localhost:3000/api/movements?q=jose&type=recibido'
+curl -b cookies.txt -H 'content-type: application/json' \
+  -d "{\"recipient\":\"hincha.granate\",\"amount\":\"10.50\",\"idempotencyKey\":\"$(uuidgen)\"}" \
+  http://localhost:3000/api/transfers
 ```
+
+Hay un segundo usuario demo para probar transferencias en los dos sentidos: `hincha@clublanus.com` / `GRANATE2@` (alias `hincha.granate`). El alias del usuario principal es `soy.granate.lanus`.
 
 ## Testing
 
-| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                           | Cantidad |
-| ----------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación)                   | 291      |
-| Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes | 21       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones y CLS < 0.05 en Home (con y sin movimiento reducido) en Chromium móvil                              | 32       |
+| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                                                                                                                                        | Cantidad |
+| ----------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes, transferencias: alias/CVU, montos exactos, reglas e idempotencia), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación)                                                              | 378      |
+| Integración | `pnpm test:integration` | SQL real: transferencias (atomicidad, sin sobregiro con N transferencias en paralelo, idempotencia, sin deadlock A↔B); búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes | 36       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones y CLS < 0.05 en Home (con y sin movimiento reducido) en Chromium móvil                                                                                                                                           | 32       |
 
 Integración necesita la base levantada con las migraciones: crea y borra sus propios datos, así que no depende del seed. E2E necesita además el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
