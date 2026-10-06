@@ -3,7 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { Prisma } from "@/generated/prisma/client";
+import {
+  databaseAuthenticationError,
+  databaseUnavailableError,
+  prismaUnknownRequestError,
+} from "@/test/db-errors";
 
 import {
   API_MESSAGES,
@@ -90,10 +94,7 @@ describe("withApiErrorHandling", () => {
   it("answers 503 when the database is unavailable, without leaking internals", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const handler = withApiErrorHandling(async () => {
-      throw new Prisma.PrismaClientKnownRequestError(
-        "connect ECONNREFUSED 127.0.0.1:5432",
-        { code: "ECONNREFUSED", clientVersion: "7.10.0" },
-      );
+      throw databaseUnavailableError();
     });
 
     const response = await handler();
@@ -101,11 +102,38 @@ describe("withApiErrorHandling", () => {
 
     expect(response.status).toBe(503);
     expect(body).toEqual({
-      error: { code: "SERVICE_UNAVAILABLE", message: expect.any(String) },
+      error: {
+        code: "SERVICE_UNAVAILABLE",
+        message: API_MESSAGES.serviceUnavailable,
+      },
     });
     expect(JSON.stringify(body)).not.toContain("ECONNREFUSED");
     expect(log).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    [
+      "the database rejects the configured credentials",
+      databaseAuthenticationError(),
+    ],
+    ["Prisma fails in a way it cannot classify", prismaUnknownRequestError()],
+  ])(
+    "answers 500, not 503, when %s (retrying would not help)",
+    async (_label, error) => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const handler = withApiErrorHandling(async () => {
+        throw error;
+      });
+
+      const response = await handler();
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({
+        error: { code: "INTERNAL_ERROR", message: API_MESSAGES.internalError },
+      });
+      expect(log).toHaveBeenCalledWith(expect.any(String), error);
+    },
+  );
 
   it("answers a generic 500 for anything else (a bug is not an outage)", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});

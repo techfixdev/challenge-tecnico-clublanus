@@ -1,7 +1,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 
-import { isDatabaseUnavailableError } from "./db-errors";
+import { classifyDatabaseError } from "./db-errors";
 import type { ValidationDetails } from "./validation";
 
 /**
@@ -61,6 +61,8 @@ export function isJsonContentType(header: string | null): boolean {
  * never leaks internals:
  * - Next.js control flow (`redirect()`, `notFound()`) is rethrown for the framework to handle;
  * - an unreachable database is a transient outage: 503, the client may retry later;
+ * - a database that rejects our configuration (credentials, database name) needs a fix,
+ *   not a retry: 500, logged as such so it is easy to spot;
  * - anything else is a bug: 500, logged for the server logs.
  */
 export function withApiErrorHandling<Args extends unknown[]>(
@@ -71,12 +73,23 @@ export function withApiErrorHandling<Args extends unknown[]>(
       return await handler(...args);
     } catch (error) {
       unstable_rethrow(error);
-      if (isDatabaseUnavailableError(error)) {
-        console.error("Database unavailable in API route handler", error);
-        return apiError("SERVICE_UNAVAILABLE", API_MESSAGES.serviceUnavailable);
+      switch (classifyDatabaseError(error)) {
+        case "unavailable":
+          console.error("Database unavailable in API route handler", error);
+          return apiError(
+            "SERVICE_UNAVAILABLE",
+            API_MESSAGES.serviceUnavailable,
+          );
+        case "misconfigured":
+          console.error(
+            "Database rejected the configuration (check DATABASE_URL) in API route handler",
+            error,
+          );
+          return apiError("INTERNAL_ERROR", API_MESSAGES.internalError);
+        case "unclassified":
+          console.error("Unhandled error in API route handler", error);
+          return apiError("INTERNAL_ERROR", API_MESSAGES.internalError);
       }
-      console.error("Unhandled error in API route handler", error);
-      return apiError("INTERNAL_ERROR", API_MESSAGES.internalError);
     }
   };
 }
