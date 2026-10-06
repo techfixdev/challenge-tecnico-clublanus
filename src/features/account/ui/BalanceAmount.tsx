@@ -61,7 +61,7 @@ export function BalanceAmount({ balance }: { balance: string }) {
   return (
     <span
       data-testid="balance-amount"
-      className="inline-flex text-[26px] leading-none font-medium tracking-[-0.02em]"
+      className="inline-flex text-[length:calc(var(--card-px,1px)*26)] leading-none font-medium tracking-[-0.02em]"
     >
       <span aria-hidden="true" className="inline-grid">
         <m.span

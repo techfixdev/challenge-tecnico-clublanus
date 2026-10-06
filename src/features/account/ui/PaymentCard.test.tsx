@@ -63,14 +63,11 @@ describe("PaymentCard", () => {
   });
 
   it("uses a different tone for Visa cards", () => {
-    const { container } = render(
-      <PaymentCard card={makeCard({ brand: "VISA", last4: "5678" })} />,
-    );
+    render(<PaymentCard card={makeCard({ brand: "VISA", last4: "5678" })} />);
 
     expect(
       screen.getByRole("region", { name: "Tarjeta Visa terminada en 5678" }),
-    ).toBeInTheDocument();
-    expect(container.firstElementChild).toHaveAttribute("data-brand", "VISA");
+    ).toHaveAttribute("data-brand", "VISA");
   });
 
   it("shows the hide-balance toggle on the primary card only", () => {

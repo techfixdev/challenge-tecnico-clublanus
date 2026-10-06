@@ -67,9 +67,9 @@ export function BalanceToggle() {
       aria-label="Ocultar saldo"
       aria-pressed={hidden}
       onClick={toggle}
-      className="relative flex size-4 pressable items-center justify-center rounded-full text-white/75 after:absolute after:-inset-3 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+      className="relative flex size-4 pressable items-center justify-center rounded-full text-white/75 after:absolute after:-inset-[12px] hover:text-white focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
     >
-      <Icon className="size-4" />
+      <Icon className="size-full" />
     </button>
   );
 }

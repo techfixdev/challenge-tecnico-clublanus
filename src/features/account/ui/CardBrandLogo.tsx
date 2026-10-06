@@ -27,7 +27,7 @@ function VisaLogo() {
   return (
     <svg
       viewBox="0 8.124 24 7.751"
-      className="h-[13px] w-[40.25px]"
+      className="h-[calc(var(--card-px,1px)*13)] w-[calc(var(--card-px,1px)*40.25)]"
       data-brand-logo="VISA"
       aria-hidden="true"
       focusable="false"

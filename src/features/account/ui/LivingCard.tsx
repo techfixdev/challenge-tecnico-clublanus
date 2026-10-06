@@ -92,7 +92,7 @@ export function LivingCard({
     // Swiping the carousel cancels the pointer, which releases the card.
     <div
       data-testid="living-card"
-      className="relative isolate select-none [perspective:800px]"
+      className="card-scale relative isolate select-none [perspective:800px]"
       onPointerDown={(event) => {
         if (reduced) return;
         pressed.current = true;

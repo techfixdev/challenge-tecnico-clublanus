@@ -198,3 +198,42 @@ body {
     backdrop-filter: blur(16px) saturate(180%);
   }
 }
+
+/*
+ * Payment cards scale like a physical card: everything inside is sized from the card's
+ * own width, never from the viewport. The design was polished on a 390px phone, where
+ * the card is 287.265625px wide (84% of 342px, on the browser's 1/64px layout grid), so
+ * `--card-px` is one design pixel of the current card, and the spacing, type and radius
+ * scales are re-rooted on it: `p-5`, `text-lg` or `rounded-3xl` inside the card render
+ * exactly as designed at 390px and shrink or grow with the card (small phones, Android's
+ * page zoom, the 420px-wide shell on tablets).
+ *
+ * The variables hold `cqi` lengths unresolved, so each element resolves them against
+ * this container. Arbitrary sizes use `var(--card-px, 1px)`, which also renders the
+ * design size outside a card.
+ */
+@utility card-scale {
+  container-type: inline-size;
+  --card-px: calc(100cqi / 287.265625);
+  --spacing: calc(var(--card-px) * 4);
+  --text-xs: calc(var(--card-px) * 12);
+  --text-sm: calc(var(--card-px) * 14);
+  --text-lg: calc(var(--card-px) * 18);
+  --radius-md: calc(var(--card-px) * 6);
+  --radius-3xl: calc(var(--card-px) * 24);
+
+  /* Snapped to 1/1024px so it is exactly 1px at 390px: an unsnapped 0.9999999px shifts
+     the glyphs' subpixel positions and the card no longer renders as designed. */
+  @supports (width: round(1px, 1px)) {
+    --card-px: round(calc(100cqi / 287.265625), 1px / 1024);
+  }
+
+  /* Scaled text is laid out unhinted: hinting rounds each glyph advance to whole pixels,
+     which opens gaps inside words ("Gran ate") at the card's smaller sizes. The design
+     width keeps the hinted rendering it was polished with. */
+  @container (width < 287px) or (width > 288px) {
+    & > * {
+      text-rendering: geometricPrecision;
+    }
+  }
+}

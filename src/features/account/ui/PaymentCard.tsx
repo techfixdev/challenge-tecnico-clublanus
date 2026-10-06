@@ -57,43 +57,51 @@ function CardNumber({ last4 }: { last4: string }) {
 
 export function PaymentCard({ card }: { card: Card }) {
   const theme = BRAND_THEME[card.brand];
+  // The wrapper is the size container the whole card scales from (see `card-scale` in
+  // globals.css); its height follows the width (180px at 390px, the design's shape).
   return (
-    <section
-      aria-label={describeCard(card)}
-      data-brand={card.brand}
-      className={`flex h-[180px] flex-col justify-between rounded-3xl p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.22),inset_0_0_0_1px_rgb(255_255_255/0.06)] ${theme.card}`}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          {/* The eye toggle hides every balance; it lives on the primary card only. */}
-          <div className="flex items-center gap-2">
-            <p className={`text-xs ${theme.label}`}>Balance</p>
-            {card.isPrimary && <BalanceToggle />}
-          </div>
-          {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
+    <div className="card-scale">
+      <section
+        aria-label={describeCard(card)}
+        data-brand={card.brand}
+        className={`flex h-[calc(var(--card-px,1px)*180)] flex-col justify-between rounded-3xl p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.22),inset_0_0_0_1px_rgb(255_255_255/0.06)] ${theme.card}`}
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            {/* The eye toggle hides every balance; it lives on the primary card only. */}
+            <div className="flex items-center gap-2">
+              <p className={`text-xs ${theme.label}`}>Balance</p>
+              {card.isPrimary && <BalanceToggle />}
+            </div>
+            {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
               the chip follows the ink, so it sits centered on the figures. */}
-          <p className="mt-2 flex items-center gap-3">
-            <span className="-translate-y-[1.25px] rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#6b4300] shadow-sm">
-              USD
+            <p className="mt-2 flex items-center gap-3">
+              <span className="-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide text-[#6b4300] shadow-sm">
+                USD
+              </span>
+              <BalanceAmount balance={card.balance} />
+            </p>
+          </div>
+          <CardBrandLogo brand={card.brand} />
+        </div>
+
+        {/* Decorative (the region name carries the last 4); see CardNumber. */}
+        <CardNumber last4={card.last4} />
+
+        <div className="flex items-end justify-between">
+          <p className="text-sm">{card.holderName}</p>
+          <p className="text-right">
+            <span
+              className={`block text-[length:calc(var(--card-px,1px)*9)] ${theme.label}`}
+            >
+              Exp. Date
             </span>
-            <BalanceAmount balance={card.balance} />
+            <span className="block text-xs">
+              {formatCardExpiry(card.expMonth, card.expYear)}
+            </span>
           </p>
         </div>
-        <CardBrandLogo brand={card.brand} />
-      </div>
-
-      {/* Decorative (the region name carries the last 4); see CardNumber. */}
-      <CardNumber last4={card.last4} />
-
-      <div className="flex items-end justify-between">
-        <p className="text-sm">{card.holderName}</p>
-        <p className="text-right">
-          <span className={`block text-[9px] ${theme.label}`}>Exp. Date</span>
-          <span className="block text-xs">
-            {formatCardExpiry(card.expMonth, card.expYear)}
-          </span>
-        </p>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
