@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /*
  * Motion checks on real computed styles (jsdom has no CSS). Each case runs with and
@@ -29,16 +29,36 @@ async function rowAnimations(page: Page) {
 }
 
 /**
+ * The morph needs the View Transitions API. Browsers without it navigate with an instant
+ * swap (no animation to assert), so the transition checks skip there with that reason.
+ */
+async function skipWithoutViewTransitions(page: Page) {
+  const supported = await page.evaluate(
+    () => typeof document.startViewTransition === "function",
+  );
+  test.skip(
+    !supported,
+    "No View Transitions API: navigation falls back to an instant swap",
+  );
+}
+
+type TransitionLog = {
+  started: number;
+  entries: { names: string[]; longestMs: number }[];
+};
+
+/**
  * Records every view transition the page starts: the names of its pseudo-elements and
  * the longest animation. Install before the navigation, read after it.
  */
 async function recordViewTransitions(page: Page) {
   await page.evaluate(() => {
-    const log: { names: string[]; longestMs: number }[] = [];
+    const log: TransitionLog = { started: 0, entries: [] };
     Object.assign(window, { viewTransitionLog: log });
     const start = document.startViewTransition.bind(document);
     document.startViewTransition = ((update: ViewTransitionUpdateCallback) => {
       const transition = start(update);
+      log.started += 1;
       transition.ready.then(() => {
         const animations = document
           .getAnimations()
@@ -47,7 +67,7 @@ async function recordViewTransitions(page: Page) {
               animation.effect as KeyframeEffect | null
             )?.pseudoElement?.startsWith("::view-transition"),
           );
-        log.push({
+        log.entries.push({
           names: animations.map(
             (animation) =>
               (animation.effect as KeyframeEffect).pseudoElement ?? "",
@@ -64,16 +84,16 @@ async function recordViewTransitions(page: Page) {
     }) as typeof document.startViewTransition;
   });
   return async () => {
-    // `ready` resolves a frame after the navigation commits.
-    await page.waitForTimeout(400);
-    return page.evaluate(
-      () =>
-        (
-          window as unknown as {
-            viewTransitionLog: { names: string[]; longestMs: number }[];
-          }
-        ).viewTransitionLog,
-    );
+    // `ready` resolves a frame after the navigation commits: wait until a transition
+    // started and every started one has been logged, instead of a fixed sleep.
+    const handle = await page.waitForFunction(() => {
+      const log = (window as unknown as { viewTransitionLog: TransitionLog })
+        .viewTransitionLog;
+      return log.started > 0 && log.entries.length === log.started
+        ? log.entries
+        : null;
+    });
+    return (await handle.jsonValue()) as TransitionLog["entries"];
   };
 }
 
@@ -101,6 +121,17 @@ function shimmerAnimation(page: Page) {
   });
 }
 
+/**
+ * A computed style once the element's own transitions have finished (none running means
+ * the value is already final), so the read never catches a value mid-transition.
+ */
+function settledStyle(locator: Locator, property: "scale" | "translate") {
+  return locator.evaluate(async (element, name) => {
+    await Promise.all(element.getAnimations().map((a) => a.finished));
+    return getComputedStyle(element)[name];
+  }, property);
+}
+
 /** Computed `scale` of the login button while it is held down (`:active`). */
 async function pressedScale(page: Page) {
   const button = page.getByRole("button", { name: "Ingresar" });
@@ -108,13 +139,16 @@ async function pressedScale(page: Page) {
   if (!box) throw new Error("The login button is not visible");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  // Wait past the press transition, then read the settled value.
-  await page.waitForTimeout(300);
-  const scale = await button.evaluate(
-    (element) => getComputedStyle(element).scale,
-  );
+  const scale = await settledStyle(button, "scale");
   await page.mouse.up();
   return scale;
+}
+
+/** Computed `translate` of the first movement row while the pointer rests on it. */
+async function hoveredRowTranslate(page: Page) {
+  const link = movementRows(page).first().getByRole("link");
+  await link.hover();
+  return settledStyle(link, "translate");
 }
 
 test.describe("with motion allowed", () => {
@@ -127,14 +161,16 @@ test.describe("with motion allowed", () => {
     expect(await pressedScale(page)).toBe("0.97");
   });
 
-  test("rows stagger in and the tapped tile morphs into the detail", async ({
+  test("rows stagger in, lift on hover, and the tapped tile morphs into the detail", async ({
     page,
   }) => {
     await login(page);
     await page.goto("/movimientos");
 
     expect(new Set(await rowAnimations(page))).toEqual(new Set(["row-enter"]));
+    expect(await hoveredRowTranslate(page)).toBe("0px -2px");
 
+    await skipWithoutViewTransitions(page);
     const { id, transitions } = await openFirstDetail(page);
     // Only the tapped movement's tile is named, so exactly one pair morphs.
     const morphs = transitions
@@ -161,14 +197,17 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     expect(await pressedScale(page)).toBe("none");
   });
 
-  test("rows appear at once and navigation does not animate", async ({
+  test("rows appear at once, stay put on hover, and navigation does not animate", async ({
     page,
   }) => {
     await login(page);
     await page.goto("/movimientos");
 
     expect(new Set(await rowAnimations(page))).toEqual(new Set(["none"]));
+    // Hovering does not lift the row either.
+    expect(await hoveredRowTranslate(page)).toBe("none");
 
+    await skipWithoutViewTransitions(page);
     const { transitions } = await openFirstDetail(page);
     // The transition still runs (state changes stay atomic), with zero-length animations.
     expect(transitions.length).toBeGreaterThan(0);
