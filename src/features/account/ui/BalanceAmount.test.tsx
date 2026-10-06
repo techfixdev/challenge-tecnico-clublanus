@@ -86,9 +86,29 @@ describe("BalanceAmount odometer", () => {
       "0",
       "0",
     ]);
-    // The narrow-1 kerning would also reveal where the 1s are.
-    for (const sizer of sizers)
-      expect(sizer.parentElement!.style.margin).toBe("");
+    // The narrow-1 kerning would also reveal where the 1s are. Longhands are checked:
+    // the `margin` shorthand reads "" whenever only the left/right sides are set.
+    for (const sizer of sizers) {
+      expect(sizer.parentElement!.style.marginLeft).toBe("");
+      expect(sizer.parentElement!.style.marginRight).toBe("");
+    }
+  });
+
+  it("pulls in the narrow 1's column while shown (the control for the hidden case)", () => {
+    const { container } = render(<BalanceAmount balance="312.41" />);
+
+    const columns = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "[data-odometer] [data-digit-sizer]",
+      ),
+    ).map((sizer) => sizer.parentElement!);
+    expect(columns.map((column) => column.style.marginLeft)).toEqual([
+      "",
+      "-0.02em",
+      "",
+      "",
+      "-0.02em",
+    ]);
   });
 
   it("starts rolling from 0 when it mounts on the client", () => {
