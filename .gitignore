@@ -47,6 +47,7 @@ next-env.d.ts
 # local tooling
 /.atl/
 /odd/
+/.pw-*.mjs
 
 # playwright
 /test-results/
