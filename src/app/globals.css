@@ -18,7 +18,9 @@
   --color-surface: #ffffff;
 
   --color-foreground: #1e2235;
-  --color-muted: #8a8d9b;
+  /* Darker than the design's #8a8d9b (3.2:1), same hue: the lightest grey with AA 4.5:1
+     on every background it sits on (4.5 on the page and lit surfaces, 4.7 on white). */
+  --color-muted: #707382;
   --color-border: #eceef3;
 
   --color-subscription: #c76dff;
