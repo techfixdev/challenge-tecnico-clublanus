@@ -1,9 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AccountError from "./error";
 import MovementsError from "./movimientos/error";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe.each([
   ["signed-in area", AccountError, "No pudimos cargar tu cuenta"],
