@@ -100,6 +100,22 @@ async function toReviewStep(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("TransferFlow", () => {
+  it("shows the first step at once and slides in only the steps that follow", async () => {
+    const { user } = renderFlow();
+    // The step wrapper: the closest element carrying Motion's inline style.
+    const stepWrapper = (name: string) =>
+      screen.getByRole("heading", { name }).closest("[style]");
+
+    // Server-rendered: no entrance state that would keep it hidden until hydration.
+    expect(stepWrapper("¿A quién le enviás?")).not.toHaveStyle({
+      opacity: "0",
+    });
+
+    await toAmountStep(user);
+    // jsdom loads no Motion features, so a later step stays at its entrance state.
+    expect(stepWrapper("¿Cuánto le enviás?")).toHaveStyle({ opacity: "0" });
+  });
+
   it("validates the alias or CVU live, with the server's messages", async () => {
     const { user, lookup } = renderFlow();
     const field = screen.getByLabelText("Alias o CVU");

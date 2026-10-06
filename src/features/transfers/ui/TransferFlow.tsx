@@ -23,10 +23,17 @@ import { RecipientStep } from "./RecipientStep";
 import { ReviewStep } from "./ReviewStep";
 import { TransferSuccess } from "./TransferSuccess";
 
+/**
+ * A new step slides in from the right. The fade is shorter than the slide, so the step is
+ * fully readable early; under reduced motion the slide jumps and only the quick fade stays.
+ */
 const ENTER = {
   initial: { opacity: 0, x: 16 },
   animate: { opacity: 1, x: 0 },
-  transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+  transition: {
+    x: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+    opacity: { duration: 0.12, ease: "easeOut" },
+  },
 } as const;
 
 type StepError = { step: TransferStep; message: string };
@@ -90,6 +97,16 @@ export function TransferFlow({
 
   const done = sendState.status === "success";
   const view = done ? "done" : step;
+
+  // The first view arrives with the page (server-rendered): it shows at once instead of
+  // waiting for hydration and Motion's lazy features to fade it in. Only later views
+  // (a step change, the receipt) animate in.
+  const [shownView, setShownView] = useState(view);
+  const [animateEntrance, setAnimateEntrance] = useState(false);
+  if (view !== shownView) {
+    setShownView(view);
+    setAnimateEntrance(true);
+  }
 
   // Move the focus to the new step's title (not on the first render: the page just loaded).
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -193,7 +210,12 @@ export function TransferFlow({
   }
 
   return (
-    <m.div key={view} {...ENTER}>
+    <m.div
+      key={view}
+      initial={animateEntrance ? ENTER.initial : false}
+      animate={ENTER.animate}
+      transition={ENTER.transition}
+    >
       {content}
     </m.div>
   );
