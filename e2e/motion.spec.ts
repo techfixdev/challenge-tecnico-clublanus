@@ -229,26 +229,23 @@ test.describe("with motion allowed", () => {
 
   // Known framework limitation: the browser's back button restores the list on React's
   // blocking (sync) lane, and React only starts view transitions for transition lanes,
-  // so no transition runs at all (no `document.startViewTransition` call). Marked as an
-  // expected failure: the body still runs, and the test turns red as soon as Next/React
-  // start animating traversals, which is the signal to drop this marker.
-  test.fail(
-    "browser back morphs the tile back into its row",
-    async ({ page }) => {
-      await login(page);
-      await page.goto("/movimientos");
-      await expect(movementRows(page).first()).toBeVisible();
+  // so no transition runs at all (no `document.startViewTransition` call). This pins the
+  // current behavior precisely: every step must still work, and only the wait for a
+  // transition may time out. Once Next/React animate traversals, the wait resolves, this
+  // test turns red, and it should become a morph assertion like the "Volver" one.
+  test("browser back returns to the list without a morph (framework limitation)", async ({
+    page,
+  }) => {
+    await login(page);
+    await page.goto("/movimientos");
+    await expect(movementRows(page).first()).toBeVisible();
 
-      await skipWithoutViewTransitions(page);
-      const { id } = await openFirstDetail(page);
-      // Bounded wait: no transition starts today, and an expected failure must fail
-      // rather than hit the test timeout (Playwright reports that as "timed out").
-      const transitions = await backToList(page, "history", { timeout: 5_000 });
-      expect(tileMorphs(transitions)).toEqual(
-        new Set([`::view-transition-group(movement-tile-${id})`]),
-      );
-    },
-  );
+    await skipWithoutViewTransitions(page);
+    await openFirstDetail(page);
+    await expect(
+      backToList(page, "history", { timeout: 5_000 }),
+    ).rejects.toThrow(/waitForFunction: Timeout 5000ms exceeded/);
+  });
 });
 
 test.describe("with prefers-reduced-motion: reduce", () => {
