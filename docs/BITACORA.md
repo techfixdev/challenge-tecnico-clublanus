@@ -425,7 +425,7 @@ Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsd
 
 **Morph de vuelta (detalle → lista):**
 - Con el link "Volver" **funciona en producción**: el prefetch del link trae la lista antes de navegar, así el ícono "pareja" existe cuando cambia la pantalla. En `next dev` no hay prefetch, y por eso no se ve en desarrollo.
-- Con el **botón atrás del navegador no se anima**. React restaura esa entrada del historial de forma síncrona y no inicia ninguna view transition. Es una limitación del framework. No se intercepta el historial para forzarlo, y queda un test marcado `test.fail` que se pone en rojo el día que el framework lo soporte.
+- Con el **botón atrás del navegador no se anima**. React restaura esa entrada del historial de forma síncrona y no inicia ninguna view transition. Es una limitación del framework. No se intercepta el historial para forzarlo, y queda un test que fija el comportamiento actual (solo puede fallar la espera de la transición) y se pone en rojo el día que el framework lo soporte.
 
 **Fidelidad al diseño:** se evaluó cambiar las filas y poner signo a los montos, pero el Figma muestra filas como tarjetas separadas y montos sin signo. Se mantiene el diseño.
 
@@ -451,7 +451,9 @@ Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsd
 
 **Revisiones:**
 - `.gitignore` (scripts locales): aprobada.
-- Fix del morph de vuelta, e2e y checklist: aprobada, con 2 observaciones menores. Se aplicó la principal: `test.fixme` → `test.fail`, porque `fixme` no ejecuta el cuerpo y nunca avisaría.
+- Fix del morph de vuelta, e2e y checklist: aprobada, con 2 observaciones menores. Se aplicó la principal en dos pasos. Primero `test.fixme` → `test.fail`, porque `fixme` no ejecuta el cuerpo y nunca avisaría. Después, por otra observación de la revisión (`test.fail` aceptaba cualquier falla, hasta un login roto), un test normal que solo admite el timeout de la espera de la transición.
+
+**Hallazgo probando la API con `curl`:** si el JSON del login venía *sin* `email` o `password`, zod respondía su mensaje por defecto en inglés ("Invalid input: expected string…"). La UI no se veía afectada porque el formulario siempre manda los campos, pero un cliente de la API sí. Se corrigió con `z.string({ error })` y un test que primero falló (RED).
 
 **Checklist del enunciado:** `docs/CHECKLIST.md`, con el estado de cada requerimiento y su evidencia.
 

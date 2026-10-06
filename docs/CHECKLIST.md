@@ -54,7 +54,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 
 - [x] Ordenar los scripts sueltos de Playwright (`.gitignore`, `c5cf5b4`).
 - [x] Mergear la versión premium (`feat/premium-motion`): tarjeta viva, saldo tipo odómetro, header glass, indicador de la nav.
-- [x] Morph de vuelta (detalle → lista): con "Volver" funciona en producción, porque el prefetch trae la lista antes de navegar (e2e en verde). En `next dev` no hay prefetch y por eso no se ve. Con el botón atrás del navegador no se anima: React no inicia la transición. Queda como limitación conocida, documentada en el README y con un test marcado `test.fail` que avisa cuando el framework lo soporte.
+- [x] Morph de vuelta (detalle → lista): con "Volver" funciona en producción, porque el prefetch trae la lista antes de navegar (e2e en verde). En `next dev` no hay prefetch y por eso no se ve. Con el botón atrás del navegador no se anima: React no inicia la transición. Queda como limitación conocida, documentada en el README y con un test que fija el comportamiento actual y avisa cuando el framework lo soporte.
 - [x] Bitácora T7 con la tabla local vs. producción (`docs/BITACORA.md`).
 - [x] Puntos de entrevista en `ENTREVISTA.md` (solo local, no se versiona).
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
