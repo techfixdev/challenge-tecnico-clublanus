@@ -19,6 +19,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
+    "db:test": "tsx scripts/with-test-db.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
-import "dotenv/config";
-
 import { Client } from "pg";
+
+import { testDatabaseUrl } from "../../scripts/test-database";
 
 /**
  * Undoes the transfers an e2e test made between the two demo users, so the seed facts the
@@ -11,10 +11,9 @@ import { Client } from "pg";
  */
 const DEMO_EMAILS = ["soygranate@clublanus.com", "hincha@clublanus.com"];
 
+/** The same database the e2e web server uses (playwright.config.ts), never the dev one. */
 async function connect(): Promise<Client> {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is not set");
-  const client = new Client({ connectionString });
+  const client = new Client({ connectionString: testDatabaseUrl() });
   await client.connect();
   return client;
 }
