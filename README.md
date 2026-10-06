@@ -1,10 +1,12 @@
 # GranaBank
 
-Home banking mobile-first para el challenge técnico del Club Atlético Lanús: login, saldo de tarjetas, movimientos con búsqueda y filtros, y detalle de cada movimiento, construido a partir del diseño de Figma.
+Home banking mobile-first para el challenge técnico del Club Atlético Lanús: login, saldo de tarjetas (que se puede ocultar), movimientos con búsqueda, filtros y resumen del mes, y detalle de cada movimiento, construido a partir del diseño de Figma.
 
-| Login                                | Home                               | Movimientos                                    | Detalle                                          |
-| ------------------------------------ | ---------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
-| ![Login](docs/screenshots/login.png) | ![Home](docs/screenshots/home.png) | ![Movimientos](docs/screenshots/movements.png) | ![Detalle](docs/screenshots/movement-detail.png) |
+| Login                                | Home                               | Saldo oculto                                              | Movimientos                                    | Detalle                                          |
+| ------------------------------------ | ---------------------------------- | --------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
+| ![Login](docs/screenshots/login.png) | ![Home](docs/screenshots/home.png) | ![Saldo oculto](docs/screenshots/home-balance-hidden.png) | ![Movimientos](docs/screenshots/movements.png) | ![Detalle](docs/screenshots/movement-detail.png) |
+
+Animaciones en video (390×844): [`docs/screenshots/motion-demo.webm`](docs/screenshots/motion-demo.webm).
 
 ## Demo
 
@@ -80,7 +82,7 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 
 ## Decisiones técnicas
 
-- **App Router + Server Components.** Las páginas leen la base en el servidor: no hay credenciales ni consultas en el navegador y se envía menos JavaScript. Client Components solo para formularios, búsqueda y "Cargar más".
+- **App Router + Server Components.** Las páginas leen la base en el servidor: no hay credenciales ni consultas en el navegador y se envía menos JavaScript. Client Components solo para formularios, búsqueda, "Cargar más" y el saldo (contador y ocultar).
 - **API routes en lugar de un backend separado.** La consigna lo permite: un proyecto, un deploy, tipos compartidos. Las rutas REST reutilizan los mismos casos de uso que las páginas.
 - **Prisma + PostgreSQL.** Tipos generados desde el schema y migraciones versionadas. Para la búsqueda se usa SQL parametrizado (`Prisma.sql`), probado contra una base real.
 - **Montos `Decimal(12,2)`**, que viajan como string (`"125.00"`): un `float` acumula errores de redondeo.
@@ -92,6 +94,8 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 - **Búsqueda sin acentos** con la extensión `unaccent` ("jose" encuentra "José"), escapando `%` y `_`.
 - **404 real en el detalle.** El detalle no tiene `loading.tsx`, así el status no queda fijo en 200 antes de saber si el movimiento existe.
 - **Zona horaria de Buenos Aires** para mostrar fechas: Vercel corre en UTC y un pago de las 22 h aparecería al día siguiente.
+- **Ocultar saldo:** el ojo de la tarjeta principal enmascara los saldos de todas las tarjetas. La preferencia se guarda en una cookie (no en `localStorage`) que lee el servidor: un saldo oculto nunca se ve un instante al cargar y servidor y cliente renderizan lo mismo (sin _hydration mismatch_).
+- **Resumen del mes en Movimientos:** "Octubre · Ingresos +$X · Egresos −$Y". Ingresos = recibidos; egresos = enviados + débitos automáticos; solo movimientos **completados** (un pendiente todavía puede fallar). Mes calendario de Buenos Aires (empieza a las 03:00 UTC). No depende de la búsqueda ni del filtro: describe el mes. La base suma los `Decimal` (`groupBy`) y la app solo los combina como centavos enteros, nunca como `float`.
 - **Errores de API clasificados:** base caída → 503 (reintentable); bug → 500 genérico con log; `redirect()`/`notFound()` de Next se dejan pasar.
 
 El razonamiento completo, tarea por tarea, está en [`docs/BITACORA.md`](docs/BITACORA.md).
@@ -100,13 +104,14 @@ El razonamiento completo, tarea por tarea, está en [`docs/BITACORA.md`](docs/BI
 
 Todas las respuestas son JSON. Éxito: `{ "data": … }`. Error: `{ "error": { "code", "message", "details"? } }`, donde `code` es estable (`INVALID_INPUT`, `UNAUTHORIZED`, `NOT_FOUND`, `SERVICE_UNAVAILABLE`, …) y `details` trae los errores por campo.
 
-| Método | Ruta                 | Auth   | Parámetros                                                     | Respuestas                                                                     |
-| ------ | -------------------- | ------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| POST   | `/api/auth/login`    | —      | JSON `{ email, password, remember? }`                          | 200 `{ data: { userId } }` + cookie · 400 · 401 · 415 (no es JSON) · 500 · 503 |
-| POST   | `/api/auth/logout`   | Cookie | — (rechaza otro `Origin`)                                      | 204 · 403                                                                      |
-| GET    | `/api/movements`     | Cookie | `q` (≤ 50), `type` (`debito`, `recibido`, `enviado`), `cursor` | 200 `{ data: Movement[], total, nextCursor }` · 400 · 401 · 503                |
-| GET    | `/api/movements/:id` | Cookie | —                                                              | 200 `{ data: Movement }` · 401 · 404 (inexistente, mal formado o ajeno) · 503  |
-| GET    | `/api/account/cards` | Cookie | —                                                              | 200 `{ data: Card[] }` (principal primero) · 401 · 503                         |
+| Método | Ruta                     | Auth   | Parámetros                                                     | Respuestas                                                                     |
+| ------ | ------------------------ | ------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| POST   | `/api/auth/login`        | —      | JSON `{ email, password, remember? }`                          | 200 `{ data: { userId } }` + cookie · 400 · 401 · 415 (no es JSON) · 500 · 503 |
+| POST   | `/api/auth/logout`       | Cookie | — (rechaza otro `Origin`)                                      | 204 · 403                                                                      |
+| GET    | `/api/movements`         | Cookie | `q` (≤ 50), `type` (`debito`, `recibido`, `enviado`), `cursor` | 200 `{ data: Movement[], total, nextCursor }` · 400 · 401 · 503                |
+| GET    | `/api/movements/:id`     | Cookie | —                                                              | 200 `{ data: Movement }` · 401 · 404 (inexistente, mal formado o ajeno) · 503  |
+| GET    | `/api/movements/summary` | Cookie | `month` (`AAAA-MM`, por defecto el mes actual en Buenos Aires) | 200 `{ data: { month, currency, income, expenses } }` · 400 · 401 · 503        |
+| GET    | `/api/account/cards`     | Cookie | —                                                              | 200 `{ data: Card[] }` (principal primero) · 401 · 503                         |
 
 ```bash
 curl -i -c cookies.txt -H 'content-type: application/json' \
@@ -117,11 +122,11 @@ curl -b cookies.txt 'http://localhost:3000/api/movements?q=jose&type=recibido'
 
 ## Testing
 
-| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                               | Cantidad |
-| ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario                                                                            | 212      |
-| Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión) | 17       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404 y estados vacíos en Chromium móvil                                                                                   | 16       |
+| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                           | Cantidad |
+| ----------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (contador del saldo, ocultar saldo)                                                 | 263      |
+| Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes | 21       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes y animaciones (con y sin movimiento reducido) en Chromium móvil                                                  | 24       |
 
 Integración necesita la base levantada con las migraciones: crea y borra sus propios datos, así que no depende del seed. E2E necesita además el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
@@ -132,7 +137,17 @@ Integración necesita la base levantada con las migraciones: crea y borra sus pr
 - Estados de carga (esqueletos), error con "Reintentar" y dos estados vacíos (sin movimientos / sin resultados).
 - Mobile-first; en desktop, columna centrada como un teléfono.
 - En el celular: inputs de 16px (iOS no hace zoom al enfocarlos), zoom del usuario habilitado, márgenes para el notch y la barra inferior (`viewport-fit=cover` + `env(safe-area-inset-*)`), ícono propio y color de la barra del navegador.
-- Limitación conocida: el violeta de suscripción del diseño (`#C76DFF`) no llega a contraste AA en texto chico; se respetó el diseño.
+- Limitación conocida (diseño): el violeta de suscripción del diseño (`#C76DFF`) no llega a contraste AA en texto chico; se respetó el diseño.
+
+## Movimiento y accesibilidad
+
+Cada animación comunica algo y dura 150–300 ms, con curvas y duraciones definidas una sola vez en `globals.css` (`--motion-*`). Solo se animan `transform`/`opacity` (sin recalcular el layout) y no se agregó ninguna librería.
+
+- **Lista → detalle:** el ícono del movimiento tocado se transforma en el del detalle, y vuelve con "Volver" (React `<ViewTransition>`, incluido en el App Router de Next 16, sin flags). Solo ese par tiene nombre. Sin soporte del navegador, simplemente navega.
+- **Entrada de la lista:** las filas aparecen con un leve desplazamiento escalonado (40 ms entre filas, como mucho 280 ms). Ocurre cuando se insertan (primera carga, resultados nuevos, "Cargar más" solo para las nuevas), nunca al re-renderizar las mismas filas.
+- **Toque:** filas, chips, botones y navegación se achican apenas (0,97) al presionarlos.
+- **Esqueletos** con un brillo que los recorre; **saldo** que cuenta de 0 al valor real (600 ms). Los lectores de pantalla reciben solo el valor final.
+- **`prefers-reduced-motion: reduce`** apaga todo el movimiento: los cambios de estado siguen siendo instantáneos. Hay tests e2e que lo verifican con estilos computados reales.
 
 ## Cómo ver los estados
 
