@@ -1,4 +1,5 @@
 import { MovementListSkeleton } from "@/features/movements/ui/MovementListSkeleton";
+import { MonthlySummarySkeleton } from "@/features/movements/ui/MonthlySummaryView";
 import { Skeleton } from "@/shared/ui/Skeleton";
 
 /**
@@ -10,6 +11,7 @@ export default function MovementsLoading() {
   return (
     <div className="flex flex-col gap-5 px-6 pt-10">
       <Skeleton className="h-6 w-36" />
+      <MonthlySummarySkeleton />
       <Skeleton className="h-14 w-full rounded-2xl" />
       <div className="flex gap-3 overflow-hidden">
         {[72, 104, 92, 88].map((width) => (

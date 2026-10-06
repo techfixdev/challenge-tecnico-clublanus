@@ -5,6 +5,7 @@ import {
   MOVEMENT_TYPE_LABEL,
   formatMovementCount,
   formatSignedAmount,
+  formatSummaryAmount,
 } from "./movement-display";
 
 describe("formatSignedAmount", () => {
@@ -43,5 +44,17 @@ describe("formatMovementCount", () => {
     expect(formatMovementCount(0)).toBe("0 movimientos");
     expect(formatMovementCount(1)).toBe("1 movimiento");
     expect(formatMovementCount(26)).toBe("26 movimientos");
+  });
+});
+
+describe("formatSummaryAmount", () => {
+  it("signs money in with + and money out with a minus sign", () => {
+    expect(formatSummaryAmount("95.00", "in")).toBe("+$95");
+    expect(formatSummaryAmount("1250.50", "out")).toBe("−$1,250.50");
+  });
+
+  it("shows a plain $0 when there is nothing to sign", () => {
+    expect(formatSummaryAmount("0.00", "in")).toBe("$0");
+    expect(formatSummaryAmount("0.00", "out")).toBe("$0");
   });
 });

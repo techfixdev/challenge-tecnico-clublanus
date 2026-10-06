@@ -24,6 +24,16 @@ export function formatSignedAmount(
   return `${sign}${formatMoney(movement.amount)}`;
 }
 
+/** Monthly summary totals: "+$95" in, "−$250" out, and a plain "$0" when empty. */
+export function formatSummaryAmount(
+  amount: string,
+  direction: "in" | "out",
+): string {
+  const money = formatMoney(amount);
+  if (Number(amount) === 0) return money;
+  return `${direction === "in" ? "+" : MINUS}${money}`;
+}
+
 /** "1 movimiento", "26 movimientos". */
 export function formatMovementCount(count: number): string {
   return count === 1 ? "1 movimiento" : `${count} movimientos`;
