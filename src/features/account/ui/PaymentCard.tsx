@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import {
   describeCard,
   formatCardExpiry,
@@ -25,6 +27,34 @@ const BRAND_THEME: Record<CardBrand, { card: string; label: string }> = {
   },
 };
 
+const NUMBER_GROUPS = ["****", "****", "****"] as const;
+
+/**
+ * The card number as four evenly spaced groups. Poppins draws "*" as a superscript: its
+ * 0.35em of ink hangs from the digits' cap line (the digits are 0.7em tall), so the
+ * masked groups drop 0.175em to sit centered on the digits. A transform keeps that
+ * offset sub-pixel instead of snapping it to whole pixels. The spaces between groups
+ * keep the text "**** **** **** 1234" while the flex gap does the spacing.
+ */
+function CardNumber({ last4 }: { last4: string }) {
+  return (
+    <p
+      aria-hidden="true"
+      data-testid="card-number"
+      className="flex gap-[0.5em] text-lg tracking-[0.18em]"
+    >
+      {NUMBER_GROUPS.map((group, index) => (
+        <Fragment key={index}>
+          <span data-masked="" className="translate-y-[0.175em]">
+            {group}
+          </span>{" "}
+        </Fragment>
+      ))}
+      <span>{last4}</span>
+    </p>
+  );
+}
+
 export function PaymentCard({ card }: { card: Card }) {
   const theme = BRAND_THEME[card.brand];
   return (
@@ -40,8 +70,10 @@ export function PaymentCard({ card }: { card: Card }) {
             <p className={`text-xs ${theme.label}`}>Balance</p>
             {card.isPrimary && <BalanceToggle />}
           </div>
+          {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
+              the chip follows the ink, so it sits centered on the figures. */}
           <p className="mt-2 flex items-center gap-3">
-            <span className="rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#6b4300] shadow-sm">
+            <span className="-translate-y-[1.25px] rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#6b4300] shadow-sm">
               USD
             </span>
             <BalanceAmount balance={card.balance} />
@@ -50,15 +82,14 @@ export function PaymentCard({ card }: { card: Card }) {
         <CardBrandLogo brand={card.brand} />
       </div>
 
-      <p aria-hidden="true" className="text-lg tracking-[0.18em] tabular-nums">
-        {`**** **** **** ${card.last4}`}
-      </p>
+      {/* Decorative (the region name carries the last 4); see CardNumber. */}
+      <CardNumber last4={card.last4} />
 
       <div className="flex items-end justify-between">
         <p className="text-sm">{card.holderName}</p>
         <p className="text-right">
           <span className={`block text-[9px] ${theme.label}`}>Exp. Date</span>
-          <span className="block text-xs tabular-nums">
+          <span className="block text-xs">
             {formatCardExpiry(card.expMonth, card.expYear)}
           </span>
         </p>

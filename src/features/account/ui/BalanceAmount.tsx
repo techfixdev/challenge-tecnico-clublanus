@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui/reduced-motion";
 
 import { useBalanceHidden } from "./BalanceVisibility";
-import { digitOffset, odometerCells } from "./odometer";
+import { digitOffset, digitSidebearing, odometerCells } from "./odometer";
 
 const MASK = "••••••";
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -42,8 +42,12 @@ function useMountedOnClient(): boolean {
  * - It only rolls from 0 when it mounts on the client. Server-rendered HTML already has
  *   every strip in its final place, and replaying after hydration would flash
  *   "978.85 → 0 → 978.85". Under reduced motion every change is instant.
- * - Tabular figures and fixed cells: the width never changes while it rolls. Each
- *   column fades at its top and bottom edges, so neighbors roll in instead of popping.
+ * - Poppins has no tabular figures, so each column is as wide as its own final digit
+ *   (an invisible copy of it sizes the column) and the number keeps the font's natural
+ *   spacing: no gap around a narrow 1. The width is fixed by the final text, never by
+ *   the digit passing through, so nothing shifts while it rolls; a wider digit rolling
+ *   through a narrow column spills sideways instead of being cropped.
+ * - The row fades at its top and bottom edges, so digits roll in instead of popping.
  */
 export function BalanceAmount({ balance }: { balance: string }) {
   const hidden = useBalanceHidden();
@@ -57,13 +61,13 @@ export function BalanceAmount({ balance }: { balance: string }) {
   return (
     <span
       data-testid="balance-amount"
-      className="text-[26px] leading-none font-medium tracking-[-0.02em] tabular-nums"
+      className="inline-flex text-[26px] leading-none font-medium tracking-[-0.02em]"
     >
-      <span aria-hidden="true" className="inline-grid align-middle">
+      <span aria-hidden="true" className="inline-grid">
         <m.span
           data-odometer
           data-state={hidden ? "hidden" : "shown"}
-          className="col-start-1 row-start-1 flex"
+          className="col-start-1 row-start-1 -mx-[0.2em] flex [mask-image:linear-gradient(transparent,black_18%,black_82%,transparent)] px-[0.2em]"
           initial={false}
           animate={{
             opacity: hidden ? 0 : 1,
@@ -75,11 +79,15 @@ export function BalanceAmount({ balance }: { balance: string }) {
             cell.kind === "digit" ? (
               <span
                 key={cell.key}
-                className="inline-block h-[1.15em] overflow-hidden [mask-image:linear-gradient(transparent,black_18%,black_82%,transparent)]"
+                className="relative inline-block h-[1.15em] overflow-y-clip"
+                style={digitSidebearing(cell.digit)}
               >
+                <span data-digit-sizer className="invisible leading-[1.15]">
+                  {cell.digit}
+                </span>
                 <m.span
                   data-digit={hidden ? 0 : cell.digit}
-                  className="flex flex-col"
+                  className="absolute inset-x-0 top-0 flex flex-col items-center"
                   initial={rollOnMount && !hidden ? { y: "0%" } : false}
                   animate={{ y: digitOffset(hidden ? 0 : cell.digit) }}
                   transition={
@@ -100,10 +108,11 @@ export function BalanceAmount({ balance }: { balance: string }) {
             ),
           )}
         </m.span>
+        {/* Poppins' bullets sit 0.035em lower than the digits' center: lifted to match. */}
         <m.span
           data-balance-mask
           data-state={hidden ? "shown" : "hidden"}
-          className="col-start-1 row-start-1 self-center leading-[1.15]"
+          className="col-start-1 row-start-1 -translate-y-[0.035em] self-center leading-[1.15]"
           initial={false}
           animate={{ opacity: hidden ? 1 : 0 }}
           transition={reduced ? INSTANT : MORPH}

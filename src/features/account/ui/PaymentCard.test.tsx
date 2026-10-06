@@ -22,10 +22,44 @@ describe("PaymentCard", () => {
     expect(screen.getByText("Balance")).toBeInTheDocument();
     expect(screen.getByText("USD")).toBeInTheDocument();
     expect(screen.getByText("978.85")).toBeInTheDocument();
-    expect(screen.getByText("**** **** **** 1234")).toBeInTheDocument();
+    expect(screen.getByTestId("card-number")).toHaveTextContent(
+      "**** **** **** 1234",
+    );
     expect(screen.getByText("Soy Granate")).toBeInTheDocument();
     expect(screen.getByText("Exp. Date")).toBeInTheDocument();
     expect(screen.getByText("02/30")).toBeInTheDocument();
+  });
+
+  it("lays the card number out as four groups, the masked ones apart from the digits", () => {
+    render(<PaymentCard card={makeCard({ brand: "VISA", last4: "5678" })} />);
+
+    const number = screen.getByTestId("card-number");
+    // Decorative: the region name already says "terminada en 5678".
+    expect(number).toHaveAttribute("aria-hidden", "true");
+    const groups = Array.from(number.children);
+    expect(groups.map((group) => group.textContent)).toEqual([
+      "****",
+      "****",
+      "****",
+      "5678",
+    ]);
+    expect(groups.map((group) => group.hasAttribute("data-masked"))).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("draws the Visa wordmark as a path, not as live text in a box", () => {
+    const { container } = render(
+      <PaymentCard card={makeCard({ brand: "VISA", last4: "5678" })} />,
+    );
+
+    const logo = container.querySelector("svg[data-brand-logo=VISA]");
+    expect(logo).not.toBeNull();
+    expect(logo!.querySelector("path")).not.toBeNull();
+    expect(logo!.querySelector("text, rect")).toBeNull();
   });
 
   it("uses a different tone for Visa cards", () => {

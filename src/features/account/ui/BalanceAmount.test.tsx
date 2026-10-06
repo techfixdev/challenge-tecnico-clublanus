@@ -46,6 +46,26 @@ describe("BalanceAmount odometer", () => {
     ]);
   });
 
+  it("sizes each column by its own final digit, so a narrow 1 keeps natural spacing", () => {
+    // Poppins has no tabular figures: a column as wide as the widest digit would leave
+    // a gap around every 1 ("31 2.40"). An invisible copy of the final digit sizes it.
+    const { container } = render(<BalanceAmount balance="111.11" />);
+
+    const sizers = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        "[data-odometer] [data-digit-sizer]",
+      ),
+    );
+    expect(sizers.map((sizer) => sizer.textContent)).toEqual([
+      "1",
+      "1",
+      "1",
+      "1",
+      "1",
+    ]);
+    for (const sizer of sizers) expect(sizer).toHaveClass("invisible");
+  });
+
   it("starts rolling from 0 when it mounts on the client", () => {
     const { container } = render(<BalanceAmount balance="978.85" />);
 
