@@ -28,6 +28,65 @@ async function dragPrimaryCard(page: Page) {
   });
 }
 
+/** Scrolls the page and waits until the scroll-linked values have caught up. */
+async function scrollPage(page: Page, y: number) {
+  await page.evaluate(
+    (top) => window.scrollTo({ top, behavior: "instant" }),
+    y,
+  );
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+}
+
+function computed(
+  page: Page,
+  testId: string,
+  property: "opacity" | "transform",
+) {
+  return page
+    .getByTestId(testId)
+    .evaluate((element, name) => getComputedStyle(element)[name], property);
+}
+
+/**
+ * Taps "Movimientos" in the nav and records the indicator's left edge on every frame,
+ * from just before the tap until the navigation settles.
+ */
+async function switchTabRecordingIndicator(page: Page) {
+  await page.evaluate(() => {
+    const xs: number[] = [];
+    Object.assign(window, { indicatorXs: xs });
+    const started = performance.now();
+    requestAnimationFrame(function sample() {
+      const indicator = document.querySelector('[data-testid="nav-indicator"]');
+      const x = indicator?.getBoundingClientRect().x;
+      if (x !== undefined && xs.at(-1) !== x) xs.push(Math.round(x));
+      if (performance.now() - started < 4000) requestAnimationFrame(sample);
+    });
+  });
+  const nav = page.getByRole("navigation", { name: "Principal" });
+  await nav.getByRole("link", { name: "Movimientos" }).click();
+  await expect(page).toHaveURL(/\/movimientos$/);
+  const movements = nav.getByRole("link", { name: "Movimientos" });
+  await expect(movements.getByTestId("nav-indicator")).toBeVisible();
+  const target = Math.round((await movements.boundingBox())!.x);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { indicatorXs: number[] }).indicatorXs.at(-1),
+      ),
+    )
+    .toBe(target);
+  const xs = await page.evaluate(
+    () => (window as unknown as { indicatorXs: number[] }).indicatorXs,
+  );
+  return { xs, target };
+}
+
 function surfaceTransform(page: Page) {
   return primaryCardSurface(page).evaluate(
     (element) => getComputedStyle(element).transform,
@@ -70,10 +129,108 @@ test.describe("with motion allowed", () => {
     ).toHaveAttribute("aria-current", "true");
     await expect.poll(scaleOf).toBe("none");
   });
+  test("the header compacts into glass on scroll, and the filters stick under it", async ({
+    page,
+  }) => {
+    await login(page);
+    expect(await computed(page, "glass-header-backdrop", "opacity")).toBe("0");
+
+    await scrollPage(page, 200);
+    await expect
+      .poll(() => computed(page, "glass-header-backdrop", "opacity"))
+      .toBe("1");
+    // Scaled to 85% (a 2D matrix starting with the scale).
+    expect(await computed(page, "glass-header-title", "transform")).toMatch(
+      /^matrix\(0\.85, 0, 0, 0\.85/,
+    );
+    expect(
+      await page.getByText("Hola").evaluate((e) => getComputedStyle(e).opacity),
+    ).toBe("0");
+
+    await page.goto("/movimientos");
+    await expect(
+      page.getByRole("list", { name: "Lista de movimientos" }),
+    ).toBeVisible();
+    await scrollPage(page, 600);
+    await expect
+      .poll(() => computed(page, "sticky-filters-backdrop", "opacity"))
+      .toBe("1");
+    // The search box sits right under the compact header.
+    const filters = await page.getByTestId("sticky-filters").boundingBox();
+    expect(Math.round(filters!.y)).toBe(51);
+    await expect(page.getByRole("searchbox")).toBeInViewport();
+  });
+
+  test("Home loads without layout shift (CLS < 0.05)", async ({ page }) => {
+    await page.addInitScript(() => {
+      const shifts = { total: 0 };
+      Object.assign(window, { layoutShifts: shifts });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as (PerformanceEntry & {
+          value: number;
+          hadRecentInput: boolean;
+        })[])
+          if (!entry.hadRecentInput) shifts.total += entry.value;
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    const totalShift = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { layoutShifts: { total: number } })
+            .layoutShifts.total,
+      );
+    const sweepDone = async () => {
+      // The intro (light sweep, odometer roll) is over once the sweep reaches its end.
+      await expect
+        .poll(() =>
+          page.getByTestId("card-sweep").evaluate((sweep) => {
+            const { m41 } = new DOMMatrix(getComputedStyle(sweep).transform);
+            return Math.round(m41 / sweep.getBoundingClientRect().width);
+          }),
+        )
+        .toBe(4);
+    };
+
+    // Client navigation after login (odometer rolls), then a server-rendered reload.
+    await login(page);
+    await sweepDone();
+    expect(await totalShift()).toBeLessThan(0.05);
+
+    await page.reload();
+    await sweepDone();
+    expect(await totalShift()).toBeLessThan(0.05);
+  });
+
+  test("the nav indicator slides to the new section with a spring", async ({
+    page,
+  }) => {
+    await login(page);
+    const { xs, target } = await switchTabRecordingIndicator(page);
+    // It passed through positions between the two items: it slid, it did not jump.
+    const start = xs[0]!;
+    expect(xs.some((x) => x > start && x < target)).toBe(true);
+  });
 });
 
 test.describe("with prefers-reduced-motion: reduce", () => {
   test.use({ reducedMotion: "reduce" });
+
+  test("the header turns to glass without scaling, and the indicator jumps", async ({
+    page,
+  }) => {
+    await login(page);
+    await scrollPage(page, 200);
+    await expect
+      .poll(() => computed(page, "glass-header-backdrop", "opacity"))
+      .toBe("1");
+    expect(await computed(page, "glass-header-title", "transform")).toBe(
+      "none",
+    );
+
+    await scrollPage(page, 0);
+    const { xs, target } = await switchTabRecordingIndicator(page);
+    expect(xs.every((x) => x === xs[0] || x === target)).toBe(true);
+  });
 
   test("the card stays flat when dragged, and cards do not scale", async ({
     page,

@@ -35,13 +35,13 @@ describe("BottomNav", () => {
     ).toHaveAttribute("type", "submit");
   });
 
-  it("marks the current page", () => {
+  it("marks the current page and puts the sliding indicator under it", () => {
     render(<BottomNav logoutAction={logout} />);
 
-    expect(screen.getByRole("link", { name: "Inicio" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    const home = screen.getByRole("link", { name: "Inicio" });
+    expect(home).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByTestId("nav-indicator")).toHaveLength(1);
+    expect(home).toContainElement(screen.getByTestId("nav-indicator"));
     expect(
       screen.getByRole("link", { name: "Movimientos" }),
     ).not.toHaveAttribute("aria-current");
@@ -54,6 +54,7 @@ describe("BottomNav", () => {
     const movements = screen.getByRole("link", { name: "Movimientos" });
     expect(movements).toHaveAttribute("aria-current", "true");
     expect(movements).toHaveClass("text-primary");
+    expect(movements).toContainElement(screen.getByTestId("nav-indicator"));
     expect(screen.getByRole("link", { name: "Inicio" })).not.toHaveAttribute(
       "aria-current",
     );

@@ -1,12 +1,15 @@
 "use client";
 
+import * as m from "motion/react-m";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType, SVGProps } from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 
 import { ROUTES } from "@/shared/lib/routes";
 
 import { HomeIcon, ListIcon, LogoutIcon } from "./icons";
+import { INDICATOR_SPRING, INSTANT, PRESS_SPRING } from "./motion/springs";
+import { useReducedMotionPreference } from "./reduced-motion";
 
 type NavItem = {
   href: string;
@@ -30,12 +33,36 @@ function currentState(
 }
 
 const ITEM_CLASSES =
-  "flex size-14 items-center justify-center rounded-2xl pressable focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none";
+  "relative flex size-14 items-center justify-center rounded-2xl transition-colors focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none";
+
+/** The icon springs down a little while pressed (instead of the CSS press scale). */
+function TapIcon({
+  reduced,
+  children,
+}: {
+  reduced: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <m.span
+      className="relative flex size-full items-center justify-center"
+      whileTap={reduced ? undefined : { scale: 0.86 }}
+      transition={PRESS_SPRING}
+    >
+      {children}
+    </m.span>
+  );
+}
 
 /**
  * App navigation from the design: Home, Movements and Logout, fixed to the bottom of the
  * phone-width column. Logout is a form posting to the Server Action it receives, which
  * keeps this shared component independent from the auth feature.
+ *
+ * The bar is frosted glass, and the current section sits on a soft granate pill. The
+ * pill is one shared element (`layoutId`): when the section changes, Motion measures
+ * the old and new positions and springs the same pill between them with transforms.
+ * The nav lives in the layout, so it persists across navigations and can animate.
  */
 export function BottomNav({
   logoutAction,
@@ -43,11 +70,12 @@ export function BottomNav({
   logoutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
+  const reduced = useReducedMotionPreference();
 
   return (
     <nav
       aria-label="Principal"
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(30_34_53/0.12)]"
+      className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] glass pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(30_34_53/0.12),inset_0_1px_0_rgb(255_255_255/0.8)]"
     >
       <ul className="flex h-20 items-center justify-around px-6">
         {NAV_ITEMS.map(({ href, label, Icon }) => {
@@ -59,7 +87,17 @@ export function BottomNav({
                 aria-current={current}
                 className={`${ITEM_CLASSES} ${current ? "text-primary" : "text-foreground hover:text-primary"}`}
               >
-                <Icon className="size-[26px]" />
+                {current && (
+                  <m.span
+                    layoutId="bottom-nav-indicator"
+                    data-testid="nav-indicator"
+                    className="absolute inset-0 rounded-2xl bg-primary/10"
+                    transition={reduced ? INSTANT : INDICATOR_SPRING}
+                  />
+                )}
+                <TapIcon reduced={reduced}>
+                  <Icon className="size-[26px]" />
+                </TapIcon>
                 <span className="sr-only">{label}</span>
               </Link>
             </li>
@@ -71,7 +109,9 @@ export function BottomNav({
               type="submit"
               className={`${ITEM_CLASSES} text-foreground hover:text-primary`}
             >
-              <LogoutIcon className="size-[26px]" />
+              <TapIcon reduced={reduced}>
+                <LogoutIcon className="size-[26px]" />
+              </TapIcon>
               <span className="sr-only">Cerrar sesión</span>
             </button>
           </form>
