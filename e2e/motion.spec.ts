@@ -1,4 +1,10 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  errors,
+  expect,
+  test,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 /*
  * Motion checks on real computed styles (jsdom has no CSS). Each case runs with and
@@ -125,16 +131,12 @@ function tileMorphs(transitions: TransitionLog["entries"]) {
 }
 
 /** Leaves the detail ("Volver" or the browser's back) and returns the transitions it started. */
-async function backToList(
-  page: Page,
-  via: "link" | "history",
-  { timeout }: { timeout?: number } = {},
-) {
+async function backToList(page: Page, via: "link" | "history") {
   const readLog = await recordViewTransitions(page);
   if (via === "link") await page.getByRole("link", { name: "Volver" }).click();
   else await page.goBack();
   await expect(movementRows(page).first()).toBeVisible();
-  return readLog({ timeout });
+  return readLog();
 }
 
 /** Computed `animation-name` of a throwaway skeleton's shimmer highlight. */
@@ -242,9 +244,13 @@ test.describe("with motion allowed", () => {
 
     await skipWithoutViewTransitions(page);
     await openFirstDetail(page);
-    await expect(
-      backToList(page, "history", { timeout: 5_000 }),
-    ).rejects.toThrow(/waitForFunction: Timeout 5000ms exceeded/);
+    const readLog = await recordViewTransitions(page);
+    await page.goBack();
+    await expect(movementRows(page).first()).toBeVisible();
+    // The only accepted failure: the bounded wait for a transition times out.
+    await expect(readLog({ timeout: 5_000 })).rejects.toBeInstanceOf(
+      errors.TimeoutError,
+    );
   });
 });
 
