@@ -1,6 +1,8 @@
 import "dotenv/config";
 
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 import { Client } from "pg";
@@ -69,18 +71,28 @@ async function createIfMissing(testUrl: string): Promise<void> {
   }
 }
 
-// Prisma's CLI entry point run through Node itself: `node_modules/.bin/prisma` is a shell
-// script on Unix and a `.cmd` shim on Windows, which execFileSync cannot start there.
-const PRISMA_CLI = path.join(
-  ROOT,
-  "node_modules",
-  "prisma",
-  "build",
-  "index.js",
-);
+/**
+ * Prisma's CLI entry point, as its own package.json declares it (`bin`), resolved the way
+ * Node resolves the dependency (pnpm's symlinked store included). It is run through Node
+ * itself: `node_modules/.bin/prisma` is a shell script on Unix and a `.cmd` shim on
+ * Windows, which execFileSync cannot start there.
+ */
+export function prismaCliPath(root = ROOT): string {
+  const manifest = createRequire(path.join(root, "package.json")).resolve(
+    "prisma/package.json",
+  );
+  const { bin } = JSON.parse(readFileSync(manifest, "utf8")) as {
+    bin?: string | Record<string, string>;
+  };
+  const entry = typeof bin === "string" ? bin : bin?.prisma;
+  if (!entry) throw new Error("prisma/package.json declares no CLI (bin)");
+  const cli = path.join(path.dirname(manifest), entry);
+  if (!existsSync(cli)) throw new Error(`Prisma CLI not found at ${cli}`);
+  return cli;
+}
 
 function prisma(args: string[], testUrl: string): void {
-  execFileSync(process.execPath, [PRISMA_CLI, ...args], {
+  execFileSync(process.execPath, [prismaCliPath(), ...args], {
     cwd: ROOT,
     // Prisma's config loads `.env` with dotenv, which never overrides a variable that is
     // already set: this DATABASE_URL wins.

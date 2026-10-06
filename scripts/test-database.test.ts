@@ -1,6 +1,9 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { testDatabaseUrl } from "./test-database";
+import { prismaCliPath, testDatabaseUrl } from "./test-database";
 
 const DEV =
   "postgresql://granabank:granabank@localhost:5432/granabank?schema=public";
@@ -42,5 +45,14 @@ describe("testDatabaseUrl", () => {
     expect(() => testDatabaseUrl({})).toThrow(
       "Neither TEST_DATABASE_URL nor DATABASE_URL is set",
     );
+  });
+});
+
+describe("prismaCliPath", () => {
+  it("resolves the CLI file that prisma's package.json declares as its bin", () => {
+    const cli = prismaCliPath();
+    expect(existsSync(cli)).toBe(true);
+    expect(path.basename(cli)).toBe("index.js");
+    expect(cli.split(path.sep)).toContain("prisma");
   });
 });
