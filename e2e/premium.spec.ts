@@ -28,18 +28,52 @@ async function dragPrimaryCard(page: Page) {
   });
 }
 
-/** Scrolls the page and waits until the scroll-linked values have caught up. */
+/**
+ * Scrolls the window to `y` (from one pixel away, so a scroll event always fires) and waits
+ * two frames for scroll-linked styles. On a cold server the page can still be streaming
+ * (too short to scroll that far), so it retries until the window really sits at `y`.
+ */
 async function scrollPage(page: Page, y: number) {
-  await page.evaluate(
-    (top) => window.scrollTo({ top, behavior: "instant" }),
-    y,
-  );
-  await page.evaluate(
-    () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  );
+  await expect
+    .poll(() =>
+      page.evaluate(async (top) => {
+        const frame = () =>
+          new Promise((resolve) => requestAnimationFrame(resolve));
+        window.scrollTo({ top: Math.max(0, top - 1), behavior: "instant" });
+        await frame();
+        window.scrollTo({ top, behavior: "instant" });
+        await frame();
+        await frame();
+        return Math.round(window.scrollY);
+      }, y),
+    )
+    .toBe(y);
+}
+
+/**
+ * Polls a scroll-linked style, scrolling to `y` before each read. Scroll-linked values
+ * only update on scroll events, and one sent before hydration finished is never seen,
+ * which a single scroll followed by a poll would wait on forever.
+ */
+function styleAfterScroll(
+  page: Page,
+  y: number,
+  testId: string,
+  property: "opacity" | "transform",
+) {
+  return expect.poll(async () => {
+    await scrollPage(page, y);
+    return computed(page, testId, property);
+  });
+}
+
+/**
+ * The rendered instance of a test id. A route the router keeps around (e.g. a previous
+ * Movements page during a navigation in a long combined run) can still be in the DOM,
+ * hidden; only the one on screen matters, and strict mode must not trip on the other.
+ */
+function onScreen(page: Page, testId: string) {
+  return page.getByTestId(testId).filter({ visible: true });
 }
 
 function computed(
@@ -47,9 +81,10 @@ function computed(
   testId: string,
   property: "opacity" | "transform",
 ) {
-  return page
-    .getByTestId(testId)
-    .evaluate((element, name) => getComputedStyle(element)[name], property);
+  return onScreen(page, testId).evaluate(
+    (element, name) => getComputedStyle(element)[name],
+    property,
+  );
 }
 
 /**
@@ -135,10 +170,9 @@ test.describe("with motion allowed", () => {
     await login(page);
     expect(await computed(page, "glass-header-backdrop", "opacity")).toBe("0");
 
-    await scrollPage(page, 200);
-    await expect
-      .poll(() => computed(page, "glass-header-backdrop", "opacity"))
-      .toBe("1");
+    await styleAfterScroll(page, 200, "glass-header-backdrop", "opacity").toBe(
+      "1",
+    );
     // Scaled to 85% (a 2D matrix starting with the scale).
     expect(await computed(page, "glass-header-title", "transform")).toMatch(
       /^matrix\(0\.85, 0, 0, 0\.85/,
@@ -151,12 +185,14 @@ test.describe("with motion allowed", () => {
     await expect(
       page.getByRole("list", { name: "Lista de movimientos" }),
     ).toBeVisible();
-    await scrollPage(page, 600);
-    await expect
-      .poll(() => computed(page, "sticky-filters-backdrop", "opacity"))
-      .toBe("1");
+    await styleAfterScroll(
+      page,
+      600,
+      "sticky-filters-backdrop",
+      "opacity",
+    ).toBe("1");
     // The search box sits right under the compact header.
-    const filters = await page.getByTestId("sticky-filters").boundingBox();
+    const filters = await onScreen(page, "sticky-filters").boundingBox();
     expect(Math.round(filters!.y)).toBe(51);
     await expect(page.getByRole("searchbox")).toBeInViewport();
   });
@@ -222,10 +258,9 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     page,
   }) => {
     await login(page);
-    await scrollPage(page, 200);
-    await expect
-      .poll(() => computed(page, "glass-header-backdrop", "opacity"))
-      .toBe("1");
+    await styleAfterScroll(page, 200, "glass-header-backdrop", "opacity").toBe(
+      "1",
+    );
     expect(await computed(page, "glass-header-title", "transform")).toBe(
       "none",
     );

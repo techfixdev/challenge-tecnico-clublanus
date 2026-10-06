@@ -11,11 +11,33 @@ import { Client } from "pg";
  */
 const DEMO_EMAILS = ["soygranate@clublanus.com", "hincha@clublanus.com"];
 
-export async function undoDemoTransfersSince(since: Date): Promise<number> {
+async function connect(): Promise<Client> {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is not set");
   const client = new Client({ connectionString });
   await client.connect();
+  return client;
+}
+
+/** The balance of a user's primary card, e.g. "978.85". */
+export async function primaryCardBalance(email: string): Promise<string> {
+  const client = await connect();
+  try {
+    const { rows } = await client.query<{ balance: string }>(
+      `SELECT c.balance::text AS balance
+         FROM "Card" c JOIN "User" u ON u.id = c."userId"
+        WHERE u.email = $1 AND c."isPrimary"`,
+      [email],
+    );
+    if (rows.length !== 1) throw new Error(`No primary card for ${email}`);
+    return rows[0].balance;
+  } finally {
+    await client.end();
+  }
+}
+
+export async function undoDemoTransfersSince(since: Date): Promise<number> {
+  const client = await connect();
   try {
     await client.query("BEGIN");
     const { rows } = await client.query<{

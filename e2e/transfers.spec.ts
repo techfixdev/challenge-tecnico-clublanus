@@ -1,16 +1,29 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { undoDemoTransfersSince } from "./fixtures/transfers-db";
+import { expectFitsEveryWidth } from "./fixtures/layout-audit";
+import {
+  primaryCardBalance,
+  undoDemoTransfersSince,
+} from "./fixtures/transfers-db";
 
 const SENDER = { email: "soygranate@clublanus.com", password: "GRANATE1@" };
 const RECIPIENT = { email: "hincha@clublanus.com", password: "GRANATE2@" };
 
 /** Seed facts (prisma/seed.ts). */
 const SEED = {
-  senderBalance: "978.85",
   senderAlias: "soy.granate.lanus",
   senderCvuGrouped: "0000 0031 1000 0000 0001 75",
 };
+
+function amountToCents(amount: string): number {
+  const [units, fraction] = amount.split(".");
+  return Number(units) * 100 + Number(fraction);
+}
+
+/** 96655 → "966.55" (as the card shows it, without grouping below 1,000). */
+function centsToAmount(cents: number): string {
+  return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
+}
 
 async function login(page: Page, user: { email: string; password: string }) {
   await page.goto("/login");
@@ -32,11 +45,17 @@ function latestMovements(page: Page) {
     .getByRole("listitem");
 }
 
-// Each test leaves the demo data as the seed made it, so the order of tests and specs
-// does not matter.
+// These tests move the demo users' money, so they never run in parallel with each other
+// (a balance asserted in one must not move under it). Each one undoes its own transfers
+// afterwards and compares balances with what it read at its start, not with constants:
+// a leftover from an interrupted run cannot make it fail.
+test.describe.configure({ mode: "serial" });
+
 let startedAt: Date;
-test.beforeEach(() => {
+let senderBalance: string;
+test.beforeEach(async () => {
   startedAt = new Date(Date.now() - 1000);
+  senderBalance = await primaryCardBalance(SENDER.email);
 });
 test.afterEach(async () => {
   await undoDemoTransfersSince(startedAt);
@@ -56,6 +75,10 @@ test("sends money to hincha.granate, who receives it", async ({
   await expect(
     page.getByRole("heading", { name: "¿A quién le enviás?" }),
   ).toBeVisible();
+  // The seeded transfer makes the other demo user a recent recipient.
+  const recents = page.getByRole("region", { name: "Recientes" });
+  await expect(recents).toContainText("Hincha Granate");
+  await expect(recents).toContainText(/•••• \d{4}$/);
   await page.getByLabel("Alias o CVU").fill("hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
@@ -68,6 +91,8 @@ test("sends money to hincha.granate, who receives it", async ({
   await expect(page.getByRole("radio", { name: /Mastercard/ })).toBeChecked();
   await page.getByLabel("Monto en USD").fill("12,30");
   await page.getByLabel(/Motivo/).fill("Entradas e2e");
+  // Left the field: the amount is written the app's way.
+  await expect(page.getByLabel("Monto en USD")).toHaveValue("12.30");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   // Step 3: review and confirm.
@@ -80,7 +105,10 @@ test("sends money to hincha.granate, who receives it", async ({
   await expect(
     page.getByRole("heading", { name: "¡Transferencia enviada!" }),
   ).toBeVisible();
-  await expect(page.getByText(/^TRF-.+-E$/)).toBeVisible();
+  await expect(
+    page.getByText(/^ENV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/),
+  ).toBeVisible();
+  await expectFitsEveryWidth(page, "transfer success");
 
   // The receipt is the SENT movement's detail.
   await page.getByRole("link", { name: "Ver comprobante" }).click();
@@ -92,7 +120,9 @@ test("sends money to hincha.granate, who receives it", async ({
 
   // Home shows the new balance and the movement on top.
   await page.goto("/");
-  await expect(primaryCard(page)).toContainText("966.55");
+  await expect(primaryCard(page)).toContainText(
+    centsToAmount(amountToCents(senderBalance) - 1230),
+  );
   await expect(latestMovements(page).first()).toContainText("Hincha Granate");
   await expect(latestMovements(page).first()).toContainText("$12.30");
 
@@ -128,7 +158,8 @@ test("refuses an amount above the balance, in Spanish, and moves nothing", async
   await expect(page.getByRole("button", { name: "Continuar" })).toBeDisabled();
 
   await page.goto("/");
-  await expect(primaryCard(page)).toContainText(SEED.senderBalance);
+  await expect(primaryCard(page)).toContainText(senderBalance);
+  expect(await primaryCardBalance(SENDER.email)).toBe(senderBalance);
 });
 
 test("explains an unknown alias without leaving the first step", async ({

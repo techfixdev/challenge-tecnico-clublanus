@@ -4,6 +4,7 @@ import {
   test,
   type Locator,
   type Page,
+  type Request,
 } from "@playwright/test";
 
 /*
@@ -119,6 +120,59 @@ async function openFirstDetail(page: Page) {
   return { id, transitions: await readLog() };
 }
 
+/**
+ * The detail's full prefetch of the list (`<Link prefetch>` on "Volver"), as observed on
+ * `next start`: an RSC request (`rsc: 1`) for `/movimientos` sent from a detail page
+ * (`next-url: /movimientos/<id>`) without `next-router-prefetch` (that header marks the
+ * partial, loading-only prefetch, which also goes out and carries no list).
+ */
+function isFullListPrefetch(request: Request) {
+  const url = new URL(request.url());
+  const headers = request.headers();
+  return (
+    url.pathname === "/movimientos" &&
+    url.searchParams.has("_rsc") &&
+    headers.rsc === "1" &&
+    !("next-router-prefetch" in headers) &&
+    (headers["next-url"] ?? "").startsWith("/movimientos/")
+  );
+}
+
+/**
+ * Watches that prefetch from before the tap. It goes out before the detail is even
+ * painted, and the router reads what it needs from the stream and then cancels it, so the
+ * request ends as "failed" (`net::ERR_ABORTED`) rather than "finished": both mean the
+ * list is in the router cache. `done()` resolves once the prefetch is over; if none
+ * started (the router judged its cache fresh enough), after a short quiet period.
+ */
+function watchFullListPrefetch(page: Page) {
+  let started = false;
+  let ended = false;
+  const onStart = (request: Request) => {
+    if (isFullListPrefetch(request)) started = true;
+  };
+  const onEnd = (request: Request) => {
+    if (isFullListPrefetch(request)) ended = true;
+  };
+  page.on("request", onStart);
+  page.on("requestfinished", onEnd);
+  page.on("requestfailed", onEnd);
+  return {
+    async done() {
+      // Usually already started by now. If not, one quiet second for the router to start it.
+      if (!started) await page.waitForTimeout(1_000);
+      if (started) {
+        await expect
+          .poll(() => ended, { message: "the list prefetch ends" })
+          .toBe(true);
+      }
+      page.off("request", onStart);
+      page.off("requestfinished", onEnd);
+      page.off("requestfailed", onEnd);
+    },
+  };
+}
+
 /** Names of the movement tiles that morphed during the recorded transitions. */
 function tileMorphs(transitions: TransitionLog["entries"]) {
   return new Set(
@@ -222,7 +276,11 @@ test.describe("with motion allowed", () => {
     await expect(movementRows(page).first()).toBeVisible();
 
     await skipWithoutViewTransitions(page);
+    const listPrefetch = watchFullListPrefetch(page);
     const { id } = await openFirstDetail(page);
+    // Tapping "Volver" before the list is in the router cache would fetch it on click,
+    // show the skeleton first and form no pair: wait until the prefetch is done.
+    await listPrefetch.done();
     const transitions = await backToList(page, "link");
     expect(tileMorphs(transitions)).toEqual(
       new Set([`::view-transition-group(movement-tile-${id})`]),
