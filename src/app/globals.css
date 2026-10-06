@@ -48,6 +48,9 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  /* A word longer than its line (a narrow phone, Android's page zoom) breaks instead of
+     pushing the page sideways; text that fits is laid out exactly as before. */
+  overflow-wrap: break-word;
 }
 
 /*

@@ -15,10 +15,11 @@ import { MOVEMENT_TYPE_STYLE, MovementTypeIcon } from "./MovementTypeIcon";
 import { StatusBadge } from "./StatusBadge";
 
 function DetailRow({ term, children }: { term: string; children: ReactNode }) {
+  // On very narrow screens the value moves under its term instead of squeezing.
   return (
-    <div className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-4 first:pt-0 last:pb-0">
       <dt className="shrink-0 text-xs text-muted">{term}</dt>
-      <dd className="text-right text-sm font-medium text-foreground">
+      <dd className="min-w-0 flex-1 basis-24 text-right text-sm font-medium break-words text-foreground">
         {children}
       </dd>
     </div>

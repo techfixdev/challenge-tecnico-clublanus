@@ -77,7 +77,9 @@ export function BottomNav({
       aria-label="Principal"
       className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] glass pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(30_34_53/0.12),inset_0_1px_0_rgb(255_255_255/0.8)]"
     >
-      <ul className="flex h-20 items-center justify-around px-6">
+      {/* The side padding shrinks on very narrow viewports (page zoom), so the three items
+          always fit; from about 216px wide it is the design's 24px. */}
+      <ul className="flex h-20 items-center justify-around px-[clamp(0px,calc((100%-10.5rem)/2),1.5rem)]">
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const current = currentState(pathname, href);
           return (

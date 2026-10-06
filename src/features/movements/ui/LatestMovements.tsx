@@ -11,8 +11,8 @@ import { MovementRow } from "./MovementRow";
 export function LatestMovements({ movements }: { movements: Movement[] }) {
   return (
     <section aria-labelledby="latest-movements" className="px-6">
-      {/* On very narrow screens the title wraps; the link keeps its one line. */}
-      <div className="mb-4 flex items-baseline justify-between gap-4">
+      {/* On very narrow screens the link moves under the title (right-aligned). */}
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2
           id="latest-movements"
           className="text-base font-medium text-foreground"
@@ -21,7 +21,7 @@ export function LatestMovements({ movements }: { movements: Movement[] }) {
         </h2>
         <Link
           href={ROUTES.movements}
-          className="shrink-0 rounded-md text-xs font-medium whitespace-nowrap text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
+          className="ml-auto shrink-0 rounded-md text-xs font-medium whitespace-nowrap text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
         >
           Ver todos
         </Link>

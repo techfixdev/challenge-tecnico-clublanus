@@ -56,8 +56,9 @@ export function GlassHeader({
           <span className="absolute inset-x-0 bottom-0 h-px bg-border" />
         )}
       </m.div>
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        {/* Under extreme page zoom a long name breaks rather than pushing the actions out. */}
+        <div className="min-w-0">
           {eyebrow && (
             <m.p
               className="text-xs text-muted"
@@ -68,14 +69,17 @@ export function GlassHeader({
           )}
           <m.h1
             data-testid="glass-header-title"
-            className="origin-left text-xl font-semibold text-foreground"
+            className="origin-left text-xl font-semibold wrap-anywhere text-foreground"
             style={{ scale: reduced ? 1 : titleScale }}
           >
             {title}
           </m.h1>
         </div>
         {actions && (
-          <m.div className="flex items-center gap-1" style={{ y: actionsY }}>
+          <m.div
+            className="flex shrink-0 items-center gap-1"
+            style={{ y: actionsY }}
+          >
             {actions}
           </m.div>
         )}
