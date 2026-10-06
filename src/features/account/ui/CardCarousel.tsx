@@ -19,7 +19,7 @@ export function CardCarousel({
 }) {
   if (cards.length === 0) {
     return (
-      <p className="mx-6 rounded-3xl bg-surface p-6 text-sm text-muted shadow-card">
+      <p className="mx-6 rounded-3xl bg-surface lit-surface p-6 text-sm text-muted shadow-card">
         Todavía no tenés tarjetas asociadas.
       </p>
     );

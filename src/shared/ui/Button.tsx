@@ -7,9 +7,10 @@ const BASE_CLASSES =
   "inline-flex items-center justify-center rounded-2xl text-sm font-semibold pressable focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white shadow-card hover:bg-primary/90",
+  primary:
+    "bg-primary lit text-white shadow-raised inset-shadow-specular hover:bg-primary/90 active:shadow-pressed active:inset-shadow-pressed",
   secondary:
-    "bg-surface text-primary border border-border shadow-card hover:bg-primary-soft/40",
+    "bg-surface lit-surface text-primary border border-border shadow-card hover:bg-primary-soft/40 active:shadow-1",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

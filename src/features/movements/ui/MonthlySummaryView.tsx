@@ -4,7 +4,8 @@ import { Skeleton } from "@/shared/ui/Skeleton";
 import { formatSummaryAmount } from "../domain/movement-display";
 import type { MonthlySummary } from "../domain/movement-summary";
 
-const CARD_CLASSES = "rounded-2xl bg-surface px-4 text-xs shadow-card";
+const CARD_CLASSES =
+  "rounded-2xl bg-surface lit-surface px-4 text-xs shadow-card";
 
 /**
  * Each part after the month starts with its middle dot (decorative). The line wraps on

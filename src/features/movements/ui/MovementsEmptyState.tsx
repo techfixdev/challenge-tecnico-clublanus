@@ -29,7 +29,7 @@ export function MovementsEmptyState({ filters }: { filters: MovementFilters }) {
 
   return (
     <div className="flex flex-col items-center px-4 py-12 text-center">
-      <span className="flex size-16 items-center justify-center rounded-3xl bg-primary-soft/50 text-primary">
+      <span className="flex size-16 items-center justify-center rounded-3xl bg-primary-soft/50 lit-soft text-primary inset-shadow-specular-soft">
         <Icon className="size-7" />
       </span>
       <h2 className="mt-5 text-base font-semibold text-balance text-foreground">

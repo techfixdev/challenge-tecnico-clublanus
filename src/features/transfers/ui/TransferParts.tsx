@@ -8,7 +8,7 @@ import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
 import type { ConfirmedRecipient } from "../domain/transfer-form";
 
 /** Text inputs of the send flow (same look as the login fields). */
-export const FIELD_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEXT_CLASS} text-foreground shadow-card outline-none ring-1 ring-transparent transition placeholder:text-sm placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger`;
+export const FIELD_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEXT_CLASS} text-foreground inset-shadow-recessed outline-none ring-1 ring-transparent transition placeholder:text-sm placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger`;
 
 export const STEP_COUNT = 3;
 
@@ -87,7 +87,7 @@ export function RecipientAvatar({ fullName }: { fullName: string }) {
   return (
     <span
       aria-hidden="true"
-      className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft/60 text-sm font-semibold text-primary"
+      className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft/60 lit-soft text-sm font-semibold text-primary inset-shadow-specular-soft"
     >
       {initialsOf(fullName)}
     </span>

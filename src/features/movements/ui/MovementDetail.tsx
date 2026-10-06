@@ -60,7 +60,7 @@ export function MovementDetail({
         </p>
       </div>
 
-      <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface p-5 shadow-card">
+      <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">
         <DetailRow term="Fecha y hora">
           <span className="block">{formatLongDate(movement.occurredAt)}</span>
           <span className="block text-xs font-normal text-muted">

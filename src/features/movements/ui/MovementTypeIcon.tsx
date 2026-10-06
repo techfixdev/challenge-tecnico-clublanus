@@ -52,7 +52,7 @@ export function MovementTypeIcon({
   return (
     <span
       data-testid="movement-icon"
-      className={`flex shrink-0 items-center justify-center ${sizes.tile} ${tile}`}
+      className={`flex shrink-0 items-center justify-center lit-soft inset-shadow-specular-soft ${sizes.tile} ${tile}`}
     >
       <Icon className={sizes.icon} />
     </span>

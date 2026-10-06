@@ -97,7 +97,7 @@ export function AmountStep({
         back={{ onBack }}
       />
 
-      <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface p-4 shadow-card">
+      <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface lit-surface p-4 shadow-card">
         <RecipientAvatar fullName={recipient.fullName} />
         <span className="sr-only">Para: </span>
         <RecipientIdentity recipient={recipient} />
@@ -178,7 +178,7 @@ export function AmountStep({
                 <label
                   key={option.id}
                   data-selected={selected}
-                  className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface p-4 shadow-card ring-2 ring-transparent transition-shadow has-focus-visible:ring-primary/40 data-[selected=true]:ring-primary"
+                  className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface lit-surface p-4 shadow-card ring-2 ring-transparent transition-shadow has-focus-visible:ring-primary/40 data-[selected=true]:ring-primary"
                 >
                   <input
                     type="radio"
@@ -190,7 +190,7 @@ export function AmountStep({
                   />
                   <span
                     aria-hidden="true"
-                    className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-background"
+                    className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-background inset-shadow-recessed"
                   >
                     <CardBrandLogo brand={option.brand} />
                   </span>

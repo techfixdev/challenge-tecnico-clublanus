@@ -67,7 +67,7 @@ export function ReceiveDetailsCard({ details }: { details: ReceiveDetails }) {
 
   return (
     <div className="flex flex-col">
-      <dl className="divide-y divide-border rounded-3xl bg-surface p-5 shadow-card">
+      <dl className="divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">
         <div className="pb-4">
           <dt className="text-xs text-muted">Titular</dt>
           <dd className="mt-1 text-[15px] font-medium text-foreground">
@@ -129,7 +129,7 @@ function CopyRow({
           onClick={onCopy}
           aria-label={copied ? `${term} copiado` : `Copiar ${spokenTerm}`}
           data-copied={copied}
-          className="inline-flex h-9 shrink-0 pressable items-center gap-1.5 rounded-full bg-primary-soft/40 px-3 text-xs font-semibold text-primary hover:bg-primary-soft/60 focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none data-[copied=true]:bg-success-soft data-[copied=true]:text-success"
+          className="inline-flex h-9 shrink-0 pressable items-center gap-1.5 rounded-full bg-primary-soft/40 lit-soft px-3 text-xs font-semibold text-primary hover:bg-primary-soft/60 focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none data-[copied=true]:bg-success-soft data-[copied=true]:text-success"
         >
           {copied ? (
             <CheckIcon className="size-4" />

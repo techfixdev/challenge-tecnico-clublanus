@@ -2,7 +2,10 @@
 export function LoginHeader() {
   return (
     <header className="flex flex-col items-center text-center">
-      <div aria-hidden="true" className="size-14 rounded-2xl bg-primary" />
+      <div
+        aria-hidden="true"
+        className="size-14 rounded-2xl bg-primary lit shadow-raised inset-shadow-specular"
+      />
       <h1 className="mt-5 text-[32px] leading-tight font-semibold wrap-anywhere text-primary">
         GranaBank
       </h1>

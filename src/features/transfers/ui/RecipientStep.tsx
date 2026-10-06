@@ -133,7 +133,7 @@ export function RecipientStep({
                     onChange(recipient.query);
                     onResolve(recipient.query);
                   }}
-                  className="flex w-full pressable items-center gap-4 rounded-2xl bg-surface p-4 text-left shadow-card focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none disabled:opacity-70"
+                  className="flex w-full pressable items-center gap-4 rounded-2xl bg-surface lit-surface p-4 text-left shadow-card focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:shadow-1 disabled:opacity-70"
                 >
                   <RecipientAvatar fullName={recipient.fullName} />
                   <RecipientIdentity recipient={recipient} />

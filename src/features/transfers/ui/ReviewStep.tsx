@@ -69,7 +69,7 @@ export function ReviewStep({
         <p className="mt-1 text-xs font-medium text-muted">{card.currency}</p>
       </div>
 
-      <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface p-5 shadow-card">
+      <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">
         <SummaryRow term="Para">
           <span className="block">{recipient.fullName}</span>
           {recipient.alias ? (

@@ -86,7 +86,7 @@ export function BottomNav({
   return (
     <nav
       aria-label="Principal"
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] glass pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(30_34_53/0.12),inset_0_1px_0_rgb(255_255_255/0.8)]"
+      className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] glass pb-[env(safe-area-inset-bottom)] shadow-float inset-shadow-specular-glass"
     >
       {/* The side padding shrinks on very narrow viewports (page zoom), so the three items
           always fit; from about 216px wide it is the design's 24px. */}

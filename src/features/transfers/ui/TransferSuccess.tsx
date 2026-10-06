@@ -48,7 +48,7 @@ export function TransferSuccess({
         <m.span
           aria-hidden="true"
           data-testid="success-badge"
-          className="flex size-20 items-center justify-center rounded-3xl bg-success-soft text-success"
+          className="flex size-20 items-center justify-center rounded-3xl bg-success-soft lit-soft text-success inset-shadow-specular-soft"
           initial={reduced ? false : { scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={POP_SPRING}
@@ -85,7 +85,7 @@ export function TransferSuccess({
         </p>
       </div>
 
-      <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface p-5 shadow-card">
+      <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">
         <ReceiptRow term="Para">
           <span className="block">{receipt.recipient.fullName}</span>
           {receipt.recipient.alias ? (

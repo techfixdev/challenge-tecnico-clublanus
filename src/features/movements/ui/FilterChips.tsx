@@ -37,10 +37,10 @@ export function FilterChips({ filters }: { filters: MovementFilters }) {
                 href={buildMovementsHref({ query: filters.query, type })}
                 aria-current={isActive ? "true" : undefined}
                 scroll={false}
-                className={`inline-flex h-11 pressable items-center rounded-2xl px-5 text-[13px] font-medium whitespace-nowrap shadow-card focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none ${
+                className={`inline-flex h-11 pressable items-center rounded-2xl px-5 text-[13px] font-medium whitespace-nowrap focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none ${
                   isActive
-                    ? "bg-primary text-white"
-                    : "bg-surface text-foreground hover:bg-primary-soft/40"
+                    ? "bg-primary lit text-white shadow-raised inset-shadow-specular active:shadow-pressed active:inset-shadow-pressed"
+                    : "bg-surface lit-surface text-foreground shadow-card hover:bg-primary-soft/40 active:shadow-1"
                 }`}
               >
                 {label}

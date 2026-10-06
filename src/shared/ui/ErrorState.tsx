@@ -19,7 +19,7 @@ export function ErrorState({
     >
       <span
         aria-hidden="true"
-        className="flex size-16 items-center justify-center rounded-3xl bg-danger-soft text-2xl font-semibold text-danger"
+        className="flex size-16 items-center justify-center rounded-3xl bg-danger-soft lit-soft text-2xl font-semibold text-danger inset-shadow-specular-soft"
       >
         !
       </span>

@@ -41,7 +41,45 @@
 
   --color-skeleton: #eceef3;
 
-  --shadow-card: 0 8px 24px -12px rgb(30 34 53 / 0.12);
+  /*
+   * Light system: one key light from the top-left for the whole app (see `--light-angle`
+   * below). Shadows fall down and slightly right of it, in two layers: a tight contact
+   * shadow where the surface meets the page and a soft ambient one. They are tinted with
+   * the ink warmed toward granate (rgb 52 24 38), or with granate itself under granate
+   * fills, never neutral grey. `shadow-*` and `inset-shadow-*` compose with focus rings.
+   */
+  /* Elevation 1: controls resting on the page (inactive chips, small surfaces). */
+  --shadow-1:
+    0 0 0 1px rgb(52 24 38 / 0.03), 0.5px 1px 2px rgb(52 24 38 / 0.06),
+    1px 4px 10px -6px rgb(52 24 38 / 0.14);
+  /* Elevation 2: cards, rows, the default surface. */
+  --shadow-card:
+    0 0 0 1px rgb(52 24 38 / 0.03), 0.5px 1px 2px rgb(52 24 38 / 0.05),
+    2px 10px 24px -12px rgb(52 24 38 / 0.18);
+  /* Elevation 3: a surface lifted toward the light (hovered row). */
+  --shadow-lifted:
+    0 0 0 1px rgb(52 24 38 / 0.03), 0.5px 2px 4px rgb(52 24 38 / 0.06),
+    3px 14px 28px -12px rgb(52 24 38 / 0.22);
+  /* Elevation 3 under a granate fill (primary button, active chip, logo mark). */
+  --shadow-raised:
+    0.5px 1px 2px rgb(78 17 28 / 0.24), 1px 6px 12px -6px rgb(78 17 28 / 0.42);
+  /* A granate fill pressed into the page: only the contact shadow is left. */
+  --shadow-pressed: 0 0.5px 1px rgb(78 17 28 / 0.3);
+  /* Elevation 4: bars floating over content (bottom nav); the shade rises above it. */
+  --shadow-float: 0 -8px 24px -12px rgb(52 24 38 / 0.16);
+
+  /* Specular edges: the top edge catches the light, the bottom edge turns away from it. */
+  --inset-shadow-specular:
+    inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 -2px 0 rgb(40 6 14 / 0.2);
+  --inset-shadow-specular-soft:
+    inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 -1px 0 rgb(52 24 38 / 0.05);
+  --inset-shadow-specular-glass: inset 0 1px 0 rgb(255 255 255 / 0.8);
+  /* Pressed: the highlight is gone and the top inner edge is in shade. */
+  --inset-shadow-pressed: inset 0.5px 1px 3px rgb(40 6 14 / 0.35);
+  /* Recessed fields (inputs): shade on the inner top edge, light on the outer bottom. */
+  --inset-shadow-recessed:
+    inset 0.5px 1px 2px rgb(52 24 38 / 0.08),
+    inset 0 0 0 1px rgb(52 24 38 / 0.06);
 }
 
 body {
@@ -59,6 +97,9 @@ body {
  * properties (`scale`, `translate`), which the browser animates without re-layout.
  */
 :root {
+  /* Direction the key light travels (top-left → bottom-right): every gradient runs along it. */
+  --light-angle: 155deg;
+
   --motion-duration-press: 150ms;
   --motion-duration-enter: 240ms;
   --motion-duration-morph: 280ms;
@@ -76,7 +117,8 @@ body {
  * It also transitions colors, so it replaces `transition-colors` on those elements.
  */
 @utility pressable {
-  transition-property: color, background-color, border-color, scale, translate;
+  transition-property:
+    color, background-color, border-color, box-shadow, scale, translate;
   transition-duration: var(--motion-duration-press);
   transition-timing-function: var(--motion-ease-standard);
 
@@ -89,6 +131,52 @@ body {
     &:active:not(:disabled) {
       scale: none;
     }
+  }
+}
+
+/*
+ * Light-system fills: same-palette gradients along `--light-angle`, layered over the
+ * element's own background color (so `hover:bg-*` keeps working underneath). Brightest at
+ * the top-left, in shade at the bottom-right. Forced colors drop them with the shadows.
+ *
+ * - `lit`: saturated fills (granate buttons, the active chip, the Enviar tile).
+ * - `lit-soft`: pastel icon tiles; the white sheen keeps their own tint.
+ * - `lit-surface`: white surfaces, turning very slightly toward the page color.
+ */
+@utility lit {
+  background-image: linear-gradient(
+    var(--light-angle),
+    rgb(255 255 255 / 0.14),
+    rgb(255 255 255 / 0) 50%,
+    rgb(40 6 14 / 0.18)
+  );
+
+  @media (forced-colors: active) {
+    background-image: none;
+  }
+}
+
+@utility lit-soft {
+  background-image: linear-gradient(
+    var(--light-angle),
+    rgb(255 255 255 / 0.55),
+    rgb(255 255 255 / 0) 70%
+  );
+
+  @media (forced-colors: active) {
+    background-image: none;
+  }
+}
+
+@utility lit-surface {
+  background-image: linear-gradient(
+    var(--light-angle),
+    rgb(255 255 255 / 0) 40%,
+    rgb(236 238 243 / 0.3)
+  );
+
+  @media (forced-colors: active) {
+    background-image: none;
   }
 }
 
@@ -174,9 +262,90 @@ body {
   animation-timing-function: var(--motion-ease-standard);
 }
 
+/*
+ * Container transform (QuickActionMorph.tsx): a Home quick action grows into its screen
+ * and shrinks back into the tile. The group moves the box; the image pair is the container
+ * itself, turning from the tile's surface (white, rounded, elevated) into the page and
+ * back; the tile's contents fade out quickly while the screen's fade in, both drawn from
+ * their top-left corner and cropped by the container, never stretched.
+ */
+::view-transition-group(.container-open),
+::view-transition-group(.container-close) {
+  animation-duration: var(--motion-duration-morph);
+  animation-timing-function: var(--motion-ease-standard);
+}
+
+::view-transition-image-pair(.container-open),
+::view-transition-image-pair(.container-close) {
+  overflow: clip;
+  animation: container-surface var(--motion-duration-morph)
+    var(--motion-ease-standard) both;
+}
+
+::view-transition-image-pair(.container-close) {
+  animation-direction: reverse;
+}
+
+::view-transition-old(.container-open),
+::view-transition-new(.container-open),
+::view-transition-old(.container-close),
+::view-transition-new(.container-close) {
+  width: 100%;
+  height: 100%;
+  object-position: left top;
+}
+
+/* The screen scales with its container; the tile keeps its own size (never blown up). */
+::view-transition-new(.container-open),
+::view-transition-old(.container-close) {
+  object-fit: cover;
+}
+
+::view-transition-old(.container-open),
+::view-transition-new(.container-close) {
+  object-fit: none;
+}
+
+/* What leaves goes first and fast; what arrives overlaps it, so the swap reads as one. */
+::view-transition-old(.container-open),
+::view-transition-old(.container-close) {
+  animation: container-fade-out 100ms var(--motion-ease-standard) both;
+}
+
+::view-transition-new(.container-open),
+::view-transition-new(.container-close) {
+  animation: container-fade-in 200ms var(--motion-ease-enter) 60ms both;
+}
+
+@keyframes container-surface {
+  from {
+    border-radius: 16px;
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+  to {
+    border-radius: 0;
+    background-color: var(--color-background);
+    box-shadow: none;
+  }
+}
+
+@keyframes container-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes container-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* Reduced motion: pages swap instantly, as if the API were not supported. */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
+  ::view-transition-image-pair(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation-duration: 0s !important;
@@ -199,6 +368,13 @@ body {
     background-color: rgb(249 250 252 / 0.74);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     backdrop-filter: blur(16px) saturate(180%);
+  }
+
+  /* Asked for less transparency: a solid bar. */
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 

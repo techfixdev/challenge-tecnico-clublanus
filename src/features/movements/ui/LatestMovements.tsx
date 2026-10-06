@@ -30,7 +30,7 @@ export function LatestMovements({ movements }: { movements: Movement[] }) {
         </Link>
       </div>
       {movements.length === 0 ? (
-        <p className="rounded-2xl bg-surface p-6 text-center text-sm text-muted shadow-card">
+        <p className="rounded-2xl bg-surface lit-surface p-6 text-center text-sm text-muted shadow-card">
           Todavía no tenés movimientos.
         </p>
       ) : (

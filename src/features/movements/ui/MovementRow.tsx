@@ -32,7 +32,7 @@ export function MovementRow({ movement, href }: MovementRowProps) {
   return (
     <Link
       href={href}
-      className="flex pressable flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-surface p-4 shadow-card hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:translate-y-0 motion-reduce:hover:translate-none"
+      className="flex pressable flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-surface lit-surface p-4 shadow-card hover:-translate-y-0.5 hover:shadow-lifted focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:translate-y-0 active:shadow-card motion-reduce:hover:translate-none"
     >
       <MovementTile id={id}>
         <MovementTypeIcon type={type} />

@@ -105,7 +105,7 @@ export function MovementSearch({
 
   return (
     <form role="search" onSubmit={handleSubmit} aria-busy={isPending}>
-      <div className="flex h-14 items-center gap-3 rounded-2xl bg-surface px-4 shadow-card focus-within:ring-4 focus-within:ring-primary/20">
+      <div className="flex h-14 items-center gap-3 rounded-2xl bg-surface px-4 inset-shadow-recessed focus-within:ring-4 focus-within:ring-primary/20">
         {isPending ? (
           <span
             aria-hidden="true"
