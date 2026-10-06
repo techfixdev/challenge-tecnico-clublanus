@@ -22,7 +22,9 @@ function databaseName(url: URL): string {
 }
 
 /** The test database's connection string. Throws if it would be the dev database. */
-export function testDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+export function testDatabaseUrl(
+  env: Partial<Record<string, string>> = process.env,
+): string {
   const devUrl = env.DATABASE_URL;
   let testUrl = env.TEST_DATABASE_URL;
   if (!testUrl) {
@@ -67,8 +69,18 @@ async function createIfMissing(testUrl: string): Promise<void> {
   }
 }
 
+// Prisma's CLI entry point run through Node itself: `node_modules/.bin/prisma` is a shell
+// script on Unix and a `.cmd` shim on Windows, which execFileSync cannot start there.
+const PRISMA_CLI = path.join(
+  ROOT,
+  "node_modules",
+  "prisma",
+  "build",
+  "index.js",
+);
+
 function prisma(args: string[], testUrl: string): void {
-  execFileSync(path.join(ROOT, "node_modules", ".bin", "prisma"), args, {
+  execFileSync(process.execPath, [PRISMA_CLI, ...args], {
     cwd: ROOT,
     // Prisma's config loads `.env` with dotenv, which never overrides a variable that is
     // already set: this DATABASE_URL wins.

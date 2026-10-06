@@ -7,7 +7,7 @@ import { prepareTestDatabase } from "./test-database";
  * DATABASE_URL pointing there, e.g. a production server for local measurement scripts:
  *
  *   pnpm db:test                      # only prepare it
- *   pnpm with-test-db next start -p 3200
+ *   pnpm db:test next start -p 3200
  */
 async function main() {
   const command = process.argv.slice(2).filter((arg) => arg !== "--");
