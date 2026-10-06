@@ -17,7 +17,15 @@ const STATUS_BY_CODE = {
   INVALID_CREDENTIALS: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
+  RECIPIENT_NOT_FOUND: 404,
+  CARD_NOT_FOUND: 404,
+  // The idempotency key was already used for a different request.
+  IDEMPOTENCY_KEY_REUSED: 409,
   UNSUPPORTED_MEDIA_TYPE: 415,
+  // Well-formed requests the business rules refuse.
+  SELF_TRANSFER: 422,
+  INSUFFICIENT_FUNDS: 422,
+  CURRENCY_MISMATCH: 422,
   INTERNAL_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
 } as const;
