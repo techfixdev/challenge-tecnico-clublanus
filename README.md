@@ -38,6 +38,14 @@ pnpm dev                  # http://localhost:3000
 
 Puertos: app `3000`, PostgreSQL `5432`, servidor de los tests e2e `3100`.
 
+**Probarlo desde el celular (misma Wi‑Fi):** Next bloquea en dev los assets pedidos desde otro host, así que hay que habilitar la IP de la máquina con `ALLOWED_DEV_ORIGINS` (lista separada por comas; solo aplica a `next dev`):
+
+```bash
+ALLOWED_DEV_ORIGINS=192.168.1.10 pnpm dev -H 0.0.0.0   # luego abrir http://192.168.1.10:3000
+```
+
+Si hay firewall, abrir el puerto 3000 solo para la red local. Con `next start` no sirve por `http://`: en producción la cookie de sesión es `Secure` y el navegador la descarta fuera de HTTPS (salvo en `localhost`).
+
 ## Scripts
 
 | Script                               | Qué hace                                                 |
@@ -149,7 +157,9 @@ La sensación "premium" sale de física, profundidad y continuidad, no de cambia
 - **Saldo tipo odómetro:** cada dígito es una tira 0–9 que rueda con resorte, de derecha a izquierda (40 ms entre dígitos), con cifras tabulares y celdas fijas: el ancho no cambia. Al ocultar el saldo los dígitos se desenfocan y aparecen los puntos (250 ms), y al mostrarlo vuelven a rodar. Los lectores de pantalla escuchan solo el valor final. No se repite al recargar: el HTML del servidor ya trae cada tira en su lugar.
 - **Header de vidrio:** en Home y Movimientos el header queda fijo y se compacta con el scroll ("Hola" se desvanece, el título baja a 85%) y se vuelve vidrio esmerilado (`backdrop-filter: blur(16px) saturate(180%)`), con fondo casi opaco donde el navegador no lo soporta (`@supports`). No cambia de alto: se pega con un `top` negativo, así nada se mueve debajo (CLS 0). En Movimientos, el buscador y los chips quedan pegados debajo: son los controles de una lista larga, mientras que el resumen del mes (contexto) se va con el scroll.
 - **Barra inferior:** también de vidrio. La sección actual tiene una píldora granate suave que viaja entre íconos con un resorte (un único elemento compartido con `layoutId`), y los íconos se achican con un resorte al tocarlos.
-- **Lista → detalle:** el ícono del movimiento tocado se transforma en el del detalle (React `<ViewTransition>`). Las filas entran escalonadas y los esqueletos tienen brillo, como antes.
+- **Lista → detalle:** el ícono del movimiento tocado se transforma en el del detalle (React `<ViewTransition>`), y vuelve a su fila con "Volver". Las filas entran escalonadas y los esqueletos tienen brillo, como antes.
+  - La vuelta solo se anima si la lista aparece en el mismo _commit_ que la navegación: "Volver" la precarga (`prefetch`), y Next precarga **solo en producción**. En `next dev` la lista pasa primero por su esqueleto y no hay morph (el e2e de la vuelta corre con `CI=1`, sobre `next start`).
+  - Con el botón atrás del navegador no hay morph: React restaura esa entrada del historial en una _lane_ síncrona y no inicia ninguna view transition (limitación del framework; queda como `test.fail`, que se pone en rojo cuando el framework empiece a animarlo). No se intercepta el historial para forzarlo.
 - **Peso:** Motion se carga con `LazyMotion` y componentes `m.*`: la página trae el núcleo, y el paquete de gestos y layout (`domMax`, ~24 kB gzip) llega en un chunk aparte después de hidratar.
 - **`prefers-reduced-motion: reduce`:** sin inclinación, sin barrido de luz, sin rodar el saldo (aparece final), sin escalado ligado al scroll y la píldora salta sin resorte; el vidrio y los fundidos de opacidad se mantienen. Hay tests e2e que lo verifican en ambos modos.
 

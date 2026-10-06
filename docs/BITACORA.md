@@ -406,6 +406,55 @@ La barra del navegador usa el color de fondo y no el granate: todas las pantalla
 
 Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsdom y el test verificaba `0.00` en vez del saldo real. Ahora verifica 978.85. Los e2e se corrieron 3 veces seguidas (25/25 en las tres) y la revisión salió aprobada.
 
+### T7 — Versión premium y recorrida completa en navegador (06/10/2026)
+
+**Merge de la versión premium.** La rama `feat/premium-motion` se había hecho en un worktree aparte y nunca se había integrado. Se incorporó con *fast-forward* (`cb048be..3c15bde`), sin conflictos:
+
+| Feature | Qué aporta |
+|---|---|
+| Tarjeta "viva" | Se inclina con el dedo o el mouse y tiene un brillo que la recorre; el carrusel tiene profundidad. |
+| Saldo tipo odómetro | Los dígitos ruedan como un contador mecánico. Reemplaza al conteo lineal de T6. |
+| Header glass y nav con indicador | El header se vuelve translúcido al hacer scroll; la pastilla granate se desliza a la pestaña activa. |
+
+**Cambio de criterio:** en T6 se evitó sumar librerías. La versión premium agrega `motion`, porque la física de resortes (inclinación, odómetro, indicador) es difícil de lograr bien a mano. Se carga por partes (`LazyMotion`) para no inflar el bundle, y sigue respetando "reducir movimiento".
+
+**Recorrida de punta a punta** con un Chromium visible en tamaño iPhone (390×844). Se verificó en vivo:
+- Login: errores por campo con `aria-invalid`; credenciales inválidas sin revelar si falló el email o la contraseña.
+- Protección de rutas: sin sesión, `/` responde 307 a `/login`.
+- Animaciones: brillo de los esqueletos, filas escalonadas, morph del ícono lista → detalle y odómetro del saldo al navegar a Home.
+
+**Morph de vuelta (detalle → lista):**
+- Con el link "Volver" **funciona en producción**: el prefetch del link trae la lista antes de navegar, así el ícono "pareja" existe cuando cambia la pantalla. En `next dev` no hay prefetch, y por eso no se ve en desarrollo.
+- Con el **botón atrás del navegador no se anima**. React restaura esa entrada del historial de forma síncrona y no inicia ninguna view transition. Es una limitación del framework. No se intercepta el historial para forzarlo, y queda un test marcado `test.fail` que se pone en rojo el día que el framework lo soporte.
+
+**Fidelidad al diseño:** se evaluó cambiar las filas y poner signo a los montos, pero el Figma muestra filas como tarjetas separadas y montos sin signo. Se mantiene el diseño.
+
+**Probar desde el celular:** `ALLOWED_DEV_ORIGINS` (solo dev) habilita la IP de la máquina en la red local. Los pasos están en el README.
+
+#### Local vs. producción
+
+| Tema | Local (desarrollo) | Producción (Vercel, prevista: el deploy es T5) |
+|---|---|---|
+| Servidor | `next dev`: sin prefetch, con recarga en caliente y el indicador "N" de Next abajo a la izquierda | `next build` + `next start`: prefetch de links, sin indicador de dev |
+| Base de datos | PostgreSQL 17 en Docker (`pnpm db:up`), puerto 5432 | Neon (Postgres administrado) desde el Marketplace de Vercel |
+| Migraciones | `pnpm db:migrate` (`prisma migrate dev`, puede crear migraciones) | `pnpm db:deploy` (`prisma migrate deploy`, solo aplica las existentes) |
+| Datos | `pnpm db:seed`: usuario demo y 26 movimientos | Seed una única vez sobre la base de producción |
+| Variables | `.env` local (no se versiona); `.env.example` como plantilla | Variables de entorno del proyecto en Vercel |
+| `SESSION_SECRET` | Cualquier valor de 32+ caracteres | Secreto aleatorio (`openssl rand -base64 32`), nunca el del ejemplo |
+| Cookie de sesión | `httpOnly`, `SameSite=Lax`, **`secure=false`** (se usa `http://localhost`) | `httpOnly`, `SameSite=Lax`, **`secure=true`** (solo viaja por HTTPS) |
+| Cliente de Prisma | Se guarda en `globalThis` para no abrir conexiones nuevas en cada recarga | Una instancia por proceso |
+| `ALLOWED_DEV_ORIGINS` | Habilita la IP de la red local para probar en el celular | No tiene efecto: solo aplica a `next dev` |
+| Morph "Volver" | No se ve (no hay prefetch) | Funciona |
+| Tests e2e | `pnpm test:e2e` levanta `next dev` en el 3100 | Con `CI=1` levanta `next start` y prueba el build real |
+
+**Detalle importante:** el build de producción no se puede probar desde el celular por `http://` en la red local, porque la cookie `Secure` se descarta fuera de HTTPS (los navegadores solo hacen excepción con `localhost`). En Vercel hay HTTPS y no pasa.
+
+**Revisiones:**
+- `.gitignore` (scripts locales): aprobada.
+- Fix del morph de vuelta, e2e y checklist: aprobada, con 2 observaciones menores. Se aplicó la principal: `test.fixme` → `test.fail`, porque `fixme` no ejecuta el cuerpo y nunca avisaría.
+
+**Checklist del enunciado:** `docs/CHECKLIST.md`, con el estado de cada requerimiento y su evidencia.
+
 ---
 
 ## 6. Estructura del proyecto
