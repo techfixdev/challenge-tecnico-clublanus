@@ -20,7 +20,7 @@ Deploy: _pendiente_
 - **PostgreSQL 17** + **Prisma 7** (driver adapter `@prisma/adapter-pg`)
 - **Tailwind CSS v4**, tipografía Poppins
 - **Motion** (motion.dev, sucesor de Framer Motion) para resortes, valores ligados al scroll y animaciones de layout
-- **zod** (validación compartida cliente/servidor), **jose** (JWT), **bcryptjs**
+- **zod** (validación en el servidor; `zod/mini` para la respuesta de "Cargar más"), **jose** (JWT), **bcryptjs**
 - **Vitest** + Testing Library, **Playwright**, GitHub Actions
 
 ## Cómo correrlo
@@ -97,7 +97,8 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 - **Prisma + PostgreSQL.** Tipos generados desde el schema y migraciones versionadas. Para la búsqueda se usa SQL parametrizado (`Prisma.sql`), probado contra una base real.
 - **Montos `Decimal(12,2)`**, que viajan como string (`"125.00"`): un `float` acumula errores de redondeo.
 - **Sesión: JWT en cookie `httpOnly`**, `sameSite=lax` y `secure` en producción. `proxy.ts` hace un chequeo rápido del token y `requireUser()` vuelve a verificar al usuario en la base en cada lectura (defensa en profundidad).
-- **Un schema zod por formulario/parámetro**, compartido entre cliente (feedback inmediato) y servidor (la validación real).
+- **Un schema zod por formulario/parámetro en el servidor** (la validación real). El feedback inmediato del navegador corre las mismas reglas como funciones puras (`*-rules.ts`), sin zod: el schema delega en ellas o las comparte, y un test compara ambos veredictos caso por caso. Así zod (~89 KB gzip) no viaja al navegador; "Cargar más" valida la respuesta con `zod/mini`, que se descarga recién al primer clic.
+- **Precarga completa de las pantallas probables** (`prefetch` en Enviar/Recibir, "Ver todos" y Movimientos de la barra): abren listas, sin pasar por su esqueleto. Cuesta un render en el servidor por destino cada vez que se precarga (la caché del router dura 5 min y una transferencia la invalida).
 - **Filtros en la URL** (`?q=&type=`): se pueden compartir, sobreviven al recargar y funcionan con el botón atrás; el filtrado ocurre en la base. Búsqueda con debounce de 300 ms y `router.replace`.
 - **Paginación por cursor** (`occurredAt` + `id`): estable aunque entren movimientos nuevos y aprovecha el índice `(userId, occurredAt)`.
 - **Protección IDOR.** Toda consulta filtra por el `userId` de la sesión; un id ajeno responde el mismo 404 que uno inexistente.
