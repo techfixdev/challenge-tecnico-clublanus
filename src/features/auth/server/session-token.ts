@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 
+import { isLanPreviewEnabled } from "@/shared/config/lan-preview";
+
 /**
  * Stateless session token (JWT, HS256) and its cookie settings.
  * Framework-free on purpose: it is used by both `proxy.ts` and server code, and unit-tested.
@@ -83,21 +85,25 @@ export type SessionCookieOptions = {
 /**
  * - httpOnly: JavaScript (and therefore XSS) cannot read the token.
  * - sameSite=lax: the cookie is not sent on cross-site POSTs (CSRF), but top-level links still work.
- * - secure in production: only sent over HTTPS (localhost dev runs on plain HTTP).
+ * - secure in production: only sent over HTTPS (localhost dev runs on plain HTTP). The one
+ *   exception is the explicit local LAN preview (`GRANABANK_LAN_PREVIEW=1`, see
+ *   shared/config/lan-preview.ts), which throws on Vercel instead of dropping Secure.
  * - `expires` only when remembered; otherwise it is a session cookie cleared when the browser closes.
  */
 export function buildSessionCookieOptions({
   remember,
   expiresAt,
   isProduction = process.env.NODE_ENV === "production",
+  env = process.env,
 }: {
   remember: boolean;
   expiresAt: Date;
   isProduction?: boolean;
+  env?: Readonly<Record<string, string | undefined>>;
 }): SessionCookieOptions {
   return {
     httpOnly: true,
-    secure: isProduction,
+    secure: isProduction && !isLanPreviewEnabled(env),
     sameSite: "lax",
     path: "/",
     ...(remember ? { expires: expiresAt } : {}),

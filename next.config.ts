@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+import { assertLanPreviewConfig } from "./src/shared/config/lan-preview";
+
+// `next build` / `next start` with GRANABANK_LAN_PREVIEW=1: warn, or fail on Vercel.
+assertLanPreviewConfig();
+
 const nextConfig: NextConfig = {
   // Dev only: extra hostnames (comma-separated) allowed to load dev assets, e.g. the
   // machine's LAN IP to try the app from a phone. Ignored by `next build`/`next start`.

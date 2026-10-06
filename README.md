@@ -44,13 +44,34 @@ Puertos: app `3000`, PostgreSQL `5432`, servidor de los tests e2e `3100`.
 ALLOWED_DEV_ORIGINS=192.168.1.10 pnpm dev -H 0.0.0.0   # luego abrir http://192.168.1.10:3000
 ```
 
-Si hay firewall, abrir el puerto 3000 solo para la red local. Con `next start` no sirve por `http://`: en producción la cookie de sesión es `Secure` y el navegador la descarta fuera de HTTPS (salvo en `localhost`).
+Si hay firewall, abrir el puerto 3000 solo para la red local. Con `next start` a secas no sirve por `http://`: en producción la cookie de sesión es `Secure` y el navegador la descarta fuera de HTTPS (salvo en `localhost`). Para eso está el preview de abajo.
+
+**Probar el build de producción en el celular:** el modo dev no muestra la velocidad real. `pnpm preview:lan` hace el build y lo sirve en `0.0.0.0:3001` con `GRANABANK_LAN_PREVIEW=1`, que deja la cookie de sesión **sin `Secure`** solo para esta prueba local. Usa la base de `DATABASE_URL` (`.env`, la de desarrollo), así se ven los mismos datos que en `pnpm dev`. Puede correr junto a `pnpm dev` en el 3000 (dev usa `.next/dev` y el build no lo toca).
+
+```bash
+sudo ufw allow from 192.168.100.0/24 to any port 3001 proto tcp   # una vez, si hay ufw
+pnpm preview:lan                                                  # luego abrir http://<IP-de-la-máquina>:3001
+```
+
+Barandas: la variable solo se acepta con el valor `1`; con `VERCEL`/`VERCEL_ENV` presentes el build y el arranque fallan (nunca puede llegar a un deploy) y fuera de producción se ignora; al activarse imprime un aviso. Correr `pnpm build` (por ejemplo, para los e2e) mientras el preview está levantado reemplaza su build: conviene reiniciarlo.
+
+### Variables de entorno
+
+| Variable                | Obligatoria | Para qué                                                                                                  |
+| ----------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Sí          | PostgreSQL de la app                                                                                      |
+| `SESSION_SECRET`        | Sí          | Firma de la sesión (JWT); al menos 32 caracteres (`openssl rand -base64 32`)                              |
+| `DEMO_CVV_SECRET`       | No          | Secreto para derivar el CVV de demo de cada tarjeta; si no está, se usa `SESSION_SECRET`                  |
+| `TEST_DATABASE_URL`     | No          | Base de los tests de integración y e2e; por defecto, `DATABASE_URL` con `_test` (ver [Testing](#testing)) |
+| `ALLOWED_DEV_ORIGINS`   | No          | Hosts extra (separados por coma) que pueden cargar los assets de `next dev`, p. ej. la IP de la LAN       |
+| `GRANABANK_LAN_PREVIEW` | No          | `1` solo para el preview local del build en el celular (`pnpm preview:lan`); nunca en un deploy           |
 
 ## Scripts
 
 | Script                               | Qué hace                                                   |
 | ------------------------------------ | ---------------------------------------------------------- |
 | `pnpm dev` / `build` / `start`       | Servidor de desarrollo, build de producción y servidor     |
+| `pnpm preview:lan`                   | Build + `next start` en `0.0.0.0:3001` para el celular     |
 | `pnpm lint` / `typecheck` / `format` | ESLint, `tsc --noEmit` (con tipos de rutas), Prettier      |
 | `pnpm format:check`                  | Verifica el formato sin modificar archivos                 |
 | `pnpm test` / `test:watch`           | Tests unitarios y de componentes (sin base de datos)       |

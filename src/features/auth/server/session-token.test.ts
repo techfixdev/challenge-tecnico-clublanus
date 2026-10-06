@@ -141,4 +141,34 @@ describe("session lifetime (remember me)", () => {
     });
     expect(options.secure).toBe(true);
   });
+
+  it("drops Secure only for the explicit local LAN preview of a production build", () => {
+    const base = { remember: false, expiresAt: new Date(), isProduction: true };
+
+    expect(
+      buildSessionCookieOptions({ ...base, env: { NODE_ENV: "production" } })
+        .secure,
+    ).toBe(true);
+    expect(
+      buildSessionCookieOptions({
+        ...base,
+        env: { NODE_ENV: "production", GRANABANK_LAN_PREVIEW: "1" },
+      }).secure,
+    ).toBe(false);
+  });
+
+  it("never issues a non-Secure cookie on Vercel, even with the opt-in", () => {
+    expect(() =>
+      buildSessionCookieOptions({
+        remember: false,
+        expiresAt: new Date(),
+        isProduction: true,
+        env: {
+          NODE_ENV: "production",
+          VERCEL: "1",
+          GRANABANK_LAN_PREVIEW: "1",
+        },
+      }),
+    ).toThrow(/Vercel/);
+  });
 });
