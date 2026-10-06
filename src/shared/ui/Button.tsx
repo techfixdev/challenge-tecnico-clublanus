@@ -4,7 +4,7 @@ type ButtonVariant = "primary" | "secondary";
 type ButtonSize = "block" | "compact";
 
 const BASE_CLASSES =
-  "inline-flex items-center justify-center rounded-2xl text-sm font-semibold transition-colors focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70";
+  "inline-flex items-center justify-center rounded-2xl text-sm font-semibold pressable focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-primary text-white shadow-card hover:bg-primary/90",

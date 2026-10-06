@@ -22,7 +22,7 @@ export function MovementRow({ movement, href }: MovementRowProps) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-card transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:translate-y-0"
+      className="flex pressable items-center gap-4 rounded-2xl bg-surface p-4 shadow-card hover:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:translate-y-0"
     >
       <MovementTypeIcon type={type} />
       <span className="flex min-w-0 flex-1 flex-col">

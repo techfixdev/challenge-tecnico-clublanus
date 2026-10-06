@@ -49,3 +49,81 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }
+
+/*
+ * Motion tokens. Every animation in the app uses these, so timing feels consistent:
+ * short (150–300ms), ease-out when something enters, and only `transform`/`opacity`-like
+ * properties (`scale`, `translate`), which the browser animates without re-layout.
+ */
+:root {
+  --motion-duration-press: 150ms;
+  --motion-duration-enter: 240ms;
+  --motion-duration-morph: 280ms;
+  /* Delay between consecutive list rows; the list caps the total (see MovementList). */
+  --motion-stagger-step: 40ms;
+  /* Decelerating curve: things arrive fast and settle. */
+  --motion-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-press-scale: 0.97;
+}
+
+/*
+ * Press feedback for anything tappable (rows, chips, nav items, buttons): a quick shrink
+ * on `:active` confirms the touch landed before the navigation or action responds.
+ * It also transitions colors, so it replaces `transition-colors` on those elements.
+ */
+@utility pressable {
+  transition-property: color, background-color, border-color, scale, translate;
+  transition-duration: var(--motion-duration-press);
+  transition-timing-function: var(--motion-ease-standard);
+
+  &:active:not(:disabled) {
+    scale: var(--motion-press-scale);
+  }
+
+  /* Reduced motion: no shrink; the color change alone confirms the tap. */
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) {
+      scale: none;
+    }
+  }
+}
+
+/*
+ * Loading placeholder: the base grey plus a soft highlight sweeping across it, which
+ * reads as "loading" better than a static block. The highlight is a pseudo-element moved
+ * with `transform`, so the sweep never repaints the layout.
+ */
+@utility skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-skeleton);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.65),
+      transparent
+    );
+    animation: skeleton-shimmer 1.4s var(--motion-ease-standard) infinite;
+  }
+
+  /* Reduced motion: the static grey still reads as a placeholder. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+      display: none;
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}

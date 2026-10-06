@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 
-/** Placeholder block for loading states; purely visual (the region sets `aria-busy`). */
+/**
+ * Placeholder block for loading states, with a shimmer (`skeleton` utility in globals.css,
+ * static under reduced motion). Purely visual: the region sets `aria-busy`.
+ */
 export function Skeleton({
   className = "",
   style,
@@ -12,7 +15,7 @@ export function Skeleton({
     <span
       aria-hidden="true"
       style={style}
-      className={`block animate-pulse rounded-lg bg-skeleton motion-reduce:animate-none ${className}`}
+      className={`skeleton block rounded-lg ${className}`}
     />
   );
 }

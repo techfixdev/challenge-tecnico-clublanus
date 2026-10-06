@@ -30,7 +30,7 @@ function currentState(
 }
 
 const ITEM_CLASSES =
-  "flex size-14 items-center justify-center rounded-2xl transition-colors focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none";
+  "flex size-14 items-center justify-center rounded-2xl pressable focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none";
 
 /**
  * App navigation from the design: Home, Movements and Logout, fixed to the bottom of the

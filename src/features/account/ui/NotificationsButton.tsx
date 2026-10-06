@@ -30,7 +30,7 @@ export function NotificationsButton() {
         type="button"
         aria-label="Notificaciones"
         onClick={handleClick}
-        className="flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
+        className="flex size-10 pressable items-center justify-center rounded-full text-foreground hover:bg-surface focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
       >
         <BellIcon className="size-[22px]" />
       </button>
