@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { monthOf, monthRange } from "@/shared/lib/dates";
+import { fromCents, toCents } from "@/shared/lib/money";
 
 import type { MovementStatus, MovementType } from "./movement";
 
@@ -50,27 +51,6 @@ export type MonthlySummary = {
   income: string;
   expenses: string;
 };
-
-/**
- * "123.45" → 12345. Parsed from the digits, never via `parseFloat` × 100. Each type's
- * total fits `Decimal(12,2)` sums comfortably below 2^53 cents, so integer math is exact.
- */
-function toCents(amount: string): number {
-  const negative = amount.startsWith("-");
-  const [units, fraction = ""] = amount.replace("-", "").split(".");
-  const cents = Number(units) * 100 + Number(fraction.padEnd(2, "0"));
-  return negative ? -cents : cents;
-}
-
-function fromCents(cents: number): string {
-  if (!Number.isSafeInteger(cents)) {
-    throw new RangeError(`Total out of exact range: ${cents} cents`);
-  }
-  const sign = cents < 0 ? "-" : "";
-  const absolute = Math.abs(cents);
-  const fraction = String(absolute % 100).padStart(2, "0");
-  return `${sign}${Math.floor(absolute / 100)}.${fraction}`;
-}
 
 function sumOf(
   totals: Partial<Record<MovementType, string>>,
