@@ -69,6 +69,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | T2 | Login, sesión, protección de rutas, logout | ✅ Hecha |
 | T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
 | T4 | Pulido: hallazgos de revisión, estructura, CI, README final | ✅ Hecha |
+| — | Inspección ocular, limpieza de historial, alternativa desktop | ✅ Hecha (desktop en pausa) |
 | T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
 
 ---
@@ -312,6 +313,56 @@ dbe5dea docs: rewrite readme and update project log
 **Verificación:** unitarios 210/210 (también con las variables del CI) ✅ · integración 17/17 (con y sin seed) ✅ · e2e 13/13 ✅ · build ✅
 
 **Revisión automática (4 enfoques): aprobada, sin bloqueantes.** Quedan sugerencias menores en tests (por ejemplo, un helper de test que podría ocultar un éxito inesperado). Se documentan y no se corrigen, porque no afectan el comportamiento.
+
+### Inspección ocular (05/10/2026)
+
+Se recorrió la app juntos, en un navegador real (Chromium con Playwright, tamaño iPhone 390×844), sobre el build de producción.
+
+**Qué se verificó**
+
+| Flujo | Resultado |
+|---|---|
+| Login con contraseña incorrecta y correcta | ✅ |
+| Home: tarjetas, carrusel, últimos movimientos | ✅ |
+| Lupa → Movimientos con foco en el buscador | ✅ |
+| Búsqueda "jose" encuentra "José Suárez" (sin acentos) | ✅ |
+| Detalle → "Volver" conserva la búsqueda | ✅ |
+| Chips de filtro conservan la búsqueda | ✅ |
+| "Cargar más": 26 movimientos, sin duplicados, el botón desaparece al final | ✅ |
+| URL inventada → HTTP 404 real con pantalla amigable | ✅ |
+| Campana → "Próximamente" | ✅ |
+| Salir + botón atrás → rebota al login | ✅ |
+
+**Hallazgos y decisiones**
+- **El último chip se ve cortado:** es intencional, igual que en el Figma. Indica que la fila se desliza. Para reforzarlo se agregó un **degradé** en el borde derecho (máscara CSS del mismo ancho que el margen, así el último chip se ve completo al llegar al final). Commit `6edda00`.
+- **"Se perdió la búsqueda":** se reprodujo el recorrido de forma automatizada (incluso tocando un chip antes de que pasen los 300 ms del buscador) y la búsqueda siempre se conserva. Lo más probable es que se haya vuelto con "Movimientos" de la barra inferior, que a propósito abre la lista limpia, como una pestaña. No es un bug.
+- **Desktop "raro":** el Figma es solo mobile, y en desktop la app se mostraba como una columna de teléfono centrada. Ver la alternativa más abajo.
+
+### Limpieza del historial de git (05/10/2026)
+
+La preparación para la entrevista vivía en esta bitácora y se movió a un archivo personal ignorado por git, pero seguía en las versiones anteriores del historial. Se reescribieron los commits (`git filter-branch`) para quitar esa sección de todas las versiones, y se verificó que:
+- no quede en ningún commit;
+- el código final sea idéntico al anterior (mismo árbol);
+- las referencias a commits de esta bitácora se actualizaron a los nuevos hashes (`3627e4d`).
+
+Se hizo antes de publicar, porque reescribir el historial de algo ya publicado rompe los clones de otras personas.
+
+### Alternativa: layout responsive para desktop (05/10/2026) — ⏸️ en pausa, pendiente de decisión
+
+Rama `feat/desktop-layout` (3 commits, sin integrar). La rama principal no cambia hasta decidir.
+
+| Decisión | Por qué |
+|---|---|
+| Cambios solo desde 1024px (`lg`) | Mobile queda **idéntico píxel por píxel** al Figma (verificado con `magick compare`: 0 píxeles de diferencia). |
+| Barra lateral en lugar de nav inferior | Es el patrón estándar en desktop; la nav inferior y la lateral comparten la misma lista de rutas y la lógica de "activo" (sin duplicar). |
+| Home en dos columnas: tarjetas apiladas a la izquierda, movimientos a la derecha | Dos tarjetas lado a lado quedaban estiradas, y filas de 1000px se ven vacías; así todo entra sin scroll. |
+| Buscador y chips en una sola barra recién desde 1280px | A 1024px, con la barra lateral, los chips no entran al lado del buscador. |
+| Login partido: panel granate de marca + formulario | Aprovecha el ancho con la identidad visual del club, sin inventar estilos nuevos. |
+| La nav oculta usa `display:none` | Los lectores de pantalla ven un solo menú "Principal", no dos. |
+
+**Verificación:** 216 tests unitarios y 16 e2e (13 mobile sin cambios + 3 desktop) ✅
+
+**Trade-off:** es diseño propio (el Figma no tiene desktop). Argumento para la entrevista: "extendí el sistema de diseño a desktop sin tocar la versión mobile del Figma".
 
 ---
 
