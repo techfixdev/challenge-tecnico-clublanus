@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ROUTES } from "@/shared/lib/routes";
 
 import type { Movement } from "../domain/movement";
-import { DETAIL_FROM_HOME } from "../domain/movement-filters";
+import { DETAIL_FROM_HOME } from "../domain/movement-search-params";
 import { movementDetailHref, rowEnterStyle } from "./MovementList";
 import { MovementRow } from "./MovementRow";
 
@@ -19,8 +19,11 @@ export function LatestMovements({ movements }: { movements: Movement[] }) {
         >
           Últimos movimientos
         </h2>
+        {/* Full prefetch: the list is a likely next screen, so it opens ready, without its
+            skeleton (the default prefetch of a dynamic route stops at its loading.tsx). */}
         <Link
           href={ROUTES.movements}
+          prefetch
           className="ml-auto shrink-0 rounded-md text-xs font-medium whitespace-nowrap text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
         >
           Ver todos

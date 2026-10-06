@@ -15,11 +15,22 @@ type NavItem = {
   href: string;
   label: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /**
+   * `true`: full prefetch, so the screen opens ready instead of on its skeleton (the
+   * default prefetch of a dynamic route stops at its loading.tsx). Kept for the likely
+   * next screen only: each full prefetch is a server render.
+   */
+  prefetch?: true;
 };
 
 const NAV_ITEMS: NavItem[] = [
   { href: ROUTES.home, label: "Inicio", Icon: HomeIcon },
-  { href: ROUTES.movements, label: "Movimientos", Icon: ListIcon },
+  {
+    href: ROUTES.movements,
+    label: "Movimientos",
+    Icon: ListIcon,
+    prefetch: true,
+  },
 ];
 
 /** "page" on the exact URL; "true" inside the section (e.g. a movement detail). */
@@ -80,12 +91,13 @@ export function BottomNav({
       {/* The side padding shrinks on very narrow viewports (page zoom), so the three items
           always fit; from about 216px wide it is the design's 24px. */}
       <ul className="flex h-20 items-center justify-around px-[clamp(0px,calc((100%-10.5rem)/2),1.5rem)]">
-        {NAV_ITEMS.map(({ href, label, Icon }) => {
+        {NAV_ITEMS.map(({ href, label, Icon, prefetch }) => {
           const current = currentState(pathname, href);
           return (
             <li key={href}>
               <Link
                 href={href}
+                prefetch={prefetch}
                 aria-current={current}
                 className={`${ITEM_CLASSES} ${current ? "text-primary" : "text-foreground hover:text-primary"}`}
               >

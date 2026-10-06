@@ -34,6 +34,9 @@ const SHORTCUTS: Shortcut[] = [
  * Each tile is a size container: when it gets too narrow for icon + label side by side
  * (small phones, Android page zoom shrinking the CSS viewport), the label moves under the
  * icon instead of being cut. `min-w-0` lets the grid cells shrink below their content.
+ *
+ * Both are full prefetches: they are the likely next screens, so they open ready instead
+ * of on their skeleton (the default prefetch of a dynamic route stops at its loading.tsx).
  */
 export function TransferShortcuts() {
   return (
@@ -43,6 +46,7 @@ export function TransferShortcuts() {
           <li key={href} className="@container min-w-0">
             <Link
               href={href}
+              prefetch
               className="flex pressable flex-col items-center justify-center gap-1.5 rounded-2xl bg-surface px-2 py-3 shadow-card hover:text-primary focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none @[9rem]:h-14 @[9rem]:flex-row @[9rem]:justify-start @[9rem]:gap-3 @[9rem]:p-2 @[9rem]:pr-4"
             >
               <span
