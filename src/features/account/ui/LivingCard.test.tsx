@@ -54,4 +54,89 @@ describe("LivingCard", () => {
       "none",
     );
   });
+
+  describe("flip", () => {
+    function renderFlippable() {
+      return render(
+        <LivingCard
+          tone="primary"
+          flipLabel="Ver reverso de la tarjeta Visa terminada en 5678"
+          back={<p>Reverso</p>}
+        >
+          <p>Frente</p>
+        </LivingCard>,
+      );
+    }
+    const flipButton = () =>
+      screen.getByRole("button", {
+        name: "Ver reverso de la tarjeta Visa terminada en 5678",
+      });
+    const face = (name: "front" | "back") =>
+      document.querySelector<HTMLElement>(`[data-face=${name}]`)!;
+
+    it("is a toggle button that shows the back on a tap, and the front again on the next", () => {
+      stubReducedMotion(false);
+      renderFlippable();
+      expect(flipButton()).toHaveAttribute("aria-pressed", "false");
+      expect(face("back")).toHaveAttribute("inert");
+      expect(face("back")).toHaveAttribute("aria-hidden", "true");
+
+      fireEvent.pointerDown(flipButton(), { clientX: 100, clientY: 50 });
+      fireEvent.click(flipButton(), { clientX: 102, clientY: 51, detail: 1 });
+
+      expect(flipButton()).toHaveAttribute("aria-pressed", "true");
+      expect(face("front")).toHaveAttribute("inert");
+      expect(face("back")).not.toHaveAttribute("inert");
+      expect(screen.getByText("Reverso de la tarjeta")).toHaveAttribute(
+        "aria-live",
+        "polite",
+      );
+
+      fireEvent.click(flipButton(), { detail: 0 });
+      expect(flipButton()).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("flips from the keyboard (a click with detail 0)", () => {
+      stubReducedMotion(false);
+      renderFlippable();
+
+      fireEvent.click(flipButton(), { detail: 0 });
+
+      expect(flipButton()).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("does not flip after a drag (swipe or tilt): the press moved", () => {
+      stubReducedMotion(false);
+      renderFlippable();
+
+      fireEvent.pointerDown(flipButton(), { clientX: 200, clientY: 50 });
+      fireEvent.click(flipButton(), { clientX: 120, clientY: 52, detail: 1 });
+
+      expect(flipButton()).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("does not flip when the browser cancelled the press to scroll", () => {
+      stubReducedMotion(false);
+      renderFlippable();
+
+      fireEvent.pointerDown(flipButton(), { clientX: 200, clientY: 50 });
+      fireEvent.pointerCancel(flipButton());
+      fireEvent.click(flipButton(), { clientX: 200, clientY: 50, detail: 1 });
+
+      expect(flipButton()).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("crossfades without rotating under prefers-reduced-motion", () => {
+      stubReducedMotion(true);
+      renderFlippable();
+
+      fireEvent.click(flipButton(), { detail: 0 });
+
+      expect(flipButton()).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId("living-card-surface").style.transform).toBe(
+        "none",
+      );
+      expect(face("back").style.transform).toBe("none");
+    });
+  });
 });

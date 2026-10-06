@@ -33,3 +33,9 @@ export const PRESS_SPRING: Transition = {
 
 /** Under reduced motion every change is applied at once. */
 export const INSTANT: Transition = { duration: 0 };
+
+/** Card flip: a physical turn that settles with a slight overshoot. */
+export const FLIP_SPRING = { stiffness: 220, damping: 24 } as const;
+
+/** Reduced-motion replacement for movements: a short crossfade. */
+export const CROSSFADE: Transition = { duration: 0.2, ease: "easeOut" };
