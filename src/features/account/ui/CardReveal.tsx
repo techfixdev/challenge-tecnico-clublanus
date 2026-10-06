@@ -44,7 +44,8 @@ function useSecrets(): CardSecrets | null {
 function isCardSecrets(data: unknown): data is CardSecrets {
   const value = data as Partial<Record<keyof CardSecrets, unknown>> | null;
   return (
-    typeof value?.number === "string" &&
+    value != null &&
+    (typeof value.number === "string" || value.number === null) &&
     typeof value.cvv === "string" &&
     typeof value.balance === "string"
   );
@@ -188,8 +189,10 @@ const MASKED_GROUPS = ["****", "****", "****"] as const;
  * last 4); revealed, screen readers get the whole number from a visually hidden text.
  */
 export function RevealedCardNumber({ last4 }: { last4: string }) {
-  const secrets = useSecrets();
-  if (!secrets) {
+  const number = useSecrets()?.number;
+  // Masked until revealed, and also when the card has no stored number: the balance
+  // and CVV are still revealed, the number keeps showing only its last 4.
+  if (!number) {
     return (
       <p
         aria-hidden="true"
@@ -207,7 +210,7 @@ export function RevealedCardNumber({ last4 }: { last4: string }) {
       </p>
     );
   }
-  const groups = formatCardNumber(secrets.number);
+  const groups = formatCardNumber(number);
   // Sixteen digits are wider than twelve asterisks and four digits: tighter tracking
   // and gaps keep the full number inside the card at every width.
   return (

@@ -58,6 +58,28 @@ describe("GET /api/account/cards/:id/details", () => {
     });
   });
 
+  it("answers number null (balance and CVV still there) when the card has no stored number", async () => {
+    mocks.findDetailsById.mockResolvedValue({
+      id: "card_mc",
+      pan: null,
+      balance: "978.85",
+      currency: "USD",
+    });
+
+    const response = await call("card_mc");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      data: {
+        id: "card_mc",
+        number: null,
+        cvv: expect.stringMatching(/^\d{3}$/),
+        balance: "978.85",
+        currency: "USD",
+      },
+    });
+  });
+
   it("answers 401 without a session, without touching the card", async () => {
     mocks.getCurrentUser.mockResolvedValue(null);
 

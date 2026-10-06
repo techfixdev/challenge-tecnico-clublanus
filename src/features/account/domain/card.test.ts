@@ -128,13 +128,19 @@ describe("revealCardDetails", () => {
     ).resolves.toBeNull();
   });
 
-  it("fails loudly when the card has no number (database not re-seeded)", async () => {
+  it("still reveals balance and CVV when the card has no stored number", async () => {
     const repository: CardDetailsRepository = {
       findDetailsById: vi.fn().mockResolvedValue({ ...record, pan: null }),
     };
 
     await expect(
-      revealCardDetails(repository, "user_1", "card_1", () => "000"),
-    ).rejects.toThrow(/card number/);
+      revealCardDetails(repository, "user_1", "card_1", () => "042"),
+    ).resolves.toEqual({
+      id: "card_1",
+      number: null,
+      cvv: "042",
+      balance: "978.85",
+      currency: "USD",
+    });
   });
 });

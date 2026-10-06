@@ -10,8 +10,8 @@
 export const REVEAL_TIMEOUT_MS = 30_000;
 
 export type CardSecrets = {
-  /** The full card number, digits only. */
-  number: string;
+  /** The full card number, digits only; null when the card has none (stays masked). */
+  number: string | null;
   cvv: string;
   /** Decimal string with 2 decimals, e.g. "978.85". */
   balance: string;

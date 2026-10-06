@@ -51,8 +51,11 @@ export function toCardFace(card: Card): CardFace {
 /** The data a card keeps masked until its owner reveals it. */
 export type CardDetails = {
   id: string;
-  /** Full card number, digits only. */
-  number: string;
+  /**
+   * Full card number, digits only; null when the card has no stored number (a row from
+   * before the demo PANs were seeded). The balance and CVV are still revealed.
+   */
+  number: string | null;
   /** Display-only CVV, derived on the server (never stored). */
   cvv: string;
   balance: string;
@@ -105,6 +108,7 @@ export async function getAccountCards(
 /**
  * Use case: reveal one of the signed-in user's cards. The lookup is scoped by owner, so
  * another user's card id answers null like an unknown one. The CVV is derived, not read.
+ * A card without a stored number still reveals its balance and CVV (`number: null`).
  */
 export async function revealCardDetails(
   repository: CardDetailsRepository,
@@ -114,14 +118,9 @@ export async function revealCardDetails(
 ): Promise<CardDetails | null> {
   const record = await repository.findDetailsById(userId, cardId);
   if (!record) return null;
-  if (!record.pan) {
-    throw new Error(
-      `Card ${record.id} has no card number; re-run the seed (pnpm db:seed)`,
-    );
-  }
   return {
     id: record.id,
-    number: record.pan,
+    number: record.pan ?? null,
     cvv: deriveCvv(record.id),
     balance: record.balance,
     currency: record.currency,

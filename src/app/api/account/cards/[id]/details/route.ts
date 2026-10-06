@@ -37,7 +37,8 @@ const handle = withApiErrorHandling(
 
 /**
  * `GET /api/account/cards/:id/details` → `{ data: { id, number, cvv, balance, currency } }`.
- * The data a card keeps masked, fetched only when its owner taps the eye:
+ * The data a card keeps masked, fetched only when its owner taps the eye (`number` is
+ * null for a card without a stored number; the balance and CVV are still returned):
  * - the session is re-verified here (the proxy check is only optimistic) and the card
  *   is looked up by owner, so another user's id answers 404 like an unknown one;
  * - every answer is `Cache-Control: no-store`: neither the browser nor a proxy may keep

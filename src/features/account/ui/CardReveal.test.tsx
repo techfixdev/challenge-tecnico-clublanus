@@ -128,6 +128,35 @@ describe("card reveal", () => {
     expect(eye(visa())).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("reveals the balance and CVV but keeps the number masked when the card has none", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            id: "card_mc",
+            currency: "USD",
+            number: null,
+            cvv: "042",
+            balance: "978.85",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const user = userEvent.setup();
+    renderBoth();
+
+    await user.click(eye(mastercard()));
+
+    const card = mastercard();
+    expect(await within(card).findByText("978,85 dólares")).toBeInTheDocument();
+    expect(within(card).getByTestId("card-number")).toHaveTextContent(
+      "**** **** **** 1234",
+    );
+    expect(within(card).getByTestId("card-cvv")).toHaveTextContent("042");
+    expect(eye(card)).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("hides again (and forgets the data) on a second tap", async () => {
     const user = userEvent.setup();
     renderBoth();
