@@ -1,12 +1,10 @@
-import { act, render, screen } from "@testing-library/react";
-import { hydrateRoot } from "react-dom/client";
+import { render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { stubReducedMotion } from "@/test/reduced-motion";
 
 import { BalanceAmount } from "./BalanceAmount";
-import { BalanceVisibilityProvider } from "./BalanceVisibility";
 
 /** The 0–9 strips of the odometer, in reading order. */
 function strips(container: HTMLElement) {
@@ -71,31 +69,17 @@ describe("BalanceAmount odometer", () => {
     for (const sizer of sizers) expect(sizer).toHaveClass("invisible");
   });
 
-  it("sizes the columns with a neutral digit while hidden, so neither the markup nor the width spells the balance", () => {
+  it("renders only the mask while hidden: no digits, no columns, nothing to measure", () => {
     const { container } = render(
-      <BalanceVisibilityProvider initialHidden>
-        <BalanceAmount balance="312.41" currency="USD" />
-      </BalanceVisibilityProvider>,
+      <BalanceAmount balance={null} currency="USD" />,
     );
 
-    const sizers = Array.from(
-      container.querySelectorAll<HTMLElement>(
-        "[data-odometer] [data-digit-sizer]",
-      ),
-    );
-    expect(sizers.map((sizer) => sizer.textContent)).toEqual([
-      "0",
-      "0",
-      "0",
-      "0",
-      "0",
-    ]);
-    // The narrow-1 kerning would also reveal where the 1s are. Longhands are checked:
-    // the `margin` shorthand reads "" whenever only the left/right sides are set.
-    for (const sizer of sizers) {
-      expect(sizer.parentElement!.style.marginLeft).toBe("");
-      expect(sizer.parentElement!.style.marginRight).toBe("");
-    }
+    expect(container.querySelector("[data-odometer]")).toBeNull();
+    expect(container.querySelector("[data-digit-sizer]")).toBeNull();
+    expect(
+      container.querySelector('[data-balance-mask][data-state="shown"]'),
+    ).toHaveTextContent("••••••");
+    expect(screen.getByText("Saldo oculto")).toHaveClass("sr-only");
   });
 
   it("pulls in the narrow 1's column while shown (the control for the hidden case)", () => {
@@ -117,14 +101,6 @@ describe("BalanceAmount odometer", () => {
     ]);
   });
 
-  it("starts rolling from 0 when it mounts on the client", () => {
-    const { container } = render(
-      <BalanceAmount balance="978.85" currency="USD" />,
-    );
-
-    expect(offsets(container)).toEqual(["0%", "0%", "0%", "0%", "0%"]);
-  });
-
   it("gives screen readers only the final value, never the digit strips", () => {
     const { container } = render(
       <BalanceAmount balance="978.85" currency="USD" />,
@@ -144,20 +120,29 @@ describe("BalanceAmount odometer", () => {
     expect(offsets(container)).toEqual(FINAL_978_85);
   });
 
-  it("does not replay over a server-rendered balance while hydrating (no 978.85 → 0 flash)", async () => {
-    const host = document.createElement("div");
-    host.innerHTML = renderToString(
-      <BalanceAmount balance="978.85" currency="USD" />,
+  it("server-renders the hidden state without any digit of the balance", () => {
+    const html = renderToString(
+      <BalanceAmount balance={null} currency="USD" />,
     );
-    document.body.append(host);
-    // The server HTML already has every strip in its final place.
-    expect(offsets(host)).toEqual(FINAL_978_85);
 
-    await act(async () => {
-      hydrateRoot(host, <BalanceAmount balance="978.85" currency="USD" />);
-    });
+    expect(html).toContain('data-state="shown"');
+    expect(html).toContain("Saldo oculto");
+    expect(html).not.toMatch(/data-digit/);
+  });
 
-    expect(offsets(host)).toEqual(FINAL_978_85);
-    host.remove();
+  it("rolls from 0 when a hidden balance is revealed, and masks it again on hide", () => {
+    const { container, rerender } = render(
+      <BalanceAmount balance={null} currency="USD" />,
+    );
+
+    rerender(<BalanceAmount balance="978.85" currency="USD" />);
+    expect(offsets(container)).toEqual(["0%", "0%", "0%", "0%", "0%"]);
+    expect(screen.getByText("978,85 dólares")).toHaveClass("sr-only");
+
+    rerender(<BalanceAmount balance={null} currency="USD" />);
+    expect(screen.getByText("Saldo oculto")).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-balance-mask][data-state="shown"]'),
+    ).not.toBeNull();
   });
 });

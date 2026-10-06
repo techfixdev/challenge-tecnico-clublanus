@@ -1,16 +1,12 @@
 "use client";
 
+import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
-import { useState, useSyncExternalStore } from "react";
 
 import { formatMoneyForSpeech } from "@/shared/lib/format";
 import { INSTANT, ROLL_SPRING } from "@/shared/ui/motion/springs";
-import {
-  prefersReducedMotion,
-  useReducedMotionPreference,
-} from "@/shared/ui/reduced-motion";
+import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
-import { useBalanceHidden } from "./BalanceVisibility";
 import { digitOffset, digitSidebearing, odometerCells } from "./odometer";
 
 const MASK = "••••••";
@@ -18,31 +14,16 @@ const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 /** Mask ↔ digits morph: quick enough to feel like one gesture with the eye toggle. */
 const MORPH = { duration: 0.25, ease: [0.2, 0, 0, 1] } as const;
 
-const subscribeToNothing = () => () => {};
-
-/**
- * `true` when the component mounts on the client (e.g. navigating to Home after login),
- * `false` on the server and while hydrating server HTML.
- */
-function useMountedOnClient(): boolean {
-  return useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  );
-}
-
 /**
  * A card balance shown as an odometer: each digit is a 0–9 strip that rolls into place
- * with a spring, cents first. Hiding it blurs the digits out (they roll back to 0, so
- * showing it again replays the roll) while the mask fades in.
+ * with a spring, cents first. `balance` is null while the card is masked: then only the
+ * mask is rendered, so neither the markup nor the width of the row can spell the amount
+ * (the page does not even have it; it arrives with the reveal). Revealing fades the
+ * digits in and rolls them up from 0; hiding blurs them out while the mask fades in.
  *
  * - Screen readers get only the final value with its currency in words ("978,85
  *   dólares"), or "Saldo oculto", from a separate text; the strips are `aria-hidden`,
- *   so nobody hears "0123456789".
- * - It only rolls from 0 when it mounts on the client. Server-rendered HTML already has
- *   every strip in its final place, and replaying after hydration would flash
- *   "978,85 → 0 → 978,85". Under reduced motion every change is instant.
+ *   so nobody hears "0123456789". Under reduced motion every change is instant.
  * - Poppins has no tabular figures, so each column is as wide as its own final digit
  *   (an invisible copy of it sizes the column) and the number keeps the font's natural
  *   spacing: no gap around a narrow 1. The width is fixed by the final text, never by
@@ -54,16 +35,12 @@ export function BalanceAmount({
   balance,
   currency,
 }: {
-  balance: string;
+  balance: string | null;
   currency: string;
 }) {
-  const hidden = useBalanceHidden();
+  const hidden = balance === null;
   const reduced = useReducedMotionPreference();
-  const mountedOnClient = useMountedOnClient();
-  const [rollOnMount] = useState(
-    () => mountedOnClient && !prefersReducedMotion(),
-  );
-  const cells = odometerCells(balance);
+  const morph = reduced ? INSTANT : MORPH;
 
   return (
     <span
@@ -71,52 +48,56 @@ export function BalanceAmount({
       className="inline-flex text-[length:calc(var(--card-px,1px)*26)] leading-none font-medium tracking-[-0.02em]"
     >
       <span aria-hidden="true" className="inline-grid">
-        <m.span
-          data-odometer
-          data-state={hidden ? "hidden" : "shown"}
-          className="col-start-1 row-start-1 -mx-[0.2em] flex [mask-image:linear-gradient(transparent,black_18%,black_82%,transparent)] px-[0.2em]"
-          initial={false}
-          animate={{
-            opacity: hidden ? 0 : 1,
-            filter: hidden ? "blur(6px)" : "blur(0px)",
-          }}
-          transition={reduced ? INSTANT : MORPH}
-        >
-          {cells.map((cell) =>
-            cell.kind === "digit" ? (
-              <span
-                key={cell.key}
-                className="relative inline-block h-[1.15em] overflow-y-clip"
-                style={digitSidebearing(hidden ? 0 : cell.digit)}
-              >
-                {/* While hidden every column is sized as a 0: neither the markup nor the
-                    width of the masked row may spell the balance. */}
-                <span data-digit-sizer className="invisible leading-[1.15]">
-                  {hidden ? 0 : cell.digit}
-                </span>
-                <m.span
-                  data-digit={hidden ? 0 : cell.digit}
-                  className="absolute inset-x-0 top-0 flex flex-col items-center"
-                  initial={rollOnMount && !hidden ? { y: "0%" } : false}
-                  animate={{ y: digitOffset(hidden ? 0 : cell.digit) }}
-                  transition={
-                    reduced ? INSTANT : { ...ROLL_SPRING, delay: cell.delay }
-                  }
-                >
-                  {DIGITS.map((digit) => (
-                    <span key={digit} className="h-[1.15em] leading-[1.15]">
-                      {digit}
+        <AnimatePresence initial={false}>
+          {balance !== null && (
+            <m.span
+              key="odometer"
+              data-odometer
+              data-state="shown"
+              className="col-start-1 row-start-1 -mx-[0.2em] flex [mask-image:linear-gradient(transparent,black_18%,black_82%,transparent)] px-[0.2em]"
+              initial={{ opacity: 0, filter: "blur(6px)" }}
+              animate={{ opacity: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, filter: "blur(6px)" }}
+              transition={morph}
+            >
+              {odometerCells(balance).map((cell) =>
+                cell.kind === "digit" ? (
+                  <span
+                    key={cell.key}
+                    className="relative inline-block h-[1.15em] overflow-y-clip"
+                    style={digitSidebearing(cell.digit)}
+                  >
+                    <span data-digit-sizer className="invisible leading-[1.15]">
+                      {cell.digit}
                     </span>
-                  ))}
-                </m.span>
-              </span>
-            ) : (
-              <span key={cell.key} className="leading-[1.15]">
-                {cell.char}
-              </span>
-            ),
+                    <m.span
+                      data-digit={cell.digit}
+                      className="absolute inset-x-0 top-0 flex flex-col items-center"
+                      // Revealed on the client: roll up from 0, cents first.
+                      initial={reduced ? false : { y: "0%" }}
+                      animate={{ y: digitOffset(cell.digit) }}
+                      transition={
+                        reduced
+                          ? INSTANT
+                          : { ...ROLL_SPRING, delay: cell.delay }
+                      }
+                    >
+                      {DIGITS.map((digit) => (
+                        <span key={digit} className="h-[1.15em] leading-[1.15]">
+                          {digit}
+                        </span>
+                      ))}
+                    </m.span>
+                  </span>
+                ) : (
+                  <span key={cell.key} className="leading-[1.15]">
+                    {cell.char}
+                  </span>
+                ),
+              )}
+            </m.span>
           )}
-        </m.span>
+        </AnimatePresence>
         {/* Poppins' bullets sit 0.035em lower than the digits' center: lifted to match. */}
         <m.span
           data-balance-mask
@@ -124,13 +105,15 @@ export function BalanceAmount({
           className="col-start-1 row-start-1 -translate-y-[0.035em] self-center leading-[1.15]"
           initial={false}
           animate={{ opacity: hidden ? 1 : 0 }}
-          transition={reduced ? INSTANT : MORPH}
+          transition={morph}
         >
           {MASK}
         </m.span>
       </span>
       <span className="sr-only">
-        {hidden ? "Saldo oculto" : formatMoneyForSpeech(balance, currency)}
+        {balance === null
+          ? "Saldo oculto"
+          : formatMoneyForSpeech(balance, currency)}
       </span>
     </span>
   );

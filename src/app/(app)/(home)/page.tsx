@@ -1,6 +1,5 @@
 import { prismaCardRepository } from "@/features/account/data/prisma-card-repository";
-import { getAccountCards } from "@/features/account/domain/card";
-import { readBalanceHidden } from "@/features/account/server/balance-visibility";
+import { getAccountCards, toCardFace } from "@/features/account/domain/card";
 import { CardCarousel } from "@/features/account/ui/CardCarousel";
 import { HomeHeader } from "@/features/account/ui/HomeHeader";
 import { requireUser } from "@/features/auth/server/current-user";
@@ -12,10 +11,9 @@ import { TransferShortcuts } from "@/features/transfers/ui/TransferShortcuts";
 export default async function HomePage() {
   const user = await requireUser();
   // Independent reads run in parallel; both are scoped to the signed-in user.
-  const [cards, latestMovements, balanceHidden] = await Promise.all([
+  const [cards, latestMovements] = await Promise.all([
     getAccountCards(prismaCardRepository, user.id),
     getLatestMovements(prismaMovementRepository, user.id),
-    readBalanceHidden(),
   ]);
 
   return (
@@ -24,7 +22,8 @@ export default async function HomePage() {
       {/* 24px from the title, as in the design: the header's own 12px bottom padding
           (its compact bar needs it) plus 12px here. */}
       <div className="mt-3">
-        <CardCarousel cards={cards} balanceHidden={balanceHidden} />
+        {/* Faces only: balances, numbers and CVVs never reach the page until revealed. */}
+        <CardCarousel cards={cards.map(toCardFace)} />
       </div>
       <div className="mt-5">
         <TransferShortcuts />

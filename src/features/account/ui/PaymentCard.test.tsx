@@ -3,7 +3,18 @@ import { describe, expect, it } from "vitest";
 
 import { makeCard } from "@/test/movement-fixtures";
 
-import { PaymentCard } from "./PaymentCard";
+import { cardPhrase, toCardFace, type Card } from "../domain/card";
+import { CardRevealProvider } from "./CardReveal";
+import { PaymentCard as PaymentCardFront } from "./PaymentCard";
+
+/** The front as Home renders it: from the card's face, inside its reveal provider. */
+function PaymentCard({ card }: { card: Card }) {
+  return (
+    <CardRevealProvider cardId={card.id} phrase={cardPhrase(card)}>
+      <PaymentCardFront card={toCardFace(card)} />
+    </CardRevealProvider>
+  );
+}
 
 describe("PaymentCard", () => {
   it("is a region named after the card, readable by screen readers", () => {
@@ -16,12 +27,14 @@ describe("PaymentCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the balance, currency, masked number, holder and expiry from the design", () => {
-    render(<PaymentCard card={makeCard()} />);
+  it("shows the masked balance, currency, masked number, holder and expiry from the design", () => {
+    const { container } = render(<PaymentCard card={makeCard()} />);
 
     expect(screen.getByText("Balance")).toBeInTheDocument();
     expect(screen.getByText("USD")).toBeInTheDocument();
-    expect(screen.getByText("978,85 dólares")).toBeInTheDocument();
+    // Hidden by default; the balance is not even in the props (it comes with a reveal).
+    expect(screen.getByText("Saldo oculto")).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("978");
     expect(screen.getByTestId("card-number")).toHaveTextContent(
       "**** **** **** 1234",
     );
@@ -30,7 +43,7 @@ describe("PaymentCard", () => {
     expect(screen.getByText("02/30")).toBeInTheDocument();
   });
 
-  it("shows a peso card's currency on its chip and says the balance in pesos", () => {
+  it("shows a peso card's currency on its chip", () => {
     render(
       <PaymentCard
         card={makeCard({
@@ -42,7 +55,6 @@ describe("PaymentCard", () => {
     );
 
     expect(screen.getByText("ARS")).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getByText("312.400,50 pesos")).toHaveClass("sr-only");
   });
 
   it("lays the card number out as four groups, the masked ones apart from the digits", () => {
@@ -85,17 +97,29 @@ describe("PaymentCard", () => {
     ).toHaveAttribute("data-brand", "VISA");
   });
 
-  it("shows the hide-balance toggle on the primary card only", () => {
-    const { rerender } = render(<PaymentCard card={makeCard()} />);
-    expect(
-      screen.getByRole("button", { name: "Ocultar saldo" }),
-    ).toBeInTheDocument();
-
-    rerender(
-      <PaymentCard card={makeCard({ brand: "VISA", isPrimary: false })} />,
+  it("has its own eye on every card, primary or not, hidden by default", () => {
+    render(
+      <>
+        <PaymentCard card={makeCard()} />
+        <PaymentCard
+          card={makeCard({
+            id: "card_visa",
+            brand: "VISA",
+            last4: "5678",
+            isPrimary: false,
+          })}
+        />
+      </>,
     );
-    expect(
-      screen.queryByRole("button", { name: "Ocultar saldo" }),
-    ).not.toBeInTheDocument();
+
+    for (const name of [
+      "Mostrar datos de la tarjeta Mastercard terminada en 1234",
+      "Mostrar datos de la tarjeta Visa terminada en 5678",
+    ]) {
+      expect(screen.getByRole("button", { name })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+    }
   });
 });

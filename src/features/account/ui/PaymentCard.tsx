@@ -1,61 +1,18 @@
-import { Fragment } from "react";
-
-import {
-  describeCard,
-  formatCardExpiry,
-  type Card,
-  type CardBrand,
-} from "../domain/card";
-import { BalanceAmount } from "./BalanceAmount";
-import { BalanceToggle } from "./BalanceVisibility";
+import { describeCard, formatCardExpiry, type CardFace } from "../domain/card";
 import { CardBrandLogo } from "./CardBrandLogo";
+import {
+  CardRevealToggle,
+  RevealedBalance,
+  RevealedCardNumber,
+} from "./CardReveal";
+import { BRAND_THEME, CARD_EDGE } from "./card-theme";
 
 /**
- * Granate for the Mastercard (as in the design); the peeking Visa card is a soft pink.
- * Each base color carries a soft light from the top-left and a slightly deeper bottom
- * edge, plus a hairline inner highlight, so the card reads as a material, not a flat
- * fill, while the base color stays the design's.
+ * The front of a payment card. It renders from the card's face only (no balance): the
+ * balance and the full number arrive when the user reveals this card with its eye
+ * (see CardReveal), so it must sit inside a CardRevealProvider.
  */
-const BRAND_THEME: Record<CardBrand, { card: string; label: string }> = {
-  MASTERCARD: {
-    card: "bg-primary bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.16),transparent_55%),linear-gradient(155deg,transparent_45%,rgb(40_6_14/0.35))] text-white",
-    label: "text-white/75",
-  },
-  VISA: {
-    card: "bg-card-pink bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.5),transparent_55%),linear-gradient(155deg,transparent_45%,rgb(122_29_45/0.12))] text-primary-dark",
-    label: "text-primary-dark/70",
-  },
-};
-
-const NUMBER_GROUPS = ["****", "****", "****"] as const;
-
-/**
- * The card number as four evenly spaced groups. Poppins draws "*" as a superscript: its
- * 0.35em of ink hangs from the digits' cap line (the digits are 0.7em tall), so the
- * masked groups drop 0.175em to sit centered on the digits. A transform keeps that
- * offset sub-pixel instead of snapping it to whole pixels. The spaces between groups
- * keep the text "**** **** **** 1234" while the flex gap does the spacing.
- */
-function CardNumber({ last4 }: { last4: string }) {
-  return (
-    <p
-      aria-hidden="true"
-      data-testid="card-number"
-      className="flex gap-[0.5em] text-lg tracking-[0.18em]"
-    >
-      {NUMBER_GROUPS.map((group, index) => (
-        <Fragment key={index}>
-          <span data-masked="" className="translate-y-[0.175em]">
-            {group}
-          </span>{" "}
-        </Fragment>
-      ))}
-      <span>{last4}</span>
-    </p>
-  );
-}
-
-export function PaymentCard({ card }: { card: Card }) {
+export function PaymentCard({ card }: { card: CardFace }) {
   const theme = BRAND_THEME[card.brand];
   // The wrapper is the size container the whole card scales from (see `card-scale` in
   // globals.css); its height follows the width (180px at 390px, the design's shape).
@@ -64,14 +21,14 @@ export function PaymentCard({ card }: { card: Card }) {
       <section
         aria-label={describeCard(card)}
         data-brand={card.brand}
-        className={`flex h-[calc(var(--card-px,1px)*180)] flex-col justify-between rounded-3xl p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.22),inset_0_0_0_1px_rgb(255_255_255/0.06)] ${theme.card}`}
+        className={`flex h-[calc(var(--card-px,1px)*180)] flex-col justify-between rounded-3xl p-5 ${CARD_EDGE} ${theme.card}`}
       >
         <div className="flex items-start justify-between">
           <div>
-            {/* The eye toggle hides every balance; it lives on the primary card only. */}
+            {/* Every card has its own eye; it reveals only this card's data. */}
             <div className="flex items-center gap-2">
               <p className={`text-xs ${theme.label}`}>Balance</p>
-              {card.isPrimary && <BalanceToggle />}
+              <CardRevealToggle className={theme.eye} />
             </div>
             {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
               the chip follows the ink, so it sits centered on the figures. */}
@@ -83,14 +40,13 @@ export function PaymentCard({ card }: { card: Card }) {
               >
                 {card.currency}
               </span>
-              <BalanceAmount balance={card.balance} currency={card.currency} />
+              <RevealedBalance currency={card.currency} />
             </p>
           </div>
           <CardBrandLogo brand={card.brand} />
         </div>
 
-        {/* Decorative (the region name carries the last 4); see CardNumber. */}
-        <CardNumber last4={card.last4} />
+        <RevealedCardNumber last4={card.last4} />
 
         <div className="flex items-end justify-between">
           <p className="text-sm">{card.holderName}</p>
