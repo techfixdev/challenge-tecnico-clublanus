@@ -18,7 +18,10 @@ function post(origin?: string) {
   return POST(
     new NextRequest("http://localhost:3000/api/auth/logout", {
       method: "POST",
-      headers: origin ? { origin } : {},
+      // Browsers always send Host; the CSRF guard compares Origin against it.
+      headers: origin
+        ? { host: "localhost:3000", origin }
+        : { host: "localhost:3000" },
     }),
   );
 }

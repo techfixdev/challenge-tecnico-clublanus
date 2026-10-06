@@ -9,6 +9,7 @@ import {
   isJsonContentType,
   withApiErrorHandling,
 } from "@/shared/lib/api-response";
+import { isCrossOriginRequest } from "@/shared/lib/same-origin";
 
 /**
  * `POST /api/transfers` — send money to another GranaBank user.
@@ -24,8 +25,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest) => {
   const user = await getCurrentUser();
   if (!user) return apiError("UNAUTHORIZED", API_MESSAGES.unauthorized);
 
-  const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) {
+  if (isCrossOriginRequest(request)) {
     return apiError("FORBIDDEN", "Origen no permitido");
   }
   if (!isJsonContentType(request.headers.get("content-type"))) {
