@@ -1,7 +1,7 @@
 /**
  * Transfer references people can read out or type: "ENV-7Q4K-92XA". The code is 8 random
- * Crockford base32 symbols (40 bits) in two groups of four; the alphabet leaves out I, L,
- * O and U, so nothing can be misread as 1, 0 or another letter.
+ * Crockford base32 symbols (40 bits) in two groups of four; the alphabet leaves out I, L
+ * and O, which read as 1 and 0, and U, so codes do not spell accidental obscenities.
  *
  * Both sides of a transfer share the code, prefixed by their side (ENV for the sender's
  * "enviada", REC for the recipient's "recibida"): each movement keeps a unique reference,

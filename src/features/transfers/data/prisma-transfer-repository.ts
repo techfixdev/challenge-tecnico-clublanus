@@ -18,6 +18,7 @@ import {
   newTransferCode,
 } from "../domain/transfer-reference";
 import type { RecipientKey, TransferRequest } from "../domain/transfer-schema";
+import { violatedUniqueIndex } from "./unique-violation";
 
 /*
  * Isolation: the default READ COMMITTED plus a conditional debit, not SERIALIZABLE.
@@ -293,8 +294,9 @@ function findRecipient(key: RecipientKey) {
   });
 }
 
-/** The transaction rolled back on a unique violation that was not the idempotency key. */
+/** The transaction rolled back because the drawn reference already exists. */
 const REFERENCE_TAKEN = Symbol("reference taken");
+const MOVEMENT_REFERENCE_INDEX = "Movement_reference_key";
 
 async function executeOnce(
   senderId: string,
@@ -334,8 +336,10 @@ async function executeOnce(
         request.idempotencyKey,
       );
       if (winner) return replay(winner, request);
-      // Otherwise the only other unique value written is the reference: draw again.
-      return REFERENCE_TAKEN;
+      // Only a taken reference earns a new draw; any other constraint is a real bug.
+      if (violatedUniqueIndex(error) === MOVEMENT_REFERENCE_INDEX) {
+        return REFERENCE_TAKEN;
+      }
     }
     throw error;
   }

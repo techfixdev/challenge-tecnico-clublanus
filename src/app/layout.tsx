@@ -38,7 +38,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${poppins.variable} h-full antialiased`}>
+    // Browsers add their own attributes to <html> before React hydrates (Chrome for iOS
+    // injects `__gcrremoteframetoken`); this silences that one-level mismatch only.
+    <html
+      lang="es"
+      className={`${poppins.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="flex min-h-full flex-col">
         <AppShell>{children}</AppShell>
       </body>
