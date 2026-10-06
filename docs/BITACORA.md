@@ -68,7 +68,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | T1 | Scaffold, base de datos, ORM, datos de ejemplo, tests | ✅ Hecha |
 | T2 | Login, sesión, protección de rutas, logout | ✅ Hecha |
 | T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
-| T4 | Pulido: hallazgos de revisión, estructura, CI, README final | 🔍 En revisión |
+| T4 | Pulido: hallazgos de revisión, estructura, CI, README final | ✅ Hecha |
 | T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
 
 ---
@@ -271,7 +271,47 @@ Todas se corrigen en T4.
 
 **Verificación:** lint ✅ · typecheck ✅ · formato ✅ · unitarios 189/189 ✅ (3 corridas) · integración 10/10 ✅ · e2e 13/13 (dev y producción) ✅ · build ✅ · README probado en un clon limpio ✅
 
+**Commits:**
+```
+0b2c073 refactor: move prisma client to shared and layer the auth feature
+d2050e5 fix(api): answer 503 only for database outages and rethrow next control flow
+c1ddf88 test(movements): run the sql repository against postgresql
+ac77447 fix(movements): apply the latest filters in the debounced search
+666708a fix(movements): recover from load more failures
+99b9475 fix(ui): share error boundary, button styles and notification timer
+878d5f3 ci: add github actions workflow
+864d872 docs: rewrite readme and update project log
+efd50d4 test(auth): isolate missing-secret test from the environment
+```
+
+**Bug encontrado al commitear:** el CI define `SESSION_SECRET`, y el test "falla si falta el secreto" leía esa variable del entorno, así que en GitHub Actions iba a fallar. Se reprodujo con las mismas variables del CI (RED), se aisló el test con `vi.stubEnv` (GREEN) y se agregó `efd50d4`. Lección: un test no debe depender del entorno en el que corre.
+
+**Revisión automática por tramos: los 3 aprobados, sin bloqueantes.**
+
+| Tramo | Commits | Observaciones relevantes (no bloqueantes) |
+|---|---|---|
+| E — estructura + errores de la API | `0b2c073`…`d2050e5` | Algunos errores de Prisma desconocidos no se clasifican; un error de credenciales de la base se trata como caída (503) cuando es de configuración (500). |
+| F — integración, buscador, "Cargar más" | `c1ddf88`…`666708a` | Con la sesión vencida, "Cargar más" puede quedar en estado de carga mientras redirige; el test de integración depende de los datos del seed. |
+| G — UI, CI, docs | `99b9475`…`efd50d4` | CI: fijar las acciones por hash y limitar los permisos del token (buenas prácticas de seguridad de supply chain). |
+
 **Nota:** en el clon limpio, un test falló una vez y no se repitió en 17 corridas más. El sospechoso era un test del buscador que dependía del tiempo real; se reescribió con timers simulados.
+
+### T4b — Cierre de observaciones (05/10/2026)
+
+| Commit | Cambio | Por qué |
+|---|---|---|
+| `63c1494` | "Cargar más" pasa a un estado final "Tu sesión venció. Redirigiendo…" ante un 401 | El usuario entiende por qué se cortó la lista, en lugar de ver un botón trabado en "Cargando…". |
+| `39f3051` | Errores de base clasificados en *no disponible* (503), *mal configurada* (500) y *no clasificado* (500) | Una contraseña de base incorrecta no se arregla reintentando: es un error de configuración. |
+| `a3900f6` | El test de integración crea y borra sus propios datos, y verifica que la zona horaria sea la de Buenos Aires | Un test no debe depender del seed ni del entorno: tiene que poder correr en cualquier base. |
+| `44ca0bf` | CI: acciones fijadas por hash de commit, permisos de solo lectura y `persist-credentials: false` | Seguridad de *supply chain*: un tag (`v4`) se puede mover a código malicioso, un hash no. |
+
+**Clasificador basado en evidencia:** se probó contra el Postgres local con contraseña incorrecta, base inexistente, puerto cerrado y host desconocido, y se registró el error real de cada caso. Por ejemplo, una contraseña incorrecta da `P1000` en consultas normales y `P2010` (con `AuthenticationFailed` / `28P01`) en SQL crudo. Hay 6 tests de integración que reproducen esos casos.
+
+**Nota:** Prisma bloquea `migrate reset` cuando lo ejecuta una IA, salvo con consentimiento explícito del usuario. No se forzó.
+
+**Verificación:** unitarios 210/210 (también con las variables del CI) ✅ · integración 17/17 (con y sin seed) ✅ · e2e 13/13 ✅ · build ✅
+
+**Revisión automática (4 enfoques): aprobada, sin bloqueantes.** Quedan sugerencias menores en tests (por ejemplo, un helper de test que podría ocultar un éxito inesperado). Se documentan y no se corrigen, porque no afectan el comportamiento.
 
 ---
 
