@@ -59,8 +59,13 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Puntos de entrevista en `ENTREVISTA.md` (solo local, no se versiona).
 - [x] Pulido de las tarjetas: odómetro sin huecos en el "1" (Poppins no trae cifras de ancho fijo), asteriscos centrados con los dígitos, logo Visa real y bordes alineados, medido en capturas a 3x (`9285923`). Con el saldo oculto el ancho no delata el monto (`b5f347f`).
 - [x] Login por API: mensajes en español aunque falten campos (`089f354`).
-- [ ] ⏳ Transferencias reales entre usuarios demo, en una transacción atómica que impide saldo negativo.
-- [ ] Pantalla Recibir con alias y CVU para copiar y compartir.
+- [x] Transferencias reales entre usuarios demo, en una transacción atómica que impide saldo negativo, con idempotencia y referencia corta compartida (`99748a8`, `79a1cfa`, `0436010`).
+- [x] Pantalla Recibir con alias y CVU para copiar y compartir, con alternativa para http (`79a1cfa`).
+- [x] Ninguna pantalla se desborda ni corta texto entre 240 y 1024 px (zoom de accesibilidad incluido), con un test e2e que lo vigila (`8240624`, `0dd6d7b`).
+- [ ] ⏳ Rendimiento: medir el build de producción y optimizar con números de antes y después.
+- [ ] Sistema de luz: degradés, sombras y reflejos coherentes en toda la app.
+- [ ] Transiciones que enmascaran la carga (el botón se expande hasta la pantalla).
+- [ ] Tarjeta que gira al tocarla; el ojito revela saldo, número y CVU (ocultos por defecto).
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
 - [ ] Lista de pantallas y estados para capturar en Figma (requiere conectar tu cuenta de Figma).
 - [ ] Revisar todo juntos y commitear (local).
