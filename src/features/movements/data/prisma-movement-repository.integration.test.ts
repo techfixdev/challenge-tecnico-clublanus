@@ -12,17 +12,20 @@ import { prismaMovementRepository as repository } from "./prisma-movement-reposi
 
 /*
  * Runs the real SQL (unaccent search, LIKE escaping, keyset cursor) against PostgreSQL.
- * Each run creates its own two users and deletes them afterwards (rows cascade), so it
- * never depends on, or changes, the demo data, except for reading the seeded demo user.
+ * Each run creates every row it asserts on (its own users, with fixed timestamps) and
+ * deletes them afterwards (rows cascade), so it neither needs nor touches the seed data.
  */
 
 const RUN_ID = randomUUID().slice(0, 8);
-const SEEDED_DEMO_EMAIL = "soygranate@clublanus.com";
-const SEEDED_MOVEMENT_COUNT = 26; // prisma/seed.ts
 const TIE_INSTANT = new Date("2026-03-10T12:00:00.000Z");
+const BUENOS_AIRES = "America/Argentina/Buenos_Aires";
+/** Not a multiple of the page size, and with ties, so every page boundary is exercised. */
+const BULK_MOVEMENT_COUNT = 23;
+const BULK_PAGE_SIZE = 7;
 
 let ownerId: string;
 let otherUserId: string;
+let bulkUserId: string;
 let sequence = 0;
 
 async function createUser(label: string): Promise<string> {
@@ -55,6 +58,26 @@ async function createMovement(
   });
 }
 
+/** Rows for the full pagination walk: one every 6 hours, every fifth tied with the previous one. */
+async function createBulkMovements(userId: string) {
+  const base = Date.UTC(2026, 1, 1);
+  const sixHours = 6 * 3_600_000;
+  await db.movement.createMany({
+    data: Array.from({ length: BULK_MOVEMENT_COUNT }, (_, index) => {
+      const slot = index % 5 === 4 ? index - 1 : index;
+      return {
+        userId,
+        counterparty: `Lote ${index}`,
+        description: "Pago de prueba",
+        type: "SENT" as const,
+        amount: "1.00",
+        reference: `IT-${RUN_ID}-bulk-${index}`,
+        occurredAt: new Date(base - slot * sixHours),
+      };
+    }),
+  });
+}
+
 function daysAgo(days: number): Date {
   return new Date(Date.UTC(2026, 2, 1) - days * 86_400_000);
 }
@@ -82,6 +105,8 @@ async function collectAllPages(userId: string, pageSize: number) {
 beforeAll(async () => {
   ownerId = await createUser("owner");
   otherUserId = await createUser("other");
+  bulkUserId = await createUser("bulk");
+  await createBulkMovements(bulkUserId);
 
   await createMovement(ownerId, {
     counterparty: "José Suárez",
@@ -122,11 +147,24 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.user.deleteMany({ where: { id: { in: [ownerId, otherUserId] } } });
+  await db.user.deleteMany({
+    where: { id: { in: [ownerId, otherUserId, bulkUserId] } },
+  });
   await db.$disconnect();
 });
 
 describe("prismaMovementRepository (PostgreSQL)", () => {
+  // The cursor test below only proves something under a non-UTC zone; fail loudly if the
+  // config stops applying it, instead of passing for the wrong reason.
+  it("runs under the Buenos Aires time zone (vitest.integration.config.ts)", () => {
+    expect(process.env.TZ).toBe(BUENOS_AIRES);
+    // ICU may report the older alias, "America/Buenos_Aires".
+    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toMatch(
+      /Buenos_Aires$/,
+    );
+    expect(new Date(TIE_INSTANT).getTimezoneOffset()).toBe(180);
+  });
+
   describe("search", () => {
     it("ignores accents and case", async () => {
       expect(await search(ownerId, { query: "jose" })).toEqual(["José Suárez"]);
@@ -240,21 +278,16 @@ describe("prismaMovementRepository (PostgreSQL)", () => {
       expect(next.map((row) => row.id)).toEqual([second.id]);
     });
 
-    it("walks all seeded movements of the demo user with no duplicates or gaps", async () => {
-      const demo = await db.user.findUniqueOrThrow({
-        where: { email: SEEDED_DEMO_EMAIL },
-        select: { id: true },
-      });
-
-      const paged = await collectAllPages(demo.id, 7);
+    it("walks every page with no duplicates or gaps", async () => {
+      const paged = await collectAllPages(bulkUserId, BULK_PAGE_SIZE);
       const all = await repository.findMany({
-        userId: demo.id,
+        userId: bulkUserId,
         filters: {},
         take: 100,
       });
 
-      expect(paged).toHaveLength(SEEDED_MOVEMENT_COUNT);
-      expect(new Set(paged).size).toBe(SEEDED_MOVEMENT_COUNT);
+      expect(paged).toHaveLength(BULK_MOVEMENT_COUNT);
+      expect(new Set(paged).size).toBe(BULK_MOVEMENT_COUNT);
       expect(paged).toEqual(all.map((row) => row.id));
     });
   });

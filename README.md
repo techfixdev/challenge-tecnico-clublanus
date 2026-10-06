@@ -117,13 +117,13 @@ curl -b cookies.txt 'http://localhost:3000/api/movements?q=jose&type=recibido'
 
 ## Testing
 
-| Tipo        | Comando                 | Qué cubre                                                                                                                     | Cantidad |
-| ----------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario  | 189      |
-| Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates | 10       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404 y estados vacíos en Chromium móvil         | 13       |
+| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                               | Cantidad |
+| ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario                                                                            | 210      |
+| Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión) | 17       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404 y estados vacíos en Chromium móvil                                                                                   | 13       |
 
-Integración y e2e necesitan la base levantada y con el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
+Integración necesita la base levantada con las migraciones: crea y borra sus propios datos, así que no depende del seed. E2E necesita además el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
 ## Accesibilidad y UX
 
