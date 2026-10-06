@@ -34,7 +34,9 @@ export function StepHeader({
     <div className="flex flex-col">
       <div className="flex items-center justify-between">
         {"href" in back ? (
-          <Link href={back.href} className={BACK_CONTROL_CLASSES}>
+          // Full prefetch: Home must be ready at commit for the screen to shrink back
+          // into the Enviar tile (no skeleton, so the view-transition pair exists).
+          <Link href={back.href} prefetch className={BACK_CONTROL_CLASSES}>
             <ChevronLeftIcon className="size-5" />
             Volver
           </Link>

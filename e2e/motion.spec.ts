@@ -51,7 +51,8 @@ async function skipWithoutViewTransitions(page: Page) {
 
 type TransitionLog = {
   started: number;
-  entries: { names: string[]; longestMs: number }[];
+  /** `longestMs`: longest duration; `latestEndMs`: when the last one ends (delay included). */
+  entries: { names: string[]; longestMs: number; latestEndMs: number }[];
 };
 
 /**
@@ -83,6 +84,12 @@ async function recordViewTransitions(page: Page) {
             0,
             ...animations.map((animation) =>
               Number(animation.effect?.getComputedTiming().duration ?? 0),
+            ),
+          ),
+          latestEndMs: Math.max(
+            0,
+            ...animations.map((animation) =>
+              Number(animation.effect?.getComputedTiming().endTime ?? 0),
             ),
           ),
         });
@@ -229,6 +236,14 @@ async function openQuickAction(
   return readLog();
 }
 
+/** Leaves a quick action's screen through its "Volver" link and returns the transitions. */
+async function closeQuickAction(page: Page) {
+  const readLog = await recordViewTransitions(page);
+  await page.getByRole("link", { name: "Volver", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  return readLog();
+}
+
 /** Names of the quick-action containers that morphed during the recorded transitions. */
 function quickActionMorphs(transitions: TransitionLog["entries"]) {
   return new Set(
@@ -368,6 +383,30 @@ test.describe("with motion allowed", () => {
     }
   });
 
+  test('"Volver" shrinks Enviar and Recibir back into their tiles', async ({
+    page,
+  }) => {
+    // Same production-only condition as opening: Home must commit without its skeleton.
+    test.skip(
+      !process.env.CI,
+      "Link prefetching only runs in production; run with CI=1 (next start)",
+    );
+    await login(page);
+    await skipWithoutViewTransitions(page);
+
+    for (const action of QUICK_ACTIONS) {
+      await openHomePrefetched(page, action);
+      await openQuickAction(page, action);
+      const transitions = await closeQuickAction(page);
+      expect(quickActionMorphs(transitions)).toEqual(
+        new Set([`::view-transition-group(${action.name})`]),
+      );
+      const longest = Math.max(...transitions.map((t) => t.longestMs));
+      expect(longest).toBeGreaterThan(0);
+      expect(longest).toBeLessThanOrEqual(300);
+    }
+  });
+
   // Known framework limitation: the browser's back button restores the list on React's
   // blocking (sync) lane, and React only starts view transitions for transition lanes,
   // so no transition runs at all (no `document.startViewTransition` call). This pins the
@@ -422,17 +461,29 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     for (const { longestMs } of transitions) expect(longestMs).toBe(0);
   });
 
-  test("quick actions open their screens without a morph", async ({ page }) => {
+  test("quick actions open and close their screens without a morph", async ({
+    page,
+  }) => {
     test.skip(
       !process.env.CI,
       "Link prefetching only runs in production; run with CI=1 (next start)",
     );
     await login(page);
     await skipWithoutViewTransitions(page);
-    await openHomePrefetched(page, QUICK_ACTIONS[0]);
 
-    const transitions = await openQuickAction(page, QUICK_ACTIONS[0]);
-    expect(transitions.length).toBeGreaterThan(0);
-    for (const { longestMs } of transitions) expect(longestMs).toBe(0);
+    for (const action of QUICK_ACTIONS) {
+      await openHomePrefetched(page, action);
+      const opening = await openQuickAction(page, action);
+      const closing = await closeQuickAction(page);
+      for (const transitions of [opening, closing]) {
+        expect(transitions.length).toBeGreaterThan(0);
+        // Instant: no duration and no delay either (the incoming screen's fade-in is
+        // delayed with motion allowed; a leftover delay would hide it for that long).
+        for (const { longestMs, latestEndMs } of transitions) {
+          expect(longestMs).toBe(0);
+          expect(latestEndMs).toBe(0);
+        }
+      }
+    }
   });
 });
