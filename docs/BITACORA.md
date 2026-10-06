@@ -353,14 +353,15 @@ docs/     BITACORA.md · design/ (Figma) · screenshots/
 
 ## 7. Cómo correrlo
 
+Los pasos completos, los scripts y la descripción de la API están en el [README](../README.md). Resumen:
+
 ```bash
 pnpm install
 cp .env.example .env
-pnpm db:up        # levanta Postgres en Docker
-pnpm db:migrate   # aplica migraciones
-pnpm db:seed      # carga datos de ejemplo
-pnpm dev          # http://localhost:3000
+pnpm db:up && pnpm db:migrate && pnpm db:seed
+pnpm dev               # http://localhost:3000
 
-pnpm test         # tests unitarios
-pnpm test:e2e     # tests end-to-end (requiere la base levantada)
+pnpm test              # unitarios
+pnpm test:integration  # integración (requiere Postgres)
+pnpm test:e2e          # end-to-end (requiere Postgres)
 ```
