@@ -180,6 +180,9 @@ test.describe("with motion allowed", () => {
             .layoutShifts.total,
       );
     const sweepDone = async () => {
+      // A streamed page arrives in a hidden container before React moves it into
+      // place: wait until there is a single card.
+      await expect(page.getByTestId("card-sweep")).toHaveCount(1);
       // The intro (light sweep, odometer roll) is over once the sweep reaches its end.
       await expect
         .poll(() =>

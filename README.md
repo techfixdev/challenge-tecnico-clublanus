@@ -6,7 +6,7 @@ Home banking mobile-first para el challenge técnico del Club Atlético Lanús: 
 | ------------------------------------ | ---------------------------------- | --------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
 | ![Login](docs/screenshots/login.png) | ![Home](docs/screenshots/home.png) | ![Saldo oculto](docs/screenshots/home-balance-hidden.png) | ![Movimientos](docs/screenshots/movements.png) | ![Detalle](docs/screenshots/movement-detail.png) |
 
-Animaciones en video (390×844): [`docs/screenshots/motion-demo.webm`](docs/screenshots/motion-demo.webm).
+Animaciones en video (390×844, build de producción): [`docs/screenshots/premium-demo.webm`](docs/screenshots/premium-demo.webm) — tarjeta con inclinación 3D, saldo tipo odómetro, header y barra de vidrio. Capturas: [Home](docs/screenshots/premium-home.png), [Home con scroll](docs/screenshots/premium-home-scrolled.png), [Movimientos con scroll](docs/screenshots/premium-movements-scrolled.png). Video anterior: [`motion-demo.webm`](docs/screenshots/motion-demo.webm).
 
 ## Demo
 
@@ -19,6 +19,7 @@ Deploy: _pendiente_
 - **Next.js 16** (App Router, Server Components, Server Actions) + **TypeScript** estricto
 - **PostgreSQL 17** + **Prisma 7** (driver adapter `@prisma/adapter-pg`)
 - **Tailwind CSS v4**, tipografía Poppins
+- **Motion** (motion.dev, sucesor de Framer Motion) para resortes, valores ligados al scroll y animaciones de layout
 - **zod** (validación compartida cliente/servidor), **jose** (JWT), **bcryptjs**
 - **Vitest** + Testing Library, **Playwright**, GitHub Actions
 
@@ -124,9 +125,9 @@ curl -b cookies.txt 'http://localhost:3000/api/movements?q=jose&type=recibido'
 
 | Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                           | Cantidad |
 | ----------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (contador del saldo, ocultar saldo)                                                 | 263      |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación)                   | 291      |
 | Integración | `pnpm test:integration` | SQL real: búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes | 21       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes y animaciones (con y sin movimiento reducido) en Chromium móvil                                                  | 24       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones y CLS < 0.05 en Home (con y sin movimiento reducido) en Chromium móvil                              | 32       |
 
 Integración necesita la base levantada con las migraciones: crea y borra sus propios datos, así que no depende del seed. E2E necesita además el seed. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
@@ -141,13 +142,16 @@ Integración necesita la base levantada con las migraciones: crea y borra sus pr
 
 ## Movimiento y accesibilidad
 
-Cada animación comunica algo y dura 150–300 ms, con curvas y duraciones definidas una sola vez en `globals.css` (`--motion-*`). Solo se animan `transform`/`opacity` (sin recalcular el layout) y no se agregó ninguna librería.
+La sensación "premium" sale de física, profundidad y continuidad, no de cambiar el diseño: se respetan el layout, los colores y la tipografía del Figma. Las interacciones físicas usan **Motion** (`motion/react`) con resortes; las transiciones simples siguen en CSS con los tokens `--motion-*` de `globals.css`. Solo se animan `transform`, `opacity` y `filter`, y lo que sigue al dedo o al scroll corre sobre _motion values_ (ningún `setState` por cuadro).
 
-- **Lista → detalle:** el ícono del movimiento tocado se transforma en el del detalle, y vuelve con "Volver" (React `<ViewTransition>`, incluido en el App Router de Next 16, sin flags). Solo ese par tiene nombre. Sin soporte del navegador, simplemente navega.
-- **Entrada de la lista:** las filas aparecen con un leve desplazamiento escalonado (40 ms entre filas, como mucho 280 ms). Ocurre cuando se insertan (primera carga, resultados nuevos, "Cargar más" solo para las nuevas), nunca al re-renderizar las mismas filas.
-- **Toque:** filas, chips, botones y navegación se achican apenas (0,97) al presionarlos.
-- **Esqueletos** con un brillo que los recorre; **saldo** que cuenta de 0 al valor real (600 ms). Los lectores de pantalla reciben solo el valor final.
-- **`prefers-reduced-motion: reduce`** apaga todo el movimiento: los cambios de estado siguen siendo instantáneos. Hay tests e2e que lo verifican con estilos computados reales.
+- **Tarjeta viva (Home):** al presionarla y arrastrar se inclina en 3D hacia el dedo (hasta 10°/12°, perspectiva 800px) y vuelve con un resorte al soltar. Un brillo suave se mueve con la inclinación y la sombra se desplaza al revés; la tarjeta principal recibe un barrido de luz una sola vez al montarse. La superficie tiene un degradé sutil para leerse como material (el granate `#7A1D2D` y el rosa de Visa siguen siendo los del diseño).
+- **Carrusel:** el scroll sigue siendo nativo (scroll-snap: inercia, teclado, lectores de pantalla). Motion solo lee la posición del scroll y, cuadro a cuadro, achica (0,92) y atenúa la tarjeta no activa. Los puntos debajo son botones ("Tarjeta 1 de 2") que llevan a cada tarjeta; el activo se estira con un resorte.
+- **Saldo tipo odómetro:** cada dígito es una tira 0–9 que rueda con resorte, de derecha a izquierda (40 ms entre dígitos), con cifras tabulares y celdas fijas: el ancho no cambia. Al ocultar el saldo los dígitos se desenfocan y aparecen los puntos (250 ms), y al mostrarlo vuelven a rodar. Los lectores de pantalla escuchan solo el valor final. No se repite al recargar: el HTML del servidor ya trae cada tira en su lugar.
+- **Header de vidrio:** en Home y Movimientos el header queda fijo y se compacta con el scroll ("Hola" se desvanece, el título baja a 85%) y se vuelve vidrio esmerilado (`backdrop-filter: blur(16px) saturate(180%)`), con fondo casi opaco donde el navegador no lo soporta (`@supports`). No cambia de alto: se pega con un `top` negativo, así nada se mueve debajo (CLS 0). En Movimientos, el buscador y los chips quedan pegados debajo: son los controles de una lista larga, mientras que el resumen del mes (contexto) se va con el scroll.
+- **Barra inferior:** también de vidrio. La sección actual tiene una píldora granate suave que viaja entre íconos con un resorte (un único elemento compartido con `layoutId`), y los íconos se achican con un resorte al tocarlos.
+- **Lista → detalle:** el ícono del movimiento tocado se transforma en el del detalle (React `<ViewTransition>`). Las filas entran escalonadas y los esqueletos tienen brillo, como antes.
+- **Peso:** Motion se carga con `LazyMotion` y componentes `m.*`: la página trae el núcleo, y el paquete de gestos y layout (`domMax`, ~24 kB gzip) llega en un chunk aparte después de hidratar.
+- **`prefers-reduced-motion: reduce`:** sin inclinación, sin barrido de luz, sin rodar el saldo (aparece final), sin escalado ligado al scroll y la píldora salta sin resorte; el vidrio y los fundidos de opacidad se mantienen. Hay tests e2e que lo verifican en ambos modos.
 
 ## Cómo ver los estados
 
