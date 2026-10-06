@@ -89,3 +89,19 @@ test("'Recordarme' issues a persistent 30-day cookie", async ({
   expect(daysLeft).toBeGreaterThan(29.9);
   expect(daysLeft).toBeLessThanOrEqual(30);
 });
+
+/** iOS Safari zooms into any focused input whose computed font-size is below 16px. */
+test("login inputs are at least 16px so iOS does not zoom on focus", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  for (const input of [
+    page.getByLabel("Email"),
+    page.getByLabel("Contraseña", { exact: true }),
+  ]) {
+    const fontSize = await input.evaluate((element) =>
+      parseFloat(getComputedStyle(element).fontSize),
+    );
+    expect(fontSize).toBeGreaterThanOrEqual(16);
+  }
+});

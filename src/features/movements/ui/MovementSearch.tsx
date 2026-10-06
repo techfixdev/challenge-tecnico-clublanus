@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { CloseIcon, SearchIcon } from "@/shared/ui/icons";
+import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
 
 import {
   SEARCH_MAX_LENGTH,
@@ -127,7 +128,7 @@ export function MovementSearch({
           enterKeyHint="search"
           placeholder="Ingresá un nombre o servicio"
           onChange={(event) => handleChange(event.target.value)}
-          className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-xs placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
+          className={`h-full min-w-0 flex-1 bg-transparent ${INPUT_TEXT_CLASS} text-foreground outline-none placeholder:text-xs placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none`}
         />
         {value && (
           <button

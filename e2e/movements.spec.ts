@@ -90,6 +90,16 @@ test("home → search → filter → detail → back", async ({ page }) => {
   await expect(chip(page, "Recibido")).toHaveAttribute("aria-current", "true");
 });
 
+test("the search box is at least 16px so iOS does not zoom on focus", async ({
+  page,
+}) => {
+  await page.goto("/movimientos");
+  const fontSize = await page
+    .getByRole("searchbox", { name: "Buscar movimientos" })
+    .evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(16);
+});
+
 test("search ignores accents and case, and treats wildcards literally", async ({
   page,
 }) => {

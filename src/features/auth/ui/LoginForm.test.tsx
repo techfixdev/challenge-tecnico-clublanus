@@ -2,6 +2,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
+
 import { LOGIN_MESSAGES } from "../domain/login-schema";
 import type { LoginAction, LoginFormState } from "../domain/login-form-state";
 import { LoginForm } from "./LoginForm";
@@ -36,6 +38,14 @@ describe("LoginForm", () => {
     expect(password).toHaveAttribute("placeholder", "Ingresá tu contraseña");
     expect(password).toHaveAttribute("autocomplete", "current-password");
     expect(screen.getByLabelText("Recordarme")).not.toBeChecked();
+  });
+
+  it("keeps the text inputs at 16px so iOS Safari does not zoom on focus", () => {
+    const { email, password } = renderForm();
+
+    expect(INPUT_TEXT_CLASS).toBe("text-base");
+    expect(email).toHaveClass(INPUT_TEXT_CLASS);
+    expect(password).toHaveClass(INPUT_TEXT_CLASS);
   });
 
   it("shows field errors and does not submit when the form is invalid", async () => {

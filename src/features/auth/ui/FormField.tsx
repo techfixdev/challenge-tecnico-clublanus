@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
-export const INPUT_CLASSES =
-  "h-12 w-full rounded-xl bg-surface px-4 text-sm text-foreground shadow-card outline-none ring-1 ring-transparent transition placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger";
+import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
+
+export const INPUT_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEXT_CLASS} text-foreground shadow-card outline-none ring-1 ring-transparent transition placeholder:text-sm placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger`;
 
 /** ids used to wire the label and error message to the control (aria-describedby). */
 export function fieldIds(name: string) {

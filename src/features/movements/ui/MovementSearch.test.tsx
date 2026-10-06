@@ -8,6 +8,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
+
 import { MovementSearch, SEARCH_DEBOUNCE_MS } from "./MovementSearch";
 
 const replace = vi.fn();
@@ -35,6 +37,13 @@ function waitForDebounce() {
 }
 
 describe("MovementSearch", () => {
+  it("keeps the search box at 16px so iOS Safari does not zoom on focus", () => {
+    render(<MovementSearch filters={{}} />);
+
+    expect(INPUT_TEXT_CLASS).toBe("text-base");
+    expect(screen.getByRole("searchbox")).toHaveClass(INPUT_TEXT_CLASS);
+  });
+
   it("renders a labelled search box with the design placeholder", () => {
     render(<MovementSearch filters={{ query: "adobe" }} />);
 

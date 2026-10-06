@@ -64,7 +64,7 @@ export function LoginForm({ action }: LoginFormProps) {
   const password = fieldIds("password");
 
   return (
-    <div className="flex flex-1 flex-col px-6 pt-16 pb-8">
+    <div className="flex flex-1 flex-col px-6 pt-16 pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <LoginHeader />
 
       <form
