@@ -69,7 +69,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | T2 | Login, sesión, protección de rutas, logout | ✅ Hecha |
 | T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
 | T4 | Pulido: hallazgos de revisión, estructura, CI, README final | ✅ Hecha |
-| — | Inspección ocular, limpieza de historial, alternativa desktop | ✅ Hecha (desktop en pausa) |
+| — | Inspección ocular, limpieza de historial, alternativa desktop | ✅ Hecha (desktop archivada) |
 | T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
 
 ---
@@ -347,9 +347,9 @@ La preparación para la entrevista vivía en esta bitácora y se movió a un arc
 
 Se hizo antes de publicar, porque reescribir el historial de algo ya publicado rompe los clones de otras personas.
 
-### Alternativa: layout responsive para desktop (05/10/2026) — ⏸️ en pausa, pendiente de decisión
+### Alternativa: layout responsive para desktop (05/10/2026) — 🗄️ archivada, fuera de la entrega
 
-Rama `feat/desktop-layout` (3 commits, sin integrar). La rama principal no cambia hasta decidir.
+**Decisión:** no se incluye en el challenge. La entrega usa la columna centrada en desktop, que respeta el Figma (solo mobile) sin agregar diseño propio. La alternativa (3 commits) se guardó **fuera del repo**, como bundle de git y parches, por si se retoma más adelante.
 
 | Decisión | Por qué |
 |---|---|
