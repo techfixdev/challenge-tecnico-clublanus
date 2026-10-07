@@ -34,6 +34,66 @@ export function formatTime(date: Date): string {
 }
 
 /* ---------------------------------------------------------------------------------------
+ * Calendar days in the app's time zone ("YYYY-MM-DD"), for lists grouped by day.
+ * ------------------------------------------------------------------------------------ */
+
+const dayFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+// Labels are built from a day key, not an instant: noon UTC of that date, read in UTC.
+const dayMonthFormat = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: "UTC",
+  day: "numeric",
+  month: "long",
+});
+
+const dayMonthYearFormat = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: "UTC",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/** "2026-10-05": the calendar day of `date` in Buenos Aires. */
+export function dayOf(date: Date): string {
+  const parts = dayFormat.formatToParts(date);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function parseDay(day: string): { year: number; month: number; day: number } {
+  const [year, month, dayOfMonth] = day.split("-").map(Number);
+  return { year, month, day: dayOfMonth };
+}
+
+function dayBefore(day: string): string {
+  const { year, month, day: dayOfMonth } = parseDay(day);
+  // Date.UTC rolls day 0 back into the last day of the previous month (and year).
+  return new Date(Date.UTC(year, month - 1, dayOfMonth - 1))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * Header of a day in a list: "Hoy", "Ayer", "5 de octubre", or "31 de diciembre de 2025"
+ * when the day is not in `today`'s year. Both are day keys (`dayOf`), so the result does
+ * not depend on the runtime's time zone or clock.
+ */
+export function formatDayLabel(day: string, today: string): string {
+  if (day === today) return "Hoy";
+  if (day === dayBefore(today)) return "Ayer";
+  const { year, month, day: dayOfMonth } = parseDay(day);
+  const noon = Date.UTC(year, month - 1, dayOfMonth, 12);
+  return year === parseDay(today).year
+    ? dayMonthFormat.format(noon)
+    : dayMonthYearFormat.format(noon);
+}
+
+/* ---------------------------------------------------------------------------------------
  * Calendar months in the app's time zone ("YYYY-MM"). A month starts at local midnight
  * of its 1st in Buenos Aires, which is 03:00 UTC: a UTC month would move movements made
  * after 21:00 on the last day into the next month.
