@@ -10,7 +10,7 @@
  * and hands it to the chrome's control under that point instead.
  *
  * Pinned chrome is marked with `data-pinned-chrome`. Keyboard clicks (`detail: 0`) carry
- * no meaningful point and are left alone, as is every tap outside a transition.
+ * no meaningful point and are left alone, as is every tap outside a known transition.
  */
 
 const CHROME_SELECTOR = "[data-pinned-chrome]";
@@ -20,12 +20,17 @@ function containsPoint(rect: DOMRect, x: number, y: number) {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
-/** Whether a view transition runs (assumed when the browser cannot tell). */
+/**
+ * Whether a view transition runs. A browser that cannot tell (no
+ * `document.activeViewTransition`, e.g. Safari and Firefox today) counts as "no": the
+ * guard would otherwise steal taps from anything drawn over the chrome. There, a tap
+ * during the ~400ms transition may be lost instead, as on iOS.
+ */
 function transitionActive(doc: Document) {
-  return "activeViewTransition" in doc
-    ? (doc as Document & { activeViewTransition: unknown })
-        .activeViewTransition != null
-    : true;
+  return (
+    (doc as Document & { activeViewTransition?: unknown })
+      .activeViewTransition != null
+  );
 }
 
 /** Installs the guard on `doc`; returns the function that removes it. */

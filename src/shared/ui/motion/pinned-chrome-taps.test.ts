@@ -44,15 +44,29 @@ function tap(target: Element, x: number, y: number) {
   return event;
 }
 
+/** `document.activeViewTransition` as the browser reports it; `"unsupported"` removes it. */
+function setActiveTransition(value: object | null | "unsupported") {
+  if (value === "unsupported") {
+    Reflect.deleteProperty(document, "activeViewTransition");
+    return;
+  }
+  Object.defineProperty(document, "activeViewTransition", {
+    value,
+    configurable: true,
+  });
+}
+
 let uninstall: () => void = () => {};
 afterEach(() => {
   uninstall();
+  setActiveTransition("unsupported");
   document.body.innerHTML = "";
 });
 
 describe("installPinnedChromeTaps", () => {
   it("hands a tap on the pinned nav that fell through to the page to the nav's control", () => {
     const { tab, row } = setUp();
+    setActiveTransition({});
     const onTab = vi.fn((event: Event) => event.preventDefault());
     const onRow = vi.fn((event: Event) => event.preventDefault());
     tab.addEventListener("click", onTab);
@@ -70,6 +84,7 @@ describe("installPinnedChromeTaps", () => {
 
   it("swallows a fall-through tap on the chrome that hits none of its controls", () => {
     const { row } = setUp();
+    setActiveTransition({});
     const onRow = vi.fn((event: Event) => event.preventDefault());
     row.addEventListener("click", onRow);
     uninstall = installPinnedChromeTaps(document);
@@ -100,6 +115,7 @@ describe("installPinnedChromeTaps", () => {
 
   it("stops intervening once uninstalled", () => {
     const { tab, row } = setUp();
+    setActiveTransition({});
     const onTab = vi.fn((event: Event) => event.preventDefault());
     tab.addEventListener("click", onTab);
     row.addEventListener("click", (event) => event.preventDefault());
@@ -108,5 +124,25 @@ describe("installPinnedChromeTaps", () => {
     tap(row, 128, 738);
 
     expect(onTab).not.toHaveBeenCalled();
+  });
+
+  it("never intervenes when no transition runs, or when the browser cannot tell", () => {
+    // Safari and Firefox lack document.activeViewTransition: guessing "a transition runs"
+    // would steal taps from anything legitimately drawn over the chrome (a toast, a sheet).
+    for (const state of [null, "unsupported"] as const) {
+      const { tab, row } = setUp();
+      setActiveTransition(state);
+      const onTab = vi.fn((event: Event) => event.preventDefault());
+      const onRow = vi.fn((event: Event) => event.preventDefault());
+      tab.addEventListener("click", onTab);
+      row.addEventListener("click", onRow);
+      uninstall = installPinnedChromeTaps(document);
+
+      tap(row, 128, 738);
+
+      expect(onRow).toHaveBeenCalledTimes(1);
+      expect(onTab).not.toHaveBeenCalled();
+      uninstall();
+    }
   });
 });
