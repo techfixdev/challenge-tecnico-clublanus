@@ -14,7 +14,10 @@ async function login(page: Page) {
   await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/$/);
-  // Home dissolves in after login; it takes taps once it has arrived.
+  // The URL changes while Home still shows its skeleton: the cards stream in later and
+  // dissolve in with a view transition, and a raw pointer tap made before they are there,
+  // or while that transition runs, never reaches the card. Wait for both.
+  await expect(flipButton(page)).toBeAttached();
   await waitForScreenToSettle(page);
 }
 
