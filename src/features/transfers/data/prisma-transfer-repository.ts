@@ -7,6 +7,7 @@ import {
   fullNameOf,
   isSameTransferRequest,
   planTransfer,
+  type DestinationCard,
   type TransferFailureReason,
   type TransferOutcome,
   type TransferReceipt,
@@ -35,6 +36,13 @@ import { violatedUniqueIndex } from "./unique-violation";
  *
  * Deadlocks: A → B and B → A at the same time lock the same two card rows. Both updates
  * always run in card-id order, so concurrent transfers acquire the locks in the same order.
+ *
+ * Idempotency: (senderId, idempotencyKey) is unique, and the transfer row that claims the
+ * key is the transaction's first write. A key already committed replays its stored
+ * receipt when the request is the same one, and is refused (`idempotency_conflict`) when
+ * it is not. Whenever the transaction fails, the key is looked up again before answering:
+ * a twin request with the same key may have committed meanwhile, and its result is then
+ * the answer (the money moved once).
  */
 
 /** Thrown inside the transaction to roll it back with a business outcome. */
@@ -43,6 +51,16 @@ class TransferRejected extends Error {
     super(reason);
   }
 }
+
+/** The transaction rolled back because the drawn reference already exists. */
+const REFERENCE_TAKEN = Symbol("reference taken");
+const MOVEMENT_REFERENCE_INDEX = "Movement_reference_key";
+
+/**
+ * A new code collides with an existing reference about once in 2^40 / (transfers so far):
+ * a second draw practically always succeeds; the third attempt is a safety margin.
+ */
+const MAX_REFERENCE_ATTEMPTS = 3;
 
 const SENT_DESCRIPTION = "Transferencia enviada";
 const RECEIVED_DESCRIPTION = "Transferencia recibida";
@@ -100,15 +118,89 @@ function toReceipt(transfer: StoredTransfer): TransferReceipt {
   };
 }
 
-function findByIdempotencyKey(
-  client: Prisma.TransactionClient | typeof db,
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
+/** `newCode` is injectable so a test can force a reference collision. */
+export function createPrismaTransferRepository({
+  newCode = () => newTransferCode(),
+}: { newCode?: () => string } = {}): TransferRepository {
+  return {
+    findRecipient,
+    async execute(senderId, request) {
+      for (let attempt = 1; ; attempt += 1) {
+        const outcome = await executeOnce(senderId, request, newCode());
+        if (outcome !== REFERENCE_TAKEN) return outcome;
+        if (attempt === MAX_REFERENCE_ATTEMPTS) {
+          throw new Error("Could not draw a free transfer reference");
+        }
+      }
+    },
+  };
+}
+
+function findRecipient(key: RecipientKey) {
+  return db.user.findUnique({
+    where: recipientWhere(key),
+    select: recipientSelect,
+  });
+}
+
+/** One attempt with one drawn reference code: replay, transfer, or ask for a new draw. */
+async function executeOnce(
   senderId: string,
-  idempotencyKey: string,
-): Promise<StoredTransfer | null> {
-  return client.transfer.findUnique({
-    where: { senderId_idempotencyKey: { senderId, idempotencyKey } },
+  request: TransferRequest,
+  code: string,
+): Promise<TransferOutcome | typeof REFERENCE_TAKEN> {
+  const replayed = await replayIfKeyCommitted(senderId, request);
+  if (replayed) return replayed;
+
+  try {
+    const receipt = await db.$transaction((tx) =>
+      runTransfer(tx, senderId, request, code),
+    );
+    return { ok: true, receipt, replayed: false };
+  } catch (error) {
+    if (error instanceof TransferRejected) {
+      // The same-key race: a duplicate can pass the key check above while its twin is
+      // still running, then read the balance after the twin committed and plan against
+      // the debited value ("insufficient funds"). If the key is committed by now, the
+      // twin won: replay it instead of reporting a refusal for money that did move.
+      const twin = await replayIfKeyCommitted(senderId, request);
+      return twin ?? { ok: false, reason: error.reason };
+    }
+    if (isUniqueViolation(error)) {
+      // Lost the race for the idempotency key: the winner has committed by now.
+      const winner = await replayIfKeyCommitted(senderId, request);
+      if (winner) return winner;
+      // Only a taken reference earns a new draw; any other constraint is a real bug.
+      if (violatedUniqueIndex(error) === MOVEMENT_REFERENCE_INDEX) {
+        return REFERENCE_TAKEN;
+      }
+    }
+    throw error;
+  }
+}
+
+/** The stored answer for this key, if a transfer already committed it; else null. */
+async function replayIfKeyCommitted(
+  senderId: string,
+  request: TransferRequest,
+): Promise<TransferOutcome | null> {
+  const stored = await db.transfer.findUnique({
+    where: {
+      senderId_idempotencyKey: {
+        senderId,
+        idempotencyKey: request.idempotencyKey,
+      },
+    },
     select: storedTransferSelect,
   });
+  return stored ? replay(stored, request) : null;
 }
 
 /** Same key again: return what the first request did, if it was the same request. */
@@ -120,46 +212,31 @@ async function replay(
     where: recipientWhere(request.recipient),
     select: { id: true },
   });
-  const same = isSameTransferRequest(
+  const isSameRequest = isSameTransferRequest(
     { ...stored, amount: stored.amount.toFixed(2) },
     { ...request, recipientId: recipient?.id ?? "" },
   );
-  return same
+  return isSameRequest
     ? { ok: true, receipt: toReceipt(stored), replayed: true }
     : { ok: false, reason: "idempotency_conflict" };
 }
 
+/**
+ * The transfer itself, inside one database transaction: read both parties, let the
+ * domain decide, claim the idempotency key, move the money and write both movements.
+ * Any business refusal throws `TransferRejected`, which rolls everything back.
+ */
 async function runTransfer(
   tx: Prisma.TransactionClient,
   senderId: string,
   request: TransferRequest,
   code: string,
 ): Promise<TransferReceipt> {
-  const [sender, recipient, sourceCard] = await Promise.all([
-    tx.user.findUniqueOrThrow({
-      where: { id: senderId },
-      select: { firstName: true, lastName: true },
-    }),
-    tx.user.findUnique({
-      where: recipientWhere(request.recipient),
-      select: {
-        ...recipientSelect,
-        // Every card, primary first: `planTransfer` credits the first one in the
-        // source card's currency. The id makes the order total, so it never changes.
-        cards: {
-          select: { id: true, currency: true },
-          orderBy: [{ isPrimary: "desc" }, { id: "asc" }],
-        },
-      },
-    }),
-    // Scoped to the sender: someone else's card id is simply "not found".
-    tx.card.findFirst({
-      where: request.cardId
-        ? { id: request.cardId, userId: senderId }
-        : { userId: senderId, isPrimary: true },
-      select: { id: true, currency: true, balance: true },
-    }),
-  ]);
+  const { sender, recipient, sourceCard } = await readParties(
+    tx,
+    senderId,
+    request,
+  );
 
   const plan = planTransfer({
     senderId,
@@ -195,30 +272,12 @@ async function runTransfer(
     select: { id: true },
   });
 
-  const debit = async () => {
-    const { count } = await tx.card.updateMany({
-      where: {
-        id: sourceCard.id,
-        userId: senderId,
-        balance: { gte: request.amount },
-      },
-      data: { balance: { decrement: request.amount } },
-    });
-    // The balance read above may be stale by now: this is the check that counts.
-    if (count !== 1) throw new TransferRejected("insufficient_funds");
-  };
-  const credit = () =>
-    tx.card.update({
-      where: { id: destinationCard.id },
-      data: { balance: { increment: request.amount } },
-    });
-  if (sourceCard.id < destinationCard.id) {
-    await debit();
-    await credit();
-  } else {
-    await credit();
-    await debit();
-  }
+  await moveMoney(tx, {
+    senderId,
+    sourceCardId: sourceCard.id,
+    destinationCard,
+    amount: request.amount,
+  });
 
   const movement = {
     amount: request.amount,
@@ -257,92 +316,79 @@ async function runTransfer(
   return toReceipt(stored);
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  );
+/** The sender, the recipient (with every card) and the source card, read in parallel. */
+async function readParties(
+  tx: Prisma.TransactionClient,
+  senderId: string,
+  request: TransferRequest,
+) {
+  const [sender, recipient, sourceCard] = await Promise.all([
+    tx.user.findUniqueOrThrow({
+      where: { id: senderId },
+      select: { firstName: true, lastName: true },
+    }),
+    tx.user.findUnique({
+      where: recipientWhere(request.recipient),
+      select: {
+        ...recipientSelect,
+        // Every card, primary first: `planTransfer` credits the first one in the
+        // source card's currency. The id makes the order total, so it never changes.
+        cards: {
+          select: { id: true, currency: true },
+          orderBy: [{ isPrimary: "desc" }, { id: "asc" }],
+        },
+      },
+    }),
+    // Scoped to the sender: someone else's card id is simply "not found".
+    tx.card.findFirst({
+      where: request.cardId
+        ? { id: request.cardId, userId: senderId }
+        : { userId: senderId, isPrimary: true },
+      select: { id: true, currency: true, balance: true },
+    }),
+  ]);
+  return { sender, recipient, sourceCard };
 }
 
 /**
- * A new code collides with an existing reference about once in 2^40 / (transfers so far):
- * a second draw practically always succeeds; the third attempt is a safety margin.
+ * Debit the source card and credit the destination one, locking the two card rows in
+ * card-id order (see Deadlocks above). The debit is conditional on the balance: that,
+ * not the earlier read, is what guarantees no overdraft.
  */
-const MAX_REFERENCE_ATTEMPTS = 3;
-
-/** `newCode` is injectable so a test can force a reference collision. */
-export function createPrismaTransferRepository({
-  newCode = () => newTransferCode(),
-}: { newCode?: () => string } = {}): TransferRepository {
-  return {
-    findRecipient,
-    async execute(senderId, request) {
-      for (let attempt = 1; ; attempt += 1) {
-        const outcome = await executeOnce(senderId, request, newCode());
-        if (outcome !== REFERENCE_TAKEN) return outcome;
-        if (attempt === MAX_REFERENCE_ATTEMPTS) {
-          throw new Error("Could not draw a free transfer reference");
-        }
-      }
-    },
-  };
-}
-
-function findRecipient(key: RecipientKey) {
-  return db.user.findUnique({
-    where: recipientWhere(key),
-    select: recipientSelect,
-  });
-}
-
-/** The transaction rolled back because the drawn reference already exists. */
-const REFERENCE_TAKEN = Symbol("reference taken");
-const MOVEMENT_REFERENCE_INDEX = "Movement_reference_key";
-
-async function executeOnce(
-  senderId: string,
-  request: TransferRequest,
-  code: string,
-): Promise<TransferOutcome | typeof REFERENCE_TAKEN> {
-  const existing = await findByIdempotencyKey(
-    db,
+async function moveMoney(
+  tx: Prisma.TransactionClient,
+  {
     senderId,
-    request.idempotencyKey,
-  );
-  if (existing) return replay(existing, request);
+    sourceCardId,
+    destinationCard,
+    amount,
+  }: {
+    senderId: string;
+    sourceCardId: string;
+    destinationCard: DestinationCard;
+    amount: string;
+  },
+): Promise<void> {
+  const debit = async () => {
+    const { count } = await tx.card.updateMany({
+      where: { id: sourceCardId, userId: senderId, balance: { gte: amount } },
+      data: { balance: { decrement: amount } },
+    });
+    // The balance read before planning may be stale by now: this is the check that counts.
+    if (count !== 1) throw new TransferRejected("insufficient_funds");
+  };
+  const credit = () =>
+    tx.card.update({
+      where: { id: destinationCard.id },
+      data: { balance: { increment: amount } },
+    });
 
-  try {
-    const receipt = await db.$transaction((tx) =>
-      runTransfer(tx, senderId, request, code),
-    );
-    return { ok: true, receipt, replayed: false };
-  } catch (error) {
-    if (error instanceof TransferRejected) {
-      // A duplicate can pass the key check above while its twin is still running, then
-      // read the balance after the twin committed and plan against the debited value
-      // ("insufficient funds"). If the key is committed by now, the twin won: replay it.
-      const twin = await findByIdempotencyKey(
-        db,
-        senderId,
-        request.idempotencyKey,
-      );
-      if (twin) return replay(twin, request);
-      return { ok: false, reason: error.reason };
-    }
-    if (isUniqueViolation(error)) {
-      // Lost the race for the idempotency key: the winner has committed by now.
-      const winner = await findByIdempotencyKey(
-        db,
-        senderId,
-        request.idempotencyKey,
-      );
-      if (winner) return replay(winner, request);
-      // Only a taken reference earns a new draw; any other constraint is a real bug.
-      if (violatedUniqueIndex(error) === MOVEMENT_REFERENCE_INDEX) {
-        return REFERENCE_TAKEN;
-      }
-    }
-    throw error;
+  if (sourceCardId < destinationCard.id) {
+    await debit();
+    await credit();
+  } else {
+    await credit();
+    await debit();
   }
 }
 
