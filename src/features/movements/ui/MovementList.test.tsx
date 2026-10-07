@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { makeMovement } from "@/test/movement-fixtures";
 
 import { MovementList } from "./MovementList";
+
+const TODAY = "2026-10-07";
 
 function enterSteps() {
   return screen
@@ -11,11 +13,49 @@ function enterSteps() {
     .map((item) => item.style.getPropertyValue("--row-enter-step"));
 }
 
+function movementsOn(...isoDates: string[]) {
+  return isoDates.map((iso) => makeMovement({ occurredAt: new Date(iso) }));
+}
+
 describe("MovementList", () => {
-  it("lets each row enter one stagger step after the previous one", () => {
+  it("groups the rows under one header per day, newest first", () => {
     render(
       <MovementList
-        movements={Array.from({ length: 3 }, () => makeMovement())}
+        today={TODAY}
+        movements={movementsOn(
+          "2026-10-07T15:00:00Z",
+          "2026-10-07T12:00:00Z",
+          "2026-10-06T12:00:00Z",
+          "2026-10-05T12:00:00Z",
+        )}
+      />,
+    );
+
+    const list = screen.getByRole("region", { name: "Lista de movimientos" });
+    const headers = within(list).getAllByRole("heading", { level: 2 });
+    expect(headers.map((header) => header.textContent)).toEqual([
+      "Hoy",
+      "Ayer",
+      "5 de octubre",
+    ]);
+    // Each day is one list, named by its header.
+    expect(
+      within(screen.getByRole("list", { name: "Hoy" })).getAllByRole(
+        "listitem",
+      ),
+    ).toHaveLength(2);
+    expect(within(list).getAllByRole("link")).toHaveLength(4);
+  });
+
+  it("lets each row enter one stagger step after the previous one, across days", () => {
+    render(
+      <MovementList
+        today={TODAY}
+        movements={movementsOn(
+          "2026-10-07T15:00:00Z",
+          "2026-10-06T12:00:00Z",
+          "2026-10-05T12:00:00Z",
+        )}
       />,
     );
 
@@ -28,6 +68,7 @@ describe("MovementList", () => {
   it("starts the stagger at the newest batch", () => {
     render(
       <MovementList
+        today={TODAY}
         movements={Array.from({ length: 4 }, () => makeMovement())}
         enterFrom={2}
       />,

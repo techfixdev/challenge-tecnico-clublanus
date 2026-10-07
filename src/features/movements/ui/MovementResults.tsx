@@ -1,15 +1,15 @@
 import "server-only";
 
+import { dayOf } from "@/shared/lib/dates";
+
 import { prismaMovementRepository } from "../data/prisma-movement-repository";
 import { formatMovementCount } from "../domain/movement-display";
 import {
   hasActiveFilters,
-  toMovementSearchParams,
   type MovementFilters,
 } from "../domain/movement-search-params";
 import { listMovements } from "../domain/movement-queries";
 import { LoadMoreMovements } from "./LoadMoreMovements";
-import { MovementList } from "./MovementList";
 import { MovementsEmptyState } from "./MovementsEmptyState";
 
 /**
@@ -27,6 +27,8 @@ export async function MovementResults({
   const page = await listMovements(prismaMovementRepository, userId, {
     filters,
   });
+  // Decided once, here: the browser labels the days as the server did ("Hoy", "Ayer").
+  const today = dayOf(new Date());
   const isFiltered = hasActiveFilters(filters);
   const isEmpty = page.items.length === 0;
 
@@ -45,18 +47,12 @@ export async function MovementResults({
       {isEmpty ? (
         <MovementsEmptyState filters={filters} />
       ) : (
-        <>
-          <MovementList
-            movements={page.items}
-            detailSearch={toMovementSearchParams(filters).toString()}
-          />
-          {page.nextCursor && (
-            <LoadMoreMovements
-              filters={filters}
-              initialCursor={page.nextCursor}
-            />
-          )}
-        </>
+        <LoadMoreMovements
+          filters={filters}
+          initialMovements={page.items}
+          initialCursor={page.nextCursor}
+          today={today}
+        />
       )}
     </div>
   );

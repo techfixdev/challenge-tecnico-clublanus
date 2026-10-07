@@ -8,33 +8,33 @@ import {
 
 import type { MovementType } from "../domain/movement";
 
-/** Visual language per movement type, from the design's movement rows. */
+/**
+ * Visual language per movement type, on its icon tile. The amount is toned by direction
+ * instead (see MovementAmount), so the type's color lives on the tile alone.
+ */
 export const MOVEMENT_TYPE_STYLE: Record<
   MovementType,
   {
     Icon: ComponentType<SVGProps<SVGSVGElement>>;
     tile: string;
-    text: string;
   }
 > = {
   SUBSCRIPTION: {
     Icon: SwapVerticalIcon,
     tile: "bg-subscription-soft text-subscription",
-    text: "text-subscription",
   },
   RECEIVED: {
     Icon: ArrowDownIcon,
     tile: "bg-received-soft text-received",
-    text: "text-received",
   },
   SENT: {
     Icon: ArrowUpIcon,
     tile: "bg-sent-soft text-sent",
-    text: "text-sent",
   },
 };
 
 const SIZE_CLASSES = {
+  sm: { tile: "size-10 rounded-xl", icon: "size-5" },
   md: { tile: "size-12 rounded-xl", icon: "size-5" },
   lg: { tile: "size-20 rounded-3xl", icon: "size-9" },
 } as const;

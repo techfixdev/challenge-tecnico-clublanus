@@ -162,7 +162,7 @@ test.describe("every screen fits every width", () => {
     test("a movement detail and not found", async ({ page }) => {
       await page.goto("/movimientos");
       await page
-        .getByRole("list", { name: "Lista de movimientos" })
+        .getByRole("region", { name: "Lista de movimientos" })
         .getByRole("link")
         .first()
         .click();

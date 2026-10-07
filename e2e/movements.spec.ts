@@ -27,8 +27,14 @@ async function login(page: Page) {
 
 function movementRows(page: Page) {
   return page
-    .getByRole("list", { name: "Lista de movimientos" })
+    .getByRole("region", { name: "Lista de movimientos" })
     .getByRole("listitem");
+}
+
+function dayHeaders(page: Page) {
+  return page
+    .getByRole("region", { name: "Lista de movimientos" })
+    .getByRole("heading", { level: 2 });
 }
 
 function chip(page: Page, name: string) {
@@ -70,7 +76,10 @@ test("home → search → filter → detail → back", async ({ page }) => {
   const latest = page.getByRole("region", { name: "Últimos movimientos" });
   await expect(latest.getByRole("listitem")).toHaveCount(5);
   await expect(latest.getByRole("listitem").first()).toContainText("Adobe");
-  await expect(latest.getByRole("listitem").first()).toContainText("US$ 125");
+  // Money out carries a minus sign (U+2212), money in a plus.
+  await expect(latest.getByRole("listitem").first()).toContainText(
+    "\u2212US$ 125",
+  );
 
   // The search icon opens Movements with the search box focused.
   await page.getByRole("link", { name: "Buscar movimientos" }).click();
@@ -163,6 +172,30 @@ test("loads more movements with cursor pagination", async ({ page }) => {
 
   await expect(movementRows(page)).toHaveCount(SEED.total);
   await expect(page.getByRole("button", { name: "Cargar más" })).toHaveCount(0);
+  // The next page joined the day groups it continues: no day header appears twice.
+  const days = await dayHeaders(page).allTextContents();
+  expect(new Set(days).size).toBe(days.length);
+});
+
+test("groups movements by day under headers that stick below the filters", async ({
+  page,
+}) => {
+  await page.goto("/movimientos");
+  await expect(movementRows(page)).toHaveCount(SEED.pageSize);
+  expect(await dayHeaders(page).count()).toBeGreaterThan(1);
+
+  await page.mouse.wheel(0, 1200);
+  const filters = page.getByTestId("sticky-filters");
+  await expect
+    .poll(async () => {
+      const box = await filters.boundingBox();
+      const bottom = Math.round((box?.y ?? 0) + (box?.height ?? 0));
+      const tops = await dayHeaders(page).evaluateAll((headers) =>
+        headers.map((header) => Math.round(header.getBoundingClientRect().top)),
+      );
+      return tops.some((top) => Math.abs(top - bottom) <= 1);
+    })
+    .toBe(true);
 });
 
 test("shows the empty state for a search without results, and clears it", async ({

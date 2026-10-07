@@ -1,4 +1,4 @@
-import { MovementRowSkeleton } from "@/features/movements/ui/MovementListSkeleton";
+import { MovementGroupSkeleton } from "@/features/movements/ui/MovementListSkeleton";
 import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 import { Skeleton } from "@/shared/ui/Skeleton";
 
@@ -28,9 +28,7 @@ export default function HomeLoading() {
         </div>
         <div className="mt-8 flex flex-col gap-4 px-6">
           <Skeleton className="h-4 w-40" />
-          {Array.from({ length: 4 }, (_, index) => (
-            <MovementRowSkeleton key={index} />
-          ))}
+          <MovementGroupSkeleton rows={5} />
         </div>
       </div>
     </ScreenTransition>

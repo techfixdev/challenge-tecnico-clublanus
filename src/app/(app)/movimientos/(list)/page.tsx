@@ -12,6 +12,7 @@ import { MonthlySummarySkeleton } from "@/features/movements/ui/MonthlySummaryVi
 import { MovementListSkeleton } from "@/features/movements/ui/MovementListSkeleton";
 import { MovementResults } from "@/features/movements/ui/MovementResults";
 import { MovementSearch } from "@/features/movements/ui/MovementSearch";
+import { StickyFiltersHeight } from "@/features/movements/ui/StickyFiltersHeight";
 import { GlassHeader } from "@/shared/ui/GlassHeader";
 import {
   RevealTransition,
@@ -57,6 +58,8 @@ export default async function MovementsPage({
               autoFocus={params.focus === "1"}
             />
             <FilterChips filters={filters} />
+            {/* Publishes this block's height: the list's day headers stick under it. */}
+            <StickyFiltersHeight />
           </StickyUnderHeader>
           {/* Keyed by the filters: a new search remounts the boundary and shows the skeleton,
             while the header, search box and chips above stay mounted (focus is kept). */}

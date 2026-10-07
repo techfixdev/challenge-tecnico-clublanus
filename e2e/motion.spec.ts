@@ -31,7 +31,7 @@ async function login(page: Page) {
 
 function movementRows(page: Page) {
   return page
-    .getByRole("list", { name: "Lista de movimientos" })
+    .getByRole("region", { name: "Lista de movimientos" })
     .getByRole("listitem");
 }
 
@@ -247,14 +247,15 @@ test.describe("with motion allowed", () => {
     expect(await entrances()).toBe(firstPaint);
   });
 
-  test("rows lift on hover, and the tapped tile morphs into the detail", async ({
+  test("rows stay flat on hover, and the tapped tile morphs into the detail", async ({
     page,
   }) => {
     await login(page);
     await page.goto("/movimientos");
 
     await expect(movementRows(page).first()).toBeVisible();
-    expect(await hoveredRowTranslate(page)).toBe("0px -2px");
+    // Rows share one grouped surface: hover tints the row instead of lifting it.
+    expect(await hoveredRowTranslate(page)).toBe("none");
 
     await skipWithoutViewTransitions(page);
     const { id, transitions } = await openFirstDetail(page);

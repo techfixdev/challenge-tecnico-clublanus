@@ -3,16 +3,15 @@ import type { ReactNode } from "react";
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
 import { BackLink } from "@/shared/ui/BackLink";
-import { Money } from "@/shared/ui/Money";
 
 import type { Movement } from "../domain/movement";
 import {
   MOVEMENT_STATUS_LABEL,
   MOVEMENT_TYPE_LABEL,
-  movementDirection,
 } from "../domain/movement-display";
+import { MovementAmount } from "./MovementAmount";
 import { MovementTile } from "./MovementTile";
-import { MOVEMENT_TYPE_STYLE, MovementTypeIcon } from "./MovementTypeIcon";
+import { MovementTypeIcon } from "./MovementTypeIcon";
 import { StatusBadge } from "./StatusBadge";
 
 function DetailRow({ term, children }: { term: string; children: ReactNode }) {
@@ -51,13 +50,11 @@ export function MovementDetail({
           {movement.counterparty}
         </h1>
         <p className="mt-1 text-sm text-muted">{movement.description}</p>
-        <p
-          className={`mt-4 text-4xl font-semibold tabular-nums ${MOVEMENT_TYPE_STYLE[movement.type].text}`}
-        >
-          <Money
-            value={movement.amount}
+        <p className="mt-4 text-4xl font-semibold">
+          <MovementAmount
+            type={movement.type}
+            amount={movement.amount}
             currency={movement.currency}
-            direction={movementDirection(movement.type)}
           />
         </p>
         <p className="mt-3">

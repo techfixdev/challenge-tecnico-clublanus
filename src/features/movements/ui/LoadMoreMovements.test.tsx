@@ -1,9 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeMovement } from "@/test/movement-fixtures";
 
+import type { Movement } from "../domain/movement";
 import { toMovementDto } from "../domain/movement-dto";
 import { LOAD_MORE_TIMEOUT_MS, LoadMoreMovements } from "./LoadMoreMovements";
 
@@ -39,11 +40,13 @@ function hangUntilAborted(_input: RequestInfo | URL, init?: RequestInit) {
   });
 }
 
-function renderLoadMore() {
+function renderLoadMore(initialMovements: Movement[] = []) {
   return render(
     <LoadMoreMovements
       filters={{ query: "juan", type: "SENT" }}
+      initialMovements={initialMovements}
       initialCursor="cursor-1"
+      today="2026-10-07"
     />,
   );
 }
@@ -98,6 +101,53 @@ describe("LoadMoreMovements", () => {
       .getAllByRole("listitem")
       .map((item) => item.style.getPropertyValue("--row-enter-step"));
     expect(steps.slice(2)).toEqual(["0", "1"]);
+  });
+
+  it("merges a page that continues a day into that day's group", async () => {
+    const user = userEvent.setup();
+    const nextPage = {
+      data: [
+        makeMovement({ occurredAt: new Date("2026-10-05T12:00:00Z") }),
+        makeMovement({ occurredAt: new Date("2026-10-04T12:00:00Z") }),
+      ].map(toMovementDto),
+      total: 4,
+      nextCursor: null,
+    };
+    fetchMock.mockResolvedValue(jsonResponse(nextPage));
+    renderLoadMore([
+      makeMovement({ occurredAt: new Date("2026-10-07T12:00:00Z") }),
+      makeMovement({ occurredAt: new Date("2026-10-05T18:00:00Z") }),
+    ]);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("listitem")).toHaveLength(4),
+    );
+    expect(
+      screen.getAllByRole("heading").map((heading) => heading.textContent),
+    ).toEqual(["Hoy", "5 de octubre", "4 de octubre"]);
+    expect(
+      within(screen.getByRole("list", { name: "5 de octubre" })).getAllByRole(
+        "listitem",
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("lists a single page without a button or a live region", () => {
+    render(
+      <LoadMoreMovements
+        filters={{}}
+        initialMovements={[makeMovement()]}
+        initialCursor={null}
+        today="2026-10-07"
+      />,
+    );
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("hides the button after the last page and uses the singular", async () => {

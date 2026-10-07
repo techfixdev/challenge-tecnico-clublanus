@@ -288,6 +288,45 @@ body {
 }
 
 /*
+ * Grouped list (iOS inset-grouped, Monzo): rows share one white surface instead of each
+ * being its own card, separated by hairlines that start where the row's text does (past
+ * its 16px padding, 40px tile and 14px gap), so the icons read as one column. The surface
+ * clips the rows' tap tint to its corners; focus rings are drawn inset for the same reason.
+ */
+@utility grouped-list {
+  overflow: hidden;
+  border-radius: var(--radius-2xl);
+  background-color: var(--color-surface);
+  background-image: linear-gradient(
+    var(--light-angle),
+    rgb(255 255 255 / 0) 40%,
+    color-mix(in srgb, var(--color-border) 30%, transparent)
+  );
+  box-shadow: var(--shadow-card);
+
+  & > li {
+    position: relative;
+  }
+
+  & > li + li::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 4.375rem;
+    z-index: 1;
+    height: 1px;
+    background-color: var(--color-border);
+    pointer-events: none;
+  }
+
+  @media (forced-colors: active) {
+    background-image: none;
+    border: 1px solid CanvasText;
+  }
+}
+
+/*
  * Loading placeholder: the base grey plus a soft highlight sweeping across it, which
  * reads as "loading" better than a static block. The highlight is a pseudo-element moved
  * with `transform`, so the sweep never repaints the layout.

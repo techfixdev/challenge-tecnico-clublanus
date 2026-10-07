@@ -6,7 +6,7 @@ import { makeMovement } from "@/test/movement-fixtures";
 import { MovementDetail } from "./MovementDetail";
 
 describe("MovementDetail", () => {
-  it("shows the receipt data with a signed, type-colored amount", () => {
+  it("shows the receipt data with a signed amount, garnet when money comes in", () => {
     render(
       <MovementDetail
         movement={makeMovement({
@@ -38,7 +38,7 @@ describe("MovementDetail", () => {
     );
   });
 
-  it("uses a minus sign for money leaving the account and names the card", () => {
+  it("uses a minus sign and calm ink for money leaving the account, and names the card", () => {
     render(
       <MovementDetail
         movement={makeMovement({
@@ -51,8 +51,9 @@ describe("MovementDetail", () => {
     );
 
     expect(screen.getByText("−US$ 35,50").parentElement).toHaveClass(
-      "text-sent",
+      "text-foreground",
     );
+    expect(screen.getByText("menos 35,50 dólares")).toHaveClass("sr-only");
     expect(screen.getAllByText("Pendiente")).toHaveLength(2); // badge + status row
     expect(screen.getByText(/Mastercard/)).toHaveTextContent(
       "Mastercard •••• terminada en 1234",

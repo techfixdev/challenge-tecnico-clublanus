@@ -502,6 +502,23 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 ---
 
+### T12b-D — Lista de movimientos agrupada y montos con signo (07/10/2026)
+
+**Pedido:** la auditoría de UX mostró que cada fila era su propia tarjeta con sombra (pesado: entraban ~3 filas sobre la barra), que una lista de 20 filas no tenía fechas y que los montos sin signo, coloreados por tipo, no dejaban leer qué entra y qué sale.
+
+**Decisión revertida:** en T7 (06/10) se había decidido mantener las filas como tarjetas separadas y los montos sin signo, como en el Figma. **El usuario revirtió esa decisión el 07/10/2026**: se prioriza la legibilidad de la lista sobre la fidelidad al Figma en este punto.
+
+**Qué se hizo:**
+- **Superficie agrupada:** las filas de Home y de Movimientos comparten una sola superficie blanca (`grouped-list` en `globals.css`) con separadores de 1 px que arrancan después del ícono. Filas de ~64 px (ícono de 40 px), sin elevarse al pasar el mouse: se tiñen, como las filas de una lista. El foco se dibuja hacia adentro porque la superficie recorta sus bordes.
+- **Días en Movimientos:** `groupMovementsByDay` agrupa por día calendario de Buenos Aires (`dayOf` y `formatDayLabel` en `src/shared/lib/dates.ts`): "Hoy", "Ayer", "5 de octubre", y "31 de diciembre de 2025" cuando el año no es el actual. Los encabezados quedan pegados debajo del buscador y los chips: un componente sin vista (`StickyFiltersHeight`) mide ese bloque y publica su alto en una variable CSS. "Hoy" lo decide el servidor una vez, así el navegador no puede nombrar distinto un día al hidratar. La primera página y las de "Cargar más" son una sola lista, así una página que continúa un día se suma a su grupo.
+- **Home** usa un solo grupo, sin encabezados: cinco filas partidas en dos o tres días se leerían como fragmentos, y "Últimos movimientos" ya dice que son los más nuevos.
+- **Signo por dirección:** sale → `−` (U+2212), entra → `+`. Entra solo `RECEIVED`; salen `SENT` y `SUBSCRIPTION` (débito automático), con la misma regla que el resumen del mes. El monto es granate si entra y tinta si sale; el color del tipo queda en el ícono. El detalle usa la misma convención (`MovementAmount`).
+- Esqueletos dentro de una superficie agrupada, con encabezado de día en Movimientos.
+
+**Tests primero:** primero los tests de `dayOf`/`formatDayLabel` (Hoy, Ayer, cambio de mes y de año, zona horaria), de `groupMovementsByDay` (orden, unión de páginas) y los de fila/detalle/lista con signo, tono y lectura ("menos 95 dólares", "Recibido"); fallaron (5 y 7 en rojo) y pasaron después. En e2e, la lista se busca como región "Lista de movimientos"; se agregó un test de encabezados pegados debajo de los filtros y de días sin repetir tras "Cargar más". Como Home ahora es más corta (scrollea ~56 px a 390×844), los tests del header de vidrio scrollean 52 px en lugar de 200.
+
+---
+
 ## 6. Estructura del proyecto
 
 Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.

@@ -30,7 +30,7 @@ async function login(page: Page) {
 
 function movementRows(page: Page) {
   return page
-    .getByRole("list", { name: "Lista de movimientos" })
+    .getByRole("region", { name: "Lista de movimientos" })
     .getByRole("listitem");
 }
 

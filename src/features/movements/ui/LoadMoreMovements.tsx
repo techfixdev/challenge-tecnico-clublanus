@@ -59,14 +59,20 @@ async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
 
 type LoadMoreMovementsProps = {
   filters: MovementFilters;
-  /** Cursor returned with the server-rendered first page. */
-  initialCursor: string;
+  /** The server-rendered first page. */
+  initialMovements: Movement[];
+  /** Cursor returned with the first page; `null` when it is the only one. */
+  initialCursor: string | null;
+  /** Today's day key, decided by the server (see MovementList). */
+  today: string;
 };
 
 /**
- * "Cargar más": keyset pagination through the REST API (`/api/movements?cursor=`).
- * The first page is server-rendered; later pages are appended on demand. The response is
- * validated with the movement DTO schema of the API, so a contract drift fails loudly.
+ * The movement list with "Cargar más": keyset pagination through the REST API
+ * (`/api/movements?cursor=`). The first page comes from the server; later pages are
+ * appended on demand and rendered as one list with it, so a page that continues a day
+ * joins that day's group. The response is validated with the movement DTO schema of the
+ * API, so a contract drift fails loudly.
  *
  * Failures are recoverable in place (inline message + "Reintentar"), except an expired
  * session (401), which goes to the login instead of retrying a request that cannot succeed;
@@ -74,15 +80,18 @@ type LoadMoreMovementsProps = {
  */
 export function LoadMoreMovements({
   filters,
+  initialMovements,
   initialCursor,
+  today,
 }: LoadMoreMovementsProps) {
   const router = useRouter();
-  const [movements, setMovements] = useState<Movement[]>([]);
+  const [loaded, setLoaded] = useState<Movement[]>([]);
   const [batchStart, setBatchStart] = useState(0);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [announcement, setAnnouncement] = useState("");
   const requestRef = useRef<AbortController>(undefined);
+  const paginated = initialCursor !== null;
 
   // Leaving the page cancels a request in flight (and its state updates).
   useEffect(
@@ -109,8 +118,8 @@ export function LoadMoreMovements({
         controller.signal,
       );
       const next = page.movements;
-      setBatchStart(movements.length);
-      setMovements((current) => [...current, ...next]);
+      setBatchStart(initialMovements.length + loaded.length);
+      setLoaded((current) => [...current, ...next]);
       setCursor(page.nextCursor);
       setAnnouncement(loadedAnnouncement(next.length));
       setStatus("idle");
@@ -133,17 +142,19 @@ export function LoadMoreMovements({
 
   return (
     <>
-      {movements.length > 0 && (
-        <MovementList
-          movements={movements}
-          detailSearch={toMovementSearchParams(filters).toString()}
-          enterFrom={batchStart}
-        />
+      <MovementList
+        movements={[...initialMovements, ...loaded]}
+        today={today}
+        detailSearch={toMovementSearchParams(filters).toString()}
+        enterFrom={batchStart}
+      />
+      {/* One polite live region: visible for errors and the redirect, screen-reader-only
+          for progress. Only when there are more pages: a single page announces nothing. */}
+      {paginated && (
+        <p role="status" className={STATUS_CLASS[status]}>
+          {announcement}
+        </p>
       )}
-      {/* One polite live region: visible for errors and the redirect, screen-reader-only for progress. */}
-      <p role="status" className={STATUS_CLASS[status]}>
-        {announcement}
-      </p>
       {cursor && status !== "redirecting" && (
         <Button
           variant="secondary"

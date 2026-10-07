@@ -7,7 +7,11 @@ import { movementDetailHref, rowEnterStyle } from "./MovementList";
 import { MovementRow } from "./MovementRow";
 import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
-/** "Últimos movimientos" on Home: a flat list, as in the design, plus a link to all. */
+/**
+ * "Últimos movimientos" on Home: the few latest rows as one grouped surface, plus a link
+ * to all. No day headers here: five rows split into two or three days would read as
+ * fragments, and "Últimos" already says they are the newest; Movimientos groups by day.
+ */
 export function LatestMovements({ movements }: { movements: Movement[] }) {
   return (
     <section aria-labelledby="latest-movements" className="px-6">
@@ -35,7 +39,7 @@ export function LatestMovements({ movements }: { movements: Movement[] }) {
           Todavía no tenés movimientos.
         </p>
       ) : (
-        <ul className="flex flex-col gap-4">
+        <ul className="grouped-list">
           {movements.map((movement, index) => (
             <li
               key={movement.id}

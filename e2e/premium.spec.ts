@@ -33,6 +33,13 @@ async function dragPrimaryCard(page: Page) {
 }
 
 /**
+ * A Home scroll past the header's collapse (44px with the "Hola" eyebrow) and its glass
+ * fade (+4px). Home is short since its rows share one grouped surface: at 390×844 it
+ * scrolls about 56px, so a deeper scroll would never be reached.
+ */
+const HOME_COMPACT_SCROLL = 52;
+
+/**
  * Scrolls the window to `y` (from one pixel away, so a scroll event always fires) and waits
  * two frames for scroll-linked styles. On a cold server the page can still be streaming
  * (too short to scroll that far), so it retries until the window really sits at `y`.
@@ -174,9 +181,12 @@ test.describe("with motion allowed", () => {
     await login(page);
     expect(await computed(page, "glass-header-backdrop", "opacity")).toBe("0");
 
-    await styleAfterScroll(page, 200, "glass-header-backdrop", "opacity").toBe(
-      "1",
-    );
+    await styleAfterScroll(
+      page,
+      HOME_COMPACT_SCROLL,
+      "glass-header-backdrop",
+      "opacity",
+    ).toBe("1");
     // Scaled to 85% (a 2D matrix starting with the scale).
     expect(await computed(page, "glass-header-title", "transform")).toMatch(
       /^matrix\(0\.85, 0, 0, 0\.85/,
@@ -187,7 +197,7 @@ test.describe("with motion allowed", () => {
 
     await page.goto("/movimientos");
     await expect(
-      page.getByRole("list", { name: "Lista de movimientos" }),
+      page.getByRole("region", { name: "Lista de movimientos" }),
     ).toBeVisible();
     await styleAfterScroll(
       page,
@@ -269,9 +279,12 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     page,
   }) => {
     await login(page);
-    await styleAfterScroll(page, 200, "glass-header-backdrop", "opacity").toBe(
-      "1",
-    );
+    await styleAfterScroll(
+      page,
+      HOME_COMPACT_SCROLL,
+      "glass-header-backdrop",
+      "opacity",
+    ).toBe("1");
     expect(await computed(page, "glass-header-title", "transform")).toBe(
       "none",
     );
@@ -300,9 +313,12 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     await page.getByRole("button", { name: "Ingresar" }).click();
     await expect(page).toHaveURL(/\/$/);
 
-    await styleAfterScroll(page, 200, "glass-header-backdrop", "opacity").toBe(
-      "1",
-    );
+    await styleAfterScroll(
+      page,
+      HOME_COMPACT_SCROLL,
+      "glass-header-backdrop",
+      "opacity",
+    ).toBe("1");
   });
 
   test("the card stays flat when dragged, and cards do not scale", async ({
