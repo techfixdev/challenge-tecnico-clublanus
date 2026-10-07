@@ -65,7 +65,10 @@ test("logs in, keeps /login out of reach, and logs out", async ({
   await page.goto("/login");
   await expect(page).toHaveURL(/\/$/);
 
+  // Signing out lives in the profile sheet, behind a confirmation.
+  await page.getByRole("button", { name: "Tu perfil" }).click();
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  await page.getByRole("button", { name: "Sí, cerrar sesión" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);

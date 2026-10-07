@@ -2,7 +2,9 @@ import { prismaCardRepository } from "@/features/account/data/prisma-card-reposi
 import { getAccountCards, toCardFace } from "@/features/account/domain/card";
 import { CardCarousel } from "@/features/account/ui/CardCarousel";
 import { HomeHeader } from "@/features/account/ui/HomeHeader";
+import { logout } from "@/features/auth/server/actions";
 import { requireUser } from "@/features/auth/server/current-user";
+import { ProfileMenu } from "@/features/auth/ui/ProfileMenu";
 import { prismaMovementRepository } from "@/features/movements/data/prisma-movement-repository";
 import { getLatestMovements } from "@/features/movements/domain/movement-queries";
 import { LatestMovements } from "@/features/movements/ui/LatestMovements";
@@ -20,7 +22,17 @@ export default async function HomePage() {
   return (
     <ScreenTransition>
       <main className="flex flex-col">
-        <HomeHeader firstName={user.firstName} />
+        <HomeHeader
+          firstName={user.firstName}
+          profile={
+            <ProfileMenu
+              firstName={user.firstName}
+              lastName={user.lastName}
+              email={user.email}
+              logoutAction={logout}
+            />
+          }
+        />
         {/* 24px from the title, as in the design: the header's own 12px bottom padding
           (its compact bar needs it) plus 12px here. */}
         <div className="mt-3">

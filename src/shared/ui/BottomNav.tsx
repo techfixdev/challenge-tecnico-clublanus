@@ -14,7 +14,7 @@ import { ROUTES } from "@/shared/lib/routes";
 import { PINNED_CHROME, TAB_SWITCH } from "./motion/navigation";
 import { installPinnedChromeTaps } from "./motion/pinned-chrome-taps";
 
-import { HomeIcon, ListIcon, LogoutIcon } from "./icons";
+import { HomeIcon, ListIcon } from "./icons";
 import { INDICATOR_SPRING, INSTANT, PRESS_SPRING } from "./motion/springs";
 import { useReducedMotionPreference } from "./reduced-motion";
 import { MotionLink } from "./motion/MotionLink";
@@ -40,6 +40,18 @@ const NAV_ITEMS: NavItem[] = [
     prefetch: true,
   },
 ];
+
+/**
+ * Focused tasks: screens that hide the nav, so the task's own pinned action owns the
+ * bottom of the screen and the only ways out are finishing or its back control.
+ */
+const FOCUSED_TASK_ROUTES: readonly string[] = [ROUTES.transfer];
+
+function isFocusedTask(pathname: string): boolean {
+  return FOCUSED_TASK_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
 
 /** "page" on the exact URL; "true" inside the section (e.g. a movement detail). */
 function currentState(
@@ -74,9 +86,11 @@ function TapIcon({
 }
 
 /**
- * App navigation from the design: Home, Movements and Logout, fixed to the bottom of the
- * phone-width column. Logout is a form posting to the Server Action it receives, which
- * keeps this shared component independent from the auth feature.
+ * App navigation: the two sections, Home and Movements, fixed to the bottom of the
+ * phone-width column. Signing out is not a tab (a destructive action has no place in the
+ * thumb zone): it lives in the profile sheet on Home, behind a confirmation. Sending and
+ * receiving are Home's quick actions. Inside a focused task (the send flow) the nav
+ * steps aside entirely; `--nav-clearance` drops to zero without it (globals.css).
  *
  * The bar is frosted glass, and the current section sits on a soft granate pill. The
  * pill is one shared element (`layoutId`): when the section changes, Motion measures
@@ -87,24 +101,23 @@ function TapIcon({
  * the bar has its own view-transition name, so it stays put above the moving screens.
  * A tap on it while a transition runs still reaches its item (see pinned-chrome-taps.ts).
  */
-export function BottomNav({
-  logoutAction,
-}: {
-  logoutAction: () => Promise<void>;
-}) {
+export function BottomNav() {
   const pathname = usePathname();
   const reduced = useReducedMotionPreference();
   // The nav lives in the signed-in layout: one guard for all of its pinned chrome.
   useEffect(() => installPinnedChromeTaps(), []);
 
+  if (isFocusedTask(pathname)) return null;
+
   return (
     <nav
       aria-label="Principal"
+      data-bottom-nav
       data-pinned-chrome
       style={{ viewTransitionName: PINNED_CHROME.bottomNav }}
       className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] glass pb-[env(safe-area-inset-bottom)] shadow-float inset-shadow-specular-glass"
     >
-      {/* The side padding shrinks on very narrow viewports (page zoom), so the three items
+      {/* The side padding shrinks on very narrow viewports (page zoom), so the items
           always fit; from about 216px wide it is the design's 24px. */}
       <ul className="flex h-20 items-center justify-around px-[clamp(0px,calc((100%-10.5rem)/2),1.5rem)]">
         {NAV_ITEMS.map(({ href, label, Icon, prefetch }) => {
@@ -134,19 +147,6 @@ export function BottomNav({
             </li>
           );
         })}
-        <li>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className={`${ITEM_CLASSES} text-foreground hover:text-primary`}
-            >
-              <TapIcon reduced={reduced}>
-                <LogoutIcon className="size-[26px]" />
-              </TapIcon>
-              <span className="sr-only">Cerrar sesión</span>
-            </button>
-          </form>
-        </li>
       </ul>
     </nav>
   );

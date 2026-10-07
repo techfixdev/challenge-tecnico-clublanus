@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { ROUTES } from "@/shared/lib/routes";
 import { GlassHeader } from "@/shared/ui/GlassHeader";
 import { SECTION_PUSH } from "@/shared/ui/motion/navigation";
@@ -9,7 +11,17 @@ import { MotionLink } from "@/shared/ui/motion/MotionLink";
 /** Link from the search icon: lands on Movements with the search box focused. */
 const SEARCH_FROM_HOME_HREF = `${ROUTES.movements}?focus=1`;
 
-export function HomeHeader({ firstName }: { firstName: string }) {
+/**
+ * Home's header: the greeting, search, notifications and, last, the profile entry point
+ * (passed in by the page, so this feature does not depend on the auth one).
+ */
+export function HomeHeader({
+  firstName,
+  profile,
+}: {
+  firstName: string;
+  profile?: ReactNode;
+}) {
   return (
     <GlassHeader
       eyebrow="Hola"
@@ -25,6 +37,7 @@ export function HomeHeader({ firstName }: { firstName: string }) {
             <SearchIcon className="size-[22px]" />
           </MotionLink>
           <NotificationsButton />
+          {profile}
         </>
       }
     />

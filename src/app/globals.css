@@ -218,6 +218,12 @@ body {
   --nav-clearance: calc(7rem + env(safe-area-inset-bottom));
 }
 
+/* A focused task (the send flow) hides the bottom nav: no room to keep for it. Its own
+   pinned action bar pads itself by the bottom safe area. */
+:root:not(:has([data-bottom-nav])) {
+  --nav-clearance: 0px;
+}
+
 /*
  * Press feedback for anything tappable (rows, chips, nav items, buttons): a quick shrink
  * on `:active` confirms the touch landed before the navigation or action responds.
@@ -871,6 +877,58 @@ body {
     background-color: var(--color-background);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+/*
+ * Bottom sheet (shared/ui/Sheet.tsx), a modal <dialog>: it rises from the bottom edge
+ * while the page dims, and sinks back on close. `display` and `overlay` transition as
+ * discrete properties, so the dialog stays rendered (and in the top layer) until it has
+ * slid out; browsers without that support simply close it at once. The curve is the
+ * navigation's (no bounce); reduced motion opens and closes it without movement.
+ */
+.sheet {
+  translate: 0 100%;
+  transition:
+    translate var(--motion-duration-push) var(--motion-ease-push),
+    display var(--motion-duration-push) allow-discrete,
+    overlay var(--motion-duration-push) allow-discrete;
+}
+
+.sheet[open] {
+  translate: 0 0;
+}
+
+.sheet::backdrop {
+  background-color: transparent;
+  transition:
+    background-color var(--motion-duration-crossfade) ease-out,
+    display var(--motion-duration-push) allow-discrete,
+    overlay var(--motion-duration-push) allow-discrete;
+}
+
+.sheet[open]::backdrop {
+  background-color: color-mix(
+    in srgb,
+    var(--color-foreground) 32%,
+    transparent
+  );
+}
+
+@starting-style {
+  .sheet[open] {
+    translate: 0 100%;
+  }
+
+  .sheet[open]::backdrop {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet::backdrop {
+    transition: none;
   }
 }
 

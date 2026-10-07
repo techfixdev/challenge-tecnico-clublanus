@@ -9,15 +9,13 @@ vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
 }));
 
-const logout = vi.fn(async () => {});
-
 beforeEach(() => {
   navigation.pathname = "/";
 });
 
 describe("BottomNav", () => {
-  it("offers Home, Movements and a logout button", () => {
-    render(<BottomNav logoutAction={logout} />);
+  it("offers the sections only: Home and Movements, no sign-out", () => {
+    render(<BottomNav />);
 
     expect(
       screen.getByRole("navigation", { name: "Principal" }),
@@ -30,13 +28,24 @@ describe("BottomNav", () => {
       "href",
       "/movimientos",
     );
-    expect(
-      screen.getByRole("button", { name: "Cerrar sesión" }),
-    ).toHaveAttribute("type", "submit");
+    // Signing out lives in the profile sheet on Home, behind a confirmation.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it.each(["/transferir"])(
+    "steps aside inside a focused task (%s), so its actions own the bottom",
+    (pathname) => {
+      navigation.pathname = pathname;
+      render(<BottomNav />);
+
+      expect(
+        screen.queryByRole("navigation", { name: "Principal" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it("marks the current page and puts the sliding indicator under it", () => {
-    render(<BottomNav logoutAction={logout} />);
+    render(<BottomNav />);
 
     const home = screen.getByRole("link", { name: "Inicio" });
     expect(home).toHaveAttribute("aria-current", "page");
@@ -49,7 +58,7 @@ describe("BottomNav", () => {
 
   it("keeps Movements highlighted inside a movement detail", () => {
     navigation.pathname = "/movimientos/abc";
-    render(<BottomNav logoutAction={logout} />);
+    render(<BottomNav />);
 
     const movements = screen.getByRole("link", { name: "Movimientos" });
     expect(movements).toHaveAttribute("aria-current", "true");

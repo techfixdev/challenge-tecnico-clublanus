@@ -1,0 +1,131 @@
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+/*
+ * Sending money is a focused task: no bottom nav inside it, and each step's primary
+ * action stays pinned to the bottom of the screen, fully visible and tappable without
+ * scrolling. Nothing here confirms a transfer (read-only for the shared test database).
+ * Signing out moved off the nav into the profile sheet on Home, behind a confirmation.
+ */
+
+async function login(page: Page) {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("soygranate@clublanus.com");
+  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
+  await page.getByRole("button", { name: "Ingresar" }).click();
+  await expect(page).toHaveURL(/\/$/);
+}
+
+/** Inside the viewport and on top at its center: a tap there reaches it. */
+async function expectTappableWithoutScrolling(page: Page, target: Locator) {
+  await expect(target).toBeVisible();
+  const box = await target.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box, "the action has a box").not.toBeNull();
+  if (!box || !viewport) return;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  const onTop = await target.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+    return hit !== null && element.contains(hit);
+  });
+  expect(onTop, "nothing covers the action").toBe(true);
+}
+
+test.describe("the transfer flow is a focused task", () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test("hides the bottom nav and pins every step's action on screen", async ({
+    page,
+  }) => {
+    await page.goto("/transferir");
+    await expect(
+      page.getByRole("heading", { name: "¿A quién le enviás?" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Principal" }),
+    ).toHaveCount(0);
+
+    const proceed = page.getByRole("button", { name: "Continuar" });
+    // Nothing typed yet: the action is there, and clearly disabled.
+    await expectTappableWithoutScrolling(page, proceed);
+    await expect(proceed).toBeDisabled();
+
+    await page.getByLabel("Alias o CVU").fill("hincha.granate");
+    await expectTappableWithoutScrolling(page, proceed);
+    await proceed.click();
+
+    // The amount step is taller than the screen: the action still sits on it.
+    await expect(
+      page.getByRole("heading", { name: "¿Cuánto le enviás?" }),
+    ).toBeVisible();
+    await page.getByLabel("Monto en ARS").fill("1500");
+    await expect(page.getByLabel("Monto en ARS")).toHaveValue("1.500");
+    await expectTappableWithoutScrolling(page, proceed);
+    await page.getByLabel(/Motivo/).fill("Entradas");
+    await expectTappableWithoutScrolling(page, proceed);
+    await proceed.click();
+
+    await expect(
+      page.getByRole("heading", { name: "Revisá la transferencia" }),
+    ).toBeVisible();
+    await expectTappableWithoutScrolling(
+      page,
+      page.getByRole("button", { name: "Confirmar y enviar" }),
+    );
+    await expect(
+      page.getByRole("navigation", { name: "Principal" }),
+    ).toHaveCount(0);
+  });
+
+  test("brings the bottom nav back once the flow is left", async ({ page }) => {
+    await page.goto("/transferir");
+    await page.getByRole("link", { name: "Volver" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.getByRole("navigation", { name: "Principal" }),
+    ).toBeVisible();
+  });
+});
+
+test("the bottom nav holds the sections only, no sign-out", async ({
+  page,
+}) => {
+  await login(page);
+  const nav = page.getByRole("navigation", { name: "Principal" });
+  await expect(nav.getByRole("link")).toHaveCount(2);
+  await expect(nav.getByRole("link", { name: "Inicio" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Movimientos" })).toBeVisible();
+  await expect(nav.getByRole("button")).toHaveCount(0);
+});
+
+test("signs out from the profile sheet, after confirming", async ({ page }) => {
+  await login(page);
+  await page.getByRole("button", { name: "Tu perfil" }).click();
+  const sheet = page.getByRole("dialog", { name: "Tu perfil" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toContainText("soygranate@clublanus.com");
+
+  // A first tap only asks; cancelling keeps the session.
+  await sheet.getByRole("button", { name: "Cerrar sesión" }).click();
+  await expect(sheet).toContainText("¿Cerrar sesión?");
+  await sheet.getByRole("button", { name: "Cancelar" }).click();
+  await expect(
+    sheet.getByRole("button", { name: "Cerrar sesión" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.getByRole("button", { name: "Tu perfil" }).click();
+  await sheet.getByRole("button", { name: "Cerrar sesión" }).click();
+  await sheet.getByRole("button", { name: "Sí, cerrar sesión" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
+});
