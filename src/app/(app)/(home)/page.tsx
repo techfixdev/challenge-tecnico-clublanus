@@ -7,6 +7,7 @@ import { prismaMovementRepository } from "@/features/movements/data/prisma-movem
 import { getLatestMovements } from "@/features/movements/domain/movement-queries";
 import { LatestMovements } from "@/features/movements/ui/LatestMovements";
 import { TransferShortcuts } from "@/features/transfers/ui/TransferShortcuts";
+import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 
 export default async function HomePage() {
   const user = await requireUser();
@@ -17,20 +18,22 @@ export default async function HomePage() {
   ]);
 
   return (
-    <main className="flex flex-col">
-      <HomeHeader firstName={user.firstName} />
-      {/* 24px from the title, as in the design: the header's own 12px bottom padding
+    <ScreenTransition>
+      <main className="flex flex-col">
+        <HomeHeader firstName={user.firstName} />
+        {/* 24px from the title, as in the design: the header's own 12px bottom padding
           (its compact bar needs it) plus 12px here. */}
-      <div className="mt-3">
-        {/* Faces only: balances, numbers and CVVs never reach the page until revealed. */}
-        <CardCarousel cards={cards.map(toCardFace)} />
-      </div>
-      <div className="mt-5">
-        <TransferShortcuts />
-      </div>
-      <div className="mt-6">
-        <LatestMovements movements={latestMovements} />
-      </div>
-    </main>
+        <div className="mt-3">
+          {/* Faces only: balances, numbers and CVVs never reach the page until revealed. */}
+          <CardCarousel cards={cards.map(toCardFace)} />
+        </div>
+        <div className="mt-5">
+          <TransferShortcuts />
+        </div>
+        <div className="mt-6">
+          <LatestMovements movements={latestMovements} />
+        </div>
+      </main>
+    </ScreenTransition>
   );
 }

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { waitForScreenToSettle } from "./fixtures/view-transitions";
+
 /*
  * Card flip on real rendering (jsdom has no 3D transforms or hit-testing): a tap or the
  * keyboard turns the card over, a swipe or a tilt drag does not, and under reduced motion
@@ -12,6 +14,8 @@ async function login(page: Page) {
   await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/$/);
+  // Home dissolves in after login; it takes taps once it has arrived.
+  await waitForScreenToSettle(page);
 }
 
 const FLIP_MASTERCARD =

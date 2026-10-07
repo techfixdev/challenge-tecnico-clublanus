@@ -1,13 +1,12 @@
 import { ViewTransition, type ReactNode } from "react";
 
+import { QUICK_ACTION_OPEN } from "@/shared/ui/motion/navigation";
+
 /** View-transition names shared by a Home quick action and the screen it opens. */
 export const QUICK_ACTION_MORPH = {
   transfer: "quick-action-transfer",
   receive: "quick-action-receive",
 } as const;
-
-/** Transition type the quick actions put on their navigation (Link `transitionTypes`). */
-export const QUICK_ACTION_OPEN = "quick-action-open";
 
 /**
  * Container transform between a Home quick action ("Enviar", "Recibir") and its screen:
@@ -16,8 +15,11 @@ export const QUICK_ACTION_OPEN = "quick-action-open";
  * into the tile. Both screens are fully prefetched from Home, so the pair exists in the
  * navigation's commit and the morph only covers the swap, never delays it.
  *
- * - `share`: opening (typed by the tile's link) and closing (any other link) use their
- *   own classes, timed and shaped in globals.css (`.container-open`, `.container-close`).
+ * - `share`: opening (typed `quick-action-open` by the tile's link) and closing (typed
+ *   `quick-action-close` by the screen's "Volver") use their own classes, timed and
+ *   shaped in globals.css (`.container-open`, `.container-close`). Both types keep the
+ *   screens themselves still (see shared/ui/motion/navigation.ts), so only the
+ *   container moves.
  * - `default="none"`: neither side animates on unrelated transitions.
  * The browser's back button swaps without a morph, as for the movement tile (React starts
  * no view transition on that sync update); reduced motion makes the morph instant.

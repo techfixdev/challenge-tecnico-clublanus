@@ -1,14 +1,12 @@
-import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
 
 import { ROUTES } from "@/shared/lib/routes";
 import { ReceiveIcon, SendIcon } from "@/shared/ui/icons";
 
-import {
-  QUICK_ACTION_MORPH,
-  QUICK_ACTION_OPEN,
-  QuickActionMorph,
-} from "./QuickActionMorph";
+import { OPEN_QUICK_ACTION } from "@/shared/ui/motion/navigation";
+
+import { QUICK_ACTION_MORPH, QuickActionMorph } from "./QuickActionMorph";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 type Shortcut = {
   href: string;
@@ -55,10 +53,10 @@ export function TransferShortcuts() {
         {SHORTCUTS.map(({ href, label, Icon, tile, morph }) => (
           <li key={href} className="@container min-w-0">
             <QuickActionMorph name={morph}>
-              <Link
+              <MotionLink
                 href={href}
                 prefetch
-                transitionTypes={[QUICK_ACTION_OPEN]}
+                transitionTypes={OPEN_QUICK_ACTION}
                 className="flex pressable flex-col items-center justify-center gap-1.5 rounded-2xl bg-surface lit-surface px-2 py-3 shadow-card hover:text-primary focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:shadow-1 @[9rem]:h-14 @[9rem]:flex-row @[9rem]:justify-start @[9rem]:gap-3 @[9rem]:p-2 @[9rem]:pr-4"
               >
                 <span
@@ -70,7 +68,7 @@ export function TransferShortcuts() {
                 <span className="text-sm font-medium text-foreground">
                   {label}
                 </span>
-              </Link>
+              </MotionLink>
             </QuickActionMorph>
           </li>
         ))}

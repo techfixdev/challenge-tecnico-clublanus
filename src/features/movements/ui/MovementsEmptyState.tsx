@@ -1,13 +1,13 @@
-import Link from "next/link";
-
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
 import { ListIcon, SearchIcon } from "@/shared/ui/icons";
+import { IN_PLACE } from "@/shared/ui/motion/navigation";
 
 import {
   hasActiveFilters,
   type MovementFilters,
 } from "../domain/movement-search-params";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /**
  * Two different empty states: an account without movements at all, and a search or
@@ -37,12 +37,13 @@ export function MovementsEmptyState({ filters }: { filters: MovementFilters }) {
       </h2>
       <p className="mt-1 text-sm text-muted">{description}</p>
       {isFiltered && (
-        <Link
+        <MotionLink
           href={ROUTES.movements}
+          transitionTypes={IN_PLACE}
           className={buttonClassName({ size: "compact", className: "mt-6" })}
         >
           Limpiar filtros
-        </Link>
+        </MotionLink>
       )}
     </div>
   );

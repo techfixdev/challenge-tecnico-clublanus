@@ -1,7 +1,6 @@
 "use client";
 
 import * as m from "motion/react-m";
-import Link from "next/link";
 import type { ReactNode, Ref } from "react";
 
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
@@ -9,9 +8,11 @@ import { formatLongDate, formatTime } from "@/shared/lib/dates";
 import { Money } from "@/shared/ui/Money";
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
+import { CLOSE_QUICK_ACTION, PUSH } from "@/shared/ui/motion/navigation";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
 import type { TransferReceipt } from "../domain/transfer-model";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 const POP_SPRING = { type: "spring", stiffness: 380, damping: 22 } as const;
 const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
@@ -126,19 +127,21 @@ export function TransferSuccess({
 
       <div className="mt-8 flex flex-col gap-3">
         {receipt.movementId ? (
-          <Link
+          <MotionLink
             href={ROUTES.movement(receipt.movementId)}
+            transitionTypes={PUSH}
             className={buttonClassName()}
           >
             Ver comprobante
-          </Link>
+          </MotionLink>
         ) : null}
-        <Link
+        <MotionLink
           href={ROUTES.home}
+          transitionTypes={CLOSE_QUICK_ACTION}
           className={buttonClassName({ variant: "secondary" })}
         >
           Volver al inicio
-        </Link>
+        </MotionLink>
       </div>
     </div>
   );

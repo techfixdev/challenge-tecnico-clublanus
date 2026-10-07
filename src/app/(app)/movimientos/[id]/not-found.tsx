@@ -1,8 +1,8 @@
-import Link from "next/link";
-
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
 import { SearchIcon } from "@/shared/ui/icons";
+import { POP } from "@/shared/ui/motion/navigation";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /** Same answer for unknown, malformed and other users' ids: never confirms an id exists. */
 export default function MovementNotFound() {
@@ -18,12 +18,13 @@ export default function MovementNotFound() {
         Puede que el enlace sea incorrecto o que el movimiento no sea de tu
         cuenta.
       </p>
-      <Link
+      <MotionLink
         href={ROUTES.movements}
+        transitionTypes={POP}
         className={buttonClassName({ size: "compact", className: "mt-8" })}
       >
         Ver mis movimientos
-      </Link>
+      </MotionLink>
     </main>
   );
 }

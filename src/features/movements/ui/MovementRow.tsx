@@ -1,12 +1,12 @@
-import Link from "next/link";
-
 import { Money } from "@/shared/ui/Money";
+import { PUSH } from "@/shared/ui/motion/navigation";
 
 import type { Movement } from "../domain/movement";
 import { MOVEMENT_TYPE_LABEL } from "../domain/movement-display";
 import { MovementTile } from "./MovementTile";
 import { MovementTypeIcon, MOVEMENT_TYPE_STYLE } from "./MovementTypeIcon";
 import { StatusBadge } from "./StatusBadge";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 type MovementRowProps = {
   movement: Pick<
@@ -24,14 +24,16 @@ type MovementRowProps = {
 
 /**
  * One movement as a card-like row; the whole row links to its detail. The type tile is a
- * shared element: on navigation it morphs into the detail's large tile (and back).
+ * shared element: on navigation it morphs into the detail's large tile (and back), while
+ * the detail is pushed in from the right (`nav-forward`).
  */
 export function MovementRow({ movement, href }: MovementRowProps) {
   const { id, counterparty, description, type, status, amount, currency } =
     movement;
   return (
-    <Link
+    <MotionLink
       href={href}
+      transitionTypes={PUSH}
       className="flex pressable flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl bg-surface lit-surface p-4 shadow-card hover:-translate-y-0.5 hover:shadow-lifted focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:translate-y-0 active:shadow-card motion-reduce:hover:translate-none"
     >
       <MovementTile id={id}>
@@ -53,6 +55,6 @@ export function MovementRow({ movement, href }: MovementRowProps) {
         {/* Unsigned, as in the design: the tile and the color tell the direction. */}
         <Money value={amount} currency={currency} />
       </span>
-    </Link>
+    </MotionLink>
   );
 }

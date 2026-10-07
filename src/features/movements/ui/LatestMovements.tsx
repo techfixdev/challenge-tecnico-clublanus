@@ -1,11 +1,11 @@
-import Link from "next/link";
-
 import { ROUTES } from "@/shared/lib/routes";
+import { SECTION_PUSH } from "@/shared/ui/motion/navigation";
 
 import type { Movement } from "../domain/movement";
 import { DETAIL_FROM_HOME } from "../domain/movement-search-params";
 import { movementDetailHref, rowEnterStyle } from "./MovementList";
 import { MovementRow } from "./MovementRow";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /** "Últimos movimientos" on Home: a flat list, as in the design, plus a link to all. */
 export function LatestMovements({ movements }: { movements: Movement[] }) {
@@ -21,13 +21,14 @@ export function LatestMovements({ movements }: { movements: Movement[] }) {
         </h2>
         {/* Full prefetch: the list is a likely next screen, so it opens ready, without its
             skeleton (the default prefetch of a dynamic route stops at its loading.tsx). */}
-        <Link
+        <MotionLink
           href={ROUTES.movements}
           prefetch
+          transitionTypes={SECTION_PUSH}
           className="ml-auto shrink-0 rounded-md text-xs font-medium whitespace-nowrap text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
         >
           Ver todos
-        </Link>
+        </MotionLink>
       </div>
       {movements.length === 0 ? (
         <p className="rounded-2xl bg-surface lit-surface p-6 text-center text-sm text-muted shadow-card">

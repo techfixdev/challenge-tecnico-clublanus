@@ -7,6 +7,15 @@ import {
   type Request,
 } from "@playwright/test";
 
+import {
+  allAnimations,
+  isFullPrefetch,
+  recordViewTransitions,
+  skipWithoutViewTransitions,
+  watchPrefetch,
+  type TransitionEntry,
+} from "./fixtures/view-transitions";
+
 /*
  * Motion checks on real computed styles (jsdom has no CSS). Each case runs with and
  * without `prefers-reduced-motion: reduce` to prove the preference turns movement off.
@@ -35,86 +44,6 @@ async function rowAnimations(page: Page) {
   );
 }
 
-/**
- * The morph needs the View Transitions API. Browsers without it navigate with an instant
- * swap (no animation to assert), so the transition checks skip there with that reason.
- */
-async function skipWithoutViewTransitions(page: Page) {
-  const supported = await page.evaluate(
-    () => typeof document.startViewTransition === "function",
-  );
-  test.skip(
-    !supported,
-    "No View Transitions API: navigation falls back to an instant swap",
-  );
-}
-
-type TransitionLog = {
-  started: number;
-  /** `longestMs`: longest duration; `latestEndMs`: when the last one ends (delay included). */
-  entries: { names: string[]; longestMs: number; latestEndMs: number }[];
-};
-
-/**
- * Records every view transition the page starts: the names of its pseudo-elements and
- * the longest animation. Install before the navigation, read after it.
- */
-async function recordViewTransitions(page: Page) {
-  await page.evaluate(() => {
-    const log: TransitionLog = { started: 0, entries: [] };
-    Object.assign(window, { viewTransitionLog: log });
-    const start = document.startViewTransition.bind(document);
-    document.startViewTransition = ((update: ViewTransitionUpdateCallback) => {
-      const transition = start(update);
-      log.started += 1;
-      transition.ready.then(() => {
-        const animations = document
-          .getAnimations()
-          .filter((animation) =>
-            (
-              animation.effect as KeyframeEffect | null
-            )?.pseudoElement?.startsWith("::view-transition"),
-          );
-        log.entries.push({
-          names: animations.map(
-            (animation) =>
-              (animation.effect as KeyframeEffect).pseudoElement ?? "",
-          ),
-          longestMs: Math.max(
-            0,
-            ...animations.map((animation) =>
-              Number(animation.effect?.getComputedTiming().duration ?? 0),
-            ),
-          ),
-          latestEndMs: Math.max(
-            0,
-            ...animations.map((animation) =>
-              Number(animation.effect?.getComputedTiming().endTime ?? 0),
-            ),
-          ),
-        });
-      });
-      return transition;
-    }) as typeof document.startViewTransition;
-  });
-  return async ({ timeout }: { timeout?: number } = {}) => {
-    // `ready` resolves a frame after the navigation commits: wait until a transition
-    // started and every started one has been logged, instead of a fixed sleep.
-    const handle = await page.waitForFunction(
-      () => {
-        const log = (window as unknown as { viewTransitionLog: TransitionLog })
-          .viewTransitionLog;
-        return log.started > 0 && log.entries.length === log.started
-          ? log.entries
-          : null;
-      },
-      undefined,
-      { timeout },
-    );
-    return (await handle.jsonValue()) as TransitionLog["entries"];
-  };
-}
-
 /** Taps a row and returns the view transitions that the navigation started. */
 async function openFirstDetail(page: Page) {
   const readLog = await recordViewTransitions(page);
@@ -125,28 +54,6 @@ async function openFirstDetail(page: Page) {
   await link.click();
   await expect(page.getByRole("link", { name: "Volver" })).toBeVisible();
   return { id, transitions: await readLog() };
-}
-
-/**
- * The detail's full prefetch of the list (`<Link prefetch>` on "Volver"), as observed on
- * `next start`: an RSC request (`rsc: 1`) for `/movimientos` sent from a detail page
- * (`next-url: /movimientos/<id>`) without `next-router-prefetch` (that header marks the
- * partial, loading-only prefetch, which also goes out and carries no list).
- */
-function isFullPrefetch(
-  request: Request,
-  pathname: string,
-  fromPrefix: string,
-) {
-  const url = new URL(request.url());
-  const headers = request.headers();
-  return (
-    url.pathname === pathname &&
-    url.searchParams.has("_rsc") &&
-    headers.rsc === "1" &&
-    !("next-router-prefetch" in headers) &&
-    (headers["next-url"] ?? "/").startsWith(fromPrefix)
-  );
 }
 
 function isFullListPrefetch(request: Request) {
@@ -164,37 +71,8 @@ function watchFullListPrefetch(page: Page) {
   return watchPrefetch(page, isFullListPrefetch);
 }
 
-/** `watchFullListPrefetch` for any full prefetch that `matches`. */
-function watchPrefetch(page: Page, matches: (request: Request) => boolean) {
-  let started = false;
-  let ended = false;
-  const onStart = (request: Request) => {
-    if (matches(request)) started = true;
-  };
-  const onEnd = (request: Request) => {
-    if (matches(request)) ended = true;
-  };
-  page.on("request", onStart);
-  page.on("requestfinished", onEnd);
-  page.on("requestfailed", onEnd);
-  return {
-    async done() {
-      // Usually already started by now. If not, one quiet second for the router to start it.
-      if (!started) await page.waitForTimeout(1_000);
-      if (started) {
-        await expect
-          .poll(() => ended, { message: "the prefetch ends" })
-          .toBe(true);
-      }
-      page.off("request", onStart);
-      page.off("requestfinished", onEnd);
-      page.off("requestfailed", onEnd);
-    },
-  };
-}
-
 /** Names of the movement tiles that morphed during the recorded transitions. */
-function tileMorphs(transitions: TransitionLog["entries"]) {
+function tileMorphs(transitions: TransitionEntry[]) {
   return new Set(
     transitions
       .flatMap(({ names }) => names)
@@ -245,7 +123,7 @@ async function closeQuickAction(page: Page) {
 }
 
 /** Names of the quick-action containers that morphed during the recorded transitions. */
-function quickActionMorphs(transitions: TransitionLog["entries"]) {
+function quickActionMorphs(transitions: TransitionEntry[]) {
   return new Set(
     transitions
       .flatMap(({ names }) => names)
@@ -253,6 +131,13 @@ function quickActionMorphs(transitions: TransitionLog["entries"]) {
         name.startsWith("::view-transition-group(quick-action"),
       ),
   );
+}
+
+/** Screen-level animations (push, pop, tab, reveal) among the recorded transitions. */
+function screenMotion(transitions: TransitionEntry[]) {
+  return allAnimations(transitions)
+    .map(({ name }) => name)
+    .filter((name) => /^(nav-|reveal$)/.test(name));
 }
 
 /** Leaves the detail ("Volver" or the browser's back) and returns the transitions it started. */
@@ -380,6 +265,8 @@ test.describe("with motion allowed", () => {
       expect(longest).toBeGreaterThan(0);
       // Masks latency without adding any: the morph stays short.
       expect(longest).toBeLessThanOrEqual(300);
+      // Only the container moves: the screens neither slide nor fade on their own.
+      expect(screenMotion(transitions)).toEqual([]);
     }
   });
 
@@ -396,7 +283,13 @@ test.describe("with motion allowed", () => {
 
     for (const action of QUICK_ACTIONS) {
       await openHomePrefetched(page, action);
+      // Home must be in the router cache before "Volver" (its full prefetch from the
+      // screen), or it commits on its skeleton first and forms no pair.
+      const homePrefetch = watchPrefetch(page, (request) =>
+        isFullPrefetch(request, "/", action.path),
+      );
       await openQuickAction(page, action);
+      await homePrefetch.done();
       const transitions = await closeQuickAction(page);
       expect(quickActionMorphs(transitions)).toEqual(
         new Set([`::view-transition-group(${action.name})`]),
@@ -404,6 +297,7 @@ test.describe("with motion allowed", () => {
       const longest = Math.max(...transitions.map((t) => t.longestMs));
       expect(longest).toBeGreaterThan(0);
       expect(longest).toBeLessThanOrEqual(300);
+      expect(screenMotion(transitions)).toEqual([]);
     }
   });
 

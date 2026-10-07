@@ -13,6 +13,11 @@ import { MovementListSkeleton } from "@/features/movements/ui/MovementListSkelet
 import { MovementResults } from "@/features/movements/ui/MovementResults";
 import { MovementSearch } from "@/features/movements/ui/MovementSearch";
 import { GlassHeader } from "@/shared/ui/GlassHeader";
+import {
+  RevealTransition,
+  ScreenTransition,
+  SkeletonTransition,
+} from "@/shared/ui/motion/ScreenTransition";
 import { StickyUnderHeader } from "@/shared/ui/StickyUnderHeader";
 
 export const metadata: Metadata = {
@@ -27,29 +32,48 @@ export default async function MovementsPage({
   const filters = parseMovementFilters(params);
 
   return (
-    <main className="flex flex-col">
-      {/* The search and chips draw the bar's bottom edge once they stick under it. */}
-      <GlassHeader title="Movimientos" hairline={false} />
-      <div className="flex flex-col gap-5 px-6 pt-2">
-        {/* This month's totals; independent of the search and type filter below. */}
-        <Suspense fallback={<MonthlySummarySkeleton />}>
-          <MonthlySummary userId={user.id} />
-        </Suspense>
-        {/* Search and type filter are the controls of a long list: they stick under the
+    <ScreenTransition>
+      <main className="flex flex-col">
+        {/* The search and chips draw the bar's bottom edge once they stick under it. */}
+        <GlassHeader title="Movimientos" hairline={false} />
+        <div className="flex flex-col gap-5 px-6 pt-2">
+          {/* This month's totals; independent of the search and type filter below. */}
+          <Suspense
+            fallback={
+              <SkeletonTransition>
+                <MonthlySummarySkeleton />
+              </SkeletonTransition>
+            }
+          >
+            <RevealTransition>
+              <MonthlySummary userId={user.id} />
+            </RevealTransition>
+          </Suspense>
+          {/* Search and type filter are the controls of a long list: they stick under the
             compact header, while the month summary (context, not a control) scrolls away. */}
-        <StickyUnderHeader>
-          <MovementSearch filters={filters} autoFocus={params.focus === "1"} />
-          <FilterChips filters={filters} />
-        </StickyUnderHeader>
-        {/* Keyed by the filters: a new search remounts the boundary and shows the skeleton,
+          <StickyUnderHeader>
+            <MovementSearch
+              filters={filters}
+              autoFocus={params.focus === "1"}
+            />
+            <FilterChips filters={filters} />
+          </StickyUnderHeader>
+          {/* Keyed by the filters: a new search remounts the boundary and shows the skeleton,
             while the header, search box and chips above stay mounted (focus is kept). */}
-        <Suspense
-          key={toMovementSearchParams(filters).toString()}
-          fallback={<MovementListSkeleton />}
-        >
-          <MovementResults userId={user.id} filters={filters} />
-        </Suspense>
-      </div>
-    </main>
+          <Suspense
+            key={toMovementSearchParams(filters).toString()}
+            fallback={
+              <SkeletonTransition>
+                <MovementListSkeleton />
+              </SkeletonTransition>
+            }
+          >
+            <RevealTransition>
+              <MovementResults userId={user.id} filters={filters} />
+            </RevealTransition>
+          </Suspense>
+        </div>
+      </main>
+    </ScreenTransition>
   );
 }

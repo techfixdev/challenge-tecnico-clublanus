@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { logout } from "@/features/auth/server/actions";
 import { BottomNav } from "@/shared/ui/BottomNav";
+import { BrandIntro } from "@/shared/ui/BrandIntro";
 import { MotionProvider } from "@/shared/ui/motion/MotionProvider";
 
 /**
@@ -9,7 +10,8 @@ import { MotionProvider } from "@/shared/ui/motion/MotionProvider";
  * here so it persists across Home, Movements and the detail, and is not re-rendered on
  * navigation; the bottom padding (nav height + breathing room + the device's bottom safe
  * area) keeps the fixed nav from covering the last rows. `MotionProvider` loads Motion's
- * features once for every animated island in this area.
+ * features once for every animated island in this area. `BrandIntro` plays once when the
+ * layout mounts (a cold load or signing in), never on the navigations inside it.
  */
 export default function AuthenticatedLayout({
   children,
@@ -18,10 +20,11 @@ export default function AuthenticatedLayout({
 }) {
   return (
     <MotionProvider>
-      <div className="flex flex-1 flex-col pb-[calc(7rem+env(safe-area-inset-bottom))]">
+      <div className="flex flex-1 flex-col pb-(--nav-clearance)">
         {children}
       </div>
       <BottomNav logoutAction={logout} />
+      <BrandIntro />
     </MotionProvider>
   );
 }

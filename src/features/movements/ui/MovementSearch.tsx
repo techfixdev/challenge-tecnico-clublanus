@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition,
@@ -10,6 +11,7 @@ import {
 } from "react";
 
 import { CloseIcon, SearchIcon } from "@/shared/ui/icons";
+import { announceNavigation, IN_PLACE } from "@/shared/ui/motion/navigation";
 import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
 
 import {
@@ -48,9 +50,12 @@ export function MovementSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Read when the debounce fires, so a chip clicked mid-typing is respected.
+  // Read when the debounce fires, so a chip clicked mid-typing is respected. A layout
+  // effect, not a passive one: when results land with a view transition (their reveal),
+  // React runs passive effects only after it, and a tap on "Borrar búsqueda" meanwhile
+  // would compare against the previous query and do nothing.
   const latestFilters = useRef(filters);
-  useEffect(() => {
+  useLayoutEffect(() => {
     latestFilters.current = filters;
   }, [filters]);
 
@@ -78,8 +83,12 @@ export function MovementSearch({
     const query = text.trim() || undefined;
     if (query === currentQuery) return;
     setRequestedQuery(query ?? "");
+    announceNavigation(IN_PLACE);
     startTransition(() => {
-      router.replace(buildMovementsHref({ query, type }), { scroll: false });
+      router.replace(buildMovementsHref({ query, type }), {
+        scroll: false,
+        transitionTypes: IN_PLACE,
+      });
     });
   }
 

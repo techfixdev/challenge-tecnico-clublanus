@@ -1,15 +1,23 @@
 "use client";
 
 import * as m from "motion/react-m";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType, ReactNode, SVGProps } from "react";
+import {
+  useEffect,
+  type ComponentType,
+  type ReactNode,
+  type SVGProps,
+} from "react";
 
 import { ROUTES } from "@/shared/lib/routes";
+
+import { PINNED_CHROME, TAB_SWITCH } from "./motion/navigation";
+import { installPinnedChromeTaps } from "./motion/pinned-chrome-taps";
 
 import { HomeIcon, ListIcon, LogoutIcon } from "./icons";
 import { INDICATOR_SPRING, INSTANT, PRESS_SPRING } from "./motion/springs";
 import { useReducedMotionPreference } from "./reduced-motion";
+import { MotionLink } from "./motion/MotionLink";
 
 type NavItem = {
   href: string;
@@ -74,6 +82,10 @@ function TapIcon({
  * pill is one shared element (`layoutId`): when the section changes, Motion measures
  * the old and new positions and springs the same pill between them with transforms.
  * The nav lives in the layout, so it persists across navigations and can animate.
+ *
+ * Switching sections is a tab switch (`nav-tab`: the screens crossfade, no slide), and
+ * the bar has its own view-transition name, so it stays put above the moving screens.
+ * A tap on it while a transition runs still reaches its item (see pinned-chrome-taps.ts).
  */
 export function BottomNav({
   logoutAction,
@@ -82,10 +94,14 @@ export function BottomNav({
 }) {
   const pathname = usePathname();
   const reduced = useReducedMotionPreference();
+  // The nav lives in the signed-in layout: one guard for all of its pinned chrome.
+  useEffect(() => installPinnedChromeTaps(), []);
 
   return (
     <nav
       aria-label="Principal"
+      data-pinned-chrome
+      style={{ viewTransitionName: PINNED_CHROME.bottomNav }}
       className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[420px] rounded-t-[28px] glass pb-[env(safe-area-inset-bottom)] shadow-float inset-shadow-specular-glass"
     >
       {/* The side padding shrinks on very narrow viewports (page zoom), so the three items
@@ -95,9 +111,10 @@ export function BottomNav({
           const current = currentState(pathname, href);
           return (
             <li key={href}>
-              <Link
+              <MotionLink
                 href={href}
                 prefetch={prefetch}
+                transitionTypes={TAB_SWITCH}
                 aria-current={current}
                 className={`${ITEM_CLASSES} ${current ? "text-primary" : "text-foreground hover:text-primary"}`}
               >
@@ -113,7 +130,7 @@ export function BottomNav({
                   <Icon className="size-[26px]" />
                 </TapIcon>
                 <span className="sr-only">{label}</span>
-              </Link>
+              </MotionLink>
             </li>
           );
         })}

@@ -77,6 +77,7 @@ describe("MovementSearch", () => {
     expect(replace).toHaveBeenCalledOnce();
     expect(replace).toHaveBeenCalledWith("/movimientos?q=ronal&type=recibido", {
       scroll: false,
+      transitionTypes: ["no-morph"],
     });
   });
 
@@ -89,7 +90,10 @@ describe("MovementSearch", () => {
     expect(screen.getByRole("searchbox")).toHaveValue("");
     expect(screen.getByRole("searchbox")).toHaveFocus();
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith("/movimientos", { scroll: false }),
+      expect(replace).toHaveBeenCalledWith("/movimientos", {
+        scroll: false,
+        transitionTypes: ["no-morph"],
+      }),
     );
   });
 
@@ -117,6 +121,7 @@ describe("MovementSearch", () => {
       expect(replace).toHaveBeenCalledOnce();
       expect(replace).toHaveBeenCalledWith("/movimientos?q=ron&type=enviado", {
         scroll: false,
+        transitionTypes: ["no-morph"],
       });
     });
 
@@ -156,9 +161,11 @@ describe("MovementSearch", () => {
       expect(screen.getByRole("searchbox")).toHaveValue("rona");
       expect(replace).toHaveBeenNthCalledWith(1, "/movimientos?q=ron", {
         scroll: false,
+        transitionTypes: ["no-morph"],
       });
       expect(replace).toHaveBeenNthCalledWith(2, "/movimientos?q=rona", {
         scroll: false,
+        transitionTypes: ["no-morph"],
       });
     });
 

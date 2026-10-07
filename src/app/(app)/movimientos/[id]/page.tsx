@@ -6,6 +6,7 @@ import { prismaMovementRepository } from "@/features/movements/data/prisma-movem
 import { detailBackHref } from "@/features/movements/domain/movement-filters";
 import { getMovement } from "@/features/movements/domain/movement-queries";
 import { MovementDetail } from "@/features/movements/ui/MovementDetail";
+import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 
 export const metadata: Metadata = {
   title: "Detalle del movimiento · GranaBank",
@@ -25,9 +26,11 @@ export default async function MovementDetailPage({
   if (!movement) notFound();
 
   return (
-    <MovementDetail
-      movement={movement}
-      backHref={detailBackHref(await searchParams)}
-    />
+    <ScreenTransition>
+      <MovementDetail
+        movement={movement}
+        backHref={detailBackHref(await searchParams)}
+      />
+    </ScreenTransition>
   );
 }

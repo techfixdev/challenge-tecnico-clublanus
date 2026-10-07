@@ -1,11 +1,12 @@
-import Link from "next/link";
 import type { ReactNode, Ref } from "react";
 
 import { BACK_CONTROL_CLASSES } from "@/shared/ui/back-control";
 import { ChevronLeftIcon } from "@/shared/ui/icons";
 import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
+import { CLOSE_QUICK_ACTION } from "@/shared/ui/motion/navigation";
 
 import type { ConfirmedRecipient } from "../domain/transfer-form";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /** Text inputs of the send flow (same look as the login fields). */
 export const FIELD_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEXT_CLASS} text-foreground inset-shadow-recessed outline-none ring-1 ring-transparent transition placeholder:text-sm placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger`;
@@ -36,10 +37,15 @@ export function StepHeader({
         {"href" in back ? (
           // Full prefetch: Home must be ready at commit for the screen to shrink back
           // into the Enviar tile (no skeleton, so the view-transition pair exists).
-          <Link href={back.href} prefetch className={BACK_CONTROL_CLASSES}>
+          <MotionLink
+            href={back.href}
+            prefetch
+            transitionTypes={CLOSE_QUICK_ACTION}
+            className={BACK_CONTROL_CLASSES}
+          >
             <ChevronLeftIcon className="size-5" />
             Volver
-          </Link>
+          </MotionLink>
         ) : (
           <button
             type="button"

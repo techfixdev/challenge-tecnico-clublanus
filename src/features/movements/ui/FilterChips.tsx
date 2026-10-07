@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { IN_PLACE } from "@/shared/ui/motion/navigation";
 import { ScrollActiveIntoView } from "@/shared/ui/ScrollActiveIntoView";
 
 import type { MovementType } from "../domain/movement";
@@ -7,6 +6,7 @@ import {
   buildMovementsHref,
   type MovementFilters,
 } from "../domain/movement-search-params";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 const CHIPS: { label: string; type: MovementType | undefined }[] = [
   { label: "Todos", type: undefined },
@@ -33,8 +33,9 @@ export function FilterChips({ filters }: { filters: MovementFilters }) {
           const isActive = filters.type === type;
           return (
             <li key={label} className="shrink-0 snap-start">
-              <Link
+              <MotionLink
                 href={buildMovementsHref({ query: filters.query, type })}
+                transitionTypes={IN_PLACE}
                 aria-current={isActive ? "true" : undefined}
                 scroll={false}
                 className={`inline-flex h-11 pressable items-center rounded-2xl px-5 text-[13px] font-medium whitespace-nowrap focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none ${
@@ -44,7 +45,7 @@ export function FilterChips({ filters }: { filters: MovementFilters }) {
                 }`}
               >
                 {label}
-              </Link>
+              </MotionLink>
             </li>
           );
         })}

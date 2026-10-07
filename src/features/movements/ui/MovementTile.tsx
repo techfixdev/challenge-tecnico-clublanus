@@ -1,6 +1,32 @@
+"use client";
+
 import { ViewTransition, type ReactNode } from "react";
 
+import {
+  classForTypes,
+  currentNavigationTypes,
+  NAV_TAB,
+  NO_MORPH,
+} from "@/shared/ui/motion/navigation";
+
 import { movementTileTransitionName } from "./movement-motion";
+
+/**
+ * The morph runs between a row and its detail (and back), on top of the push or pop.
+ * Between sections (Home ↔ Movimientos) the same tiles are on both screens, but there
+ * the screen moves as one, so they do not fly across it.
+ */
+const NO_TILE_MORPH = { [NAV_TAB]: "none", [NO_MORPH]: "none" };
+
+/** Read when React commits (a getter): the announced navigation, if its types were lost. */
+const TILE_SHARE = {
+  ...NO_TILE_MORPH,
+  get default() {
+    return (
+      classForTypes(NO_TILE_MORPH, currentNavigationTypes()) ?? "movement-morph"
+    );
+  },
+};
 
 /**
  * Marks a movement's type tile as a shared element (React `<ViewTransition>`, built into
@@ -9,7 +35,9 @@ import { movementTileTransitionName } from "./movement-motion";
  * through "Volver" (see BackLink). The browser's back button swaps without a morph:
  * React restores that history entry on a sync lane, where it starts no view transition.
  *
- * - `share`: the class of that morph, timed in globals.css (`.movement-morph`).
+ * - `share`: the class of that morph, timed in globals.css (`.movement-morph`); none on
+ *   tab switches, section pushes and in-place filters (`NO_TILE_MORPH`, also when React
+ *   dropped those types: the announced navigation decides then, see navigation.ts).
  * - `default="none"`: the tile does not crossfade on unrelated transitions (search,
  *   filters), only when its pair exists on both sides.
  * Browsers without the View Transitions API simply navigate, with no animation.
@@ -24,7 +52,7 @@ export function MovementTile({
   return (
     <ViewTransition
       name={movementTileTransitionName(id)}
-      share="movement-morph"
+      share={TILE_SHARE}
       default="none"
     >
       {children}
