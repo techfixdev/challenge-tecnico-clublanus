@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  SEARCH_MAX_LENGTH,
-  buildMovementsHref,
   detailBackHref,
   parseMovementFilters,
   parseMovementListParams,
 } from "./movement-filters";
+import { SEARCH_MAX_LENGTH } from "./movement-search-params";
 
 describe("parseMovementFilters (page search params, lenient)", () => {
   it("maps readable URL slugs to movement types", () => {
@@ -100,21 +99,6 @@ describe("parseMovementListParams (REST API, strict)", () => {
       "q",
       "type",
     ]);
-  });
-});
-
-describe("buildMovementsHref", () => {
-  it("returns the bare list URL without filters", () => {
-    expect(buildMovementsHref({})).toBe("/movimientos");
-  });
-
-  it("serializes filters with readable slugs", () => {
-    expect(buildMovementsHref({ query: "juan perez", type: "RECEIVED" })).toBe(
-      "/movimientos?q=juan+perez&type=recibido",
-    );
-    expect(buildMovementsHref({ type: "SUBSCRIPTION" })).toBe(
-      "/movimientos?type=debito",
-    );
   });
 });
 

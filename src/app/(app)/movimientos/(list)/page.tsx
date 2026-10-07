@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { requireUser } from "@/features/auth/server/current-user";
-import {
-  parseMovementFilters,
-  toMovementSearchParams,
-} from "@/features/movements/domain/movement-filters";
+import { parseMovementFilters } from "@/features/movements/domain/movement-filters";
+import { toMovementSearchParams } from "@/features/movements/domain/movement-search-params";
 import { FilterChips } from "@/features/movements/ui/FilterChips";
 import { MonthlySummary } from "@/features/movements/ui/MonthlySummary";
 import { MonthlySummarySkeleton } from "@/features/movements/ui/MonthlySummaryView";

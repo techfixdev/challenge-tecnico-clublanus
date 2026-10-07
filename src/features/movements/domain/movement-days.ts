@@ -23,13 +23,15 @@ export function groupMovementsByDay<T extends { occurredAt: Date }>(
   for (const movement of movements) {
     const day = dayOf(movement.occurredAt);
     const group = groups.get(day);
-    if (group) group.movements.push(movement);
-    else
-      groups.set(day, {
-        day,
-        label: formatDayLabel(day, today),
-        movements: [movement],
-      });
+    if (group) {
+      group.movements.push(movement);
+      continue;
+    }
+    groups.set(day, {
+      day,
+      label: formatDayLabel(day, today),
+      movements: [movement],
+    });
   }
   return [...groups.values()];
 }

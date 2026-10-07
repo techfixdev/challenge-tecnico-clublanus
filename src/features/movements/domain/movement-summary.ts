@@ -137,6 +137,8 @@ export function parseSummaryMonth(
     ? { success: true, month: parsed.data }
     : {
         success: false,
-        fieldErrors: { month: parsed.error.issues.map((i) => i.message) },
+        fieldErrors: {
+          month: parsed.error.issues.map((issue) => issue.message),
+        },
       };
 }

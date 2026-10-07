@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { Movement } from "./movement";
 import { encodeMovementCursor, type MovementCursor } from "./movement-cursor";
-import type { MovementFilters } from "./movement-filters";
+import type { MovementFilters } from "./movement-search-params";
 
 /**
  * Movement use cases. The repository is injected (hexagonal port), so the rules here are

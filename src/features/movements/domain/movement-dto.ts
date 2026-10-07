@@ -36,13 +36,13 @@ export function toMovementDto(movement: Movement): MovementDto {
   return { ...movement, occurredAt: movement.occurredAt.toISOString() };
 }
 
-function fromDto(dto: MovementDto): Movement {
+function fromMovementDto(dto: MovementDto): Movement {
   return { ...dto, occurredAt: new Date(dto.occurredAt) };
 }
 
 /** Validates untrusted JSON and turns it back into a `Movement`. Throws on mismatch. */
 export function parseMovementDto(json: unknown): Movement {
-  return fromDto(movementDtoSchema.parse(json));
+  return fromMovementDto(movementDtoSchema.parse(json));
 }
 
 /** Validates a page of the list API. Throws on mismatch (a contract drift). */
@@ -51,5 +51,8 @@ export function parseMovementPage(json: unknown): {
   nextCursor: string | null;
 } {
   const page = movementPageSchema.parse(json);
-  return { movements: page.data.map(fromDto), nextCursor: page.nextCursor };
+  return {
+    movements: page.data.map(fromMovementDto),
+    nextCursor: page.nextCursor,
+  };
 }

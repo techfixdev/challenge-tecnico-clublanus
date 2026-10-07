@@ -11,15 +11,6 @@ import {
   buildMovementsHref,
 } from "./movement-search-params";
 
-export {
-  DETAIL_FROM_HOME,
-  SEARCH_MAX_LENGTH,
-  buildMovementsHref,
-  hasActiveFilters,
-  toMovementSearchParams,
-  type MovementFilters,
-} from "./movement-search-params";
-
 /**
  * Server side of the movement filters: parses the URL's search params (validated with zod).
  * Building URLs from filters is in `movement-search-params.ts`, which client components

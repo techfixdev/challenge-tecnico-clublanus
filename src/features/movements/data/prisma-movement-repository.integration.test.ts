@@ -6,7 +6,7 @@ import type { MovementType } from "@/generated/prisma/client";
 import { db } from "@/shared/lib/db";
 
 import { decodeMovementCursor } from "../domain/movement-cursor";
-import type { MovementFilters } from "../domain/movement-filters";
+import type { MovementFilters } from "../domain/movement-search-params";
 import { listMovements } from "../domain/movement-queries";
 import { prismaMovementRepository as repository } from "./prisma-movement-repository";
 

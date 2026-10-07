@@ -8,7 +8,7 @@ import { containsPattern, LIKE_ESCAPE_CHAR } from "@/shared/lib/like-pattern";
 
 import type { Movement } from "../domain/movement";
 import type { MovementCursor } from "../domain/movement-cursor";
-import type { MovementFilters } from "../domain/movement-filters";
+import type { MovementFilters } from "../domain/movement-search-params";
 import type {
   MovementCountQuery,
   MovementListQuery,
@@ -52,6 +52,16 @@ function fromSqlRow({
   const card =
     cardBrand && cardLast4 ? { brand: cardBrand, last4: cardLast4 } : null;
   return toMovement({ ...row, card });
+}
+
+/** Position in the app's currency order; currencies the app does not list go last. */
+function currencyRank(code: string): number {
+  const index = (CURRENCIES as readonly string[]).indexOf(code);
+  return index === -1 ? CURRENCIES.length : index;
+}
+
+function byCurrencyOrder(a: string, b: string): number {
+  return currencyRank(a) - currencyRank(b) || a.localeCompare(b);
 }
 
 /**
@@ -142,14 +152,11 @@ export const prismaMovementRepository: MovementRepository &
         select: { currency: true },
       }),
     ]);
-    const order = (code: string) => {
-      const index = (CURRENCIES as readonly string[]).indexOf(code);
-      return index === -1 ? CURRENCIES.length : index;
-    };
-    const others = movements
+    const cardCurrencies = cards.map((card) => card.currency);
+    const movementCurrencies = movements
       .map((movement) => movement.currency)
-      .sort((a, b) => order(a) - order(b) || a.localeCompare(b));
-    return [...new Set([...cards.map((card) => card.currency), ...others])];
+      .sort(byCurrencyOrder);
+    return [...new Set([...cardCurrencies, ...movementCurrencies])];
   },
 
   /**

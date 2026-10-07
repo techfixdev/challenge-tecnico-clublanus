@@ -40,9 +40,7 @@ describe("seedDate", () => {
     for (let hour = 0; hour < 24; hour += 1) {
       for (const minute of [0, 30, 59]) {
         const at = localTime(7, hour, minute);
-        expect(seedDate(0, 23, at).getTime()).toBeLessThanOrEqual(
-          at.getTime(),
-        );
+        expect(seedDate(0, 23, at).getTime()).toBeLessThanOrEqual(at.getTime());
       }
     }
   });
