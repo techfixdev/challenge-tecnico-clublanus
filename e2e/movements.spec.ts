@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { movementRows } from "./fixtures/screens";
-import { login } from "./fixtures/session";
+import { bringCardForward, movementRows } from "./fixtures/screens";
+import { login, waitForHomeToSettle } from "./fixtures/session";
 
 /**
  * Seed facts (prisma/seed.ts): 33 movements (27 plus the six past transfers the demo user
@@ -32,6 +32,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("home → search → filter → detail → back", async ({ page }) => {
+  // The cards' eyes are pressed below: Home must be ready for a tap.
+  await waitForHomeToSettle(page);
   // Home: balance card and the five latest movements.
   const card = page.getByRole("region", {
     name: "Tarjeta Mastercard terminada en 1234",
@@ -51,6 +53,7 @@ test("home → search → filter → detail → back", async ({ page }) => {
     name: "Tarjeta Visa terminada en 5678",
   });
   await expect(pesos).toContainText("ARS");
+  await bringCardForward(page, 2, 2);
   await page
     .getByRole("button", {
       name: "Mostrar datos de la tarjeta Visa terminada en 5678",

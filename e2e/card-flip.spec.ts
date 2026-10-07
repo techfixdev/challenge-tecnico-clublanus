@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { login } from "./fixtures/session";
-import { waitForScreenToSettle } from "./fixtures/view-transitions";
+import { login, waitForHomeToSettle } from "./fixtures/session";
 
 /*
  * Card flip on real rendering (jsdom has no 3D transforms or hit-testing): a tap or the
@@ -15,13 +14,7 @@ async function loginUntilCardsSettle(page: Page) {
   // dissolve in with a view transition, and a raw pointer tap made before they are there,
   // or while that transition runs, never reaches the card. Wait for both.
   await expect(flipButton(page)).toBeAttached();
-  await waitForScreenToSettle(page);
-  // The deck takes drags once it has hydrated and measured its cards.
-  await expect(
-    page.getByRole("list", { name: "Tus tarjetas" }),
-  ).toHaveAttribute("data-measured");
-  // Home has built itself (HomeEntrance): the cards rest where they will stay.
-  await expect(page.locator("html")).toHaveAttribute("data-home-entered");
+  await waitForHomeToSettle(page);
 }
 
 const FLIP_MASTERCARD =

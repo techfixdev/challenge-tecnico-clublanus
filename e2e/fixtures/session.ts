@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
+import { waitForScreenToSettle } from "./view-transitions";
+
 /*
  * The seeded demo accounts (prisma/seed.ts) and the login every signed-in spec starts
  * from, so each spec reads as its own scenario instead of repeating the form steps.
@@ -34,4 +36,24 @@ export async function login(page: Page, user = DEMO_USER) {
   await fillLoginForm(page, user);
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/$/);
+}
+
+/**
+ * Waits until Home can be touched like a user would: its cards have streamed in and
+ * dissolved in (a tap made before they are there, or while that transition runs, never
+ * reaches them), the deck has hydrated and measured its cards, and HomeEntrance has built
+ * the screen, so the cards rest where they will stay.
+ */
+export async function waitForHomeToSettle(page: Page) {
+  await waitForScreenToSettle(page);
+  await expect(
+    page.getByRole("list", { name: "Tus tarjetas" }),
+  ).toHaveAttribute("data-measured");
+  await expect(page.locator("html")).toHaveAttribute("data-home-entered");
+}
+
+/** Signs in and waits until Home can be touched (see `waitForHomeToSettle`). */
+export async function loginUntilHomeSettles(page: Page, user = DEMO_USER) {
+  await login(page, user);
+  await waitForHomeToSettle(page);
 }

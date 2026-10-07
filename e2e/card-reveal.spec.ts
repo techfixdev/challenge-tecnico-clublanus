@@ -5,8 +5,8 @@ import {
   type Page,
 } from "@playwright/test";
 
-import { primaryCard } from "./fixtures/screens";
-import { login, SECOND_USER } from "./fixtures/session";
+import { bringCardForward, primaryCard } from "./fixtures/screens";
+import { login, loginUntilHomeSettles, SECOND_USER } from "./fixtures/session";
 
 /*
  * Per-card reveal: every card is masked on load (balance, full number, CVV), each eye
@@ -85,7 +85,7 @@ test("every card starts masked, and the page carries no balance, full number or 
 test("each eye reveals only its own card: balance, full number and CVV", async ({
   page,
 }) => {
-  await login(page);
+  await loginUntilHomeSettles(page);
   const details = await allDetails(page.request);
   const mastercard = details.find((card) => card.number.endsWith("1234"))!;
 
@@ -117,10 +117,12 @@ test("each eye reveals only its own card: balance, full number and CVV", async (
   ).toContainText(mastercard.cvv);
 
   // The Visa eye reveals the Visa card alone, in pesos.
+  await bringCardForward(page, 2, 2);
   await eye(page, "Visa terminada en 5678").click();
   await expect(visaCard(page)).toContainText("312.400,50 pesos");
 
   // Hiding the Mastercard leaves the Visa revealed.
+  await bringCardForward(page, 1, 2);
   await eye(page, "Mastercard terminada en 1234").click();
   await expect(primaryCard(page)).toContainText("Saldo oculto");
   await expect(primaryCard(page)).not.toContainText(groups);
@@ -129,7 +131,7 @@ test("each eye reveals only its own card: balance, full number and CVV", async (
 
 test("revealed data masks itself again after 30 seconds", async ({ page }) => {
   await page.clock.install();
-  await login(page);
+  await loginUntilHomeSettles(page);
   await eye(page, "Mastercard terminada en 1234").click();
   await expect(primaryCard(page)).toContainText("978,85 dólares");
 
@@ -146,7 +148,7 @@ test("revealed data masks itself again after 30 seconds", async ({ page }) => {
 test("revealed data masks itself again when the tab is hidden", async ({
   page,
 }) => {
-  await login(page);
+  await loginUntilHomeSettles(page);
   await eye(page, "Mastercard terminada en 1234").click();
   await expect(primaryCard(page)).toContainText("978,85 dólares");
 
@@ -294,7 +296,7 @@ test.describe("with motion allowed", () => {
     page,
   }) => {
     const readFrames = await recordBalanceFrames(page);
-    await login(page);
+    await loginUntilHomeSettles(page);
     await eye(page, "Mastercard terminada en 1234").click();
 
     const { frames, layouts } = await readFrames();
@@ -315,7 +317,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     page,
   }) => {
     const readFrames = await recordBalanceFrames(page);
-    await login(page);
+    await loginUntilHomeSettles(page);
     await eye(page, "Mastercard terminada en 1234").click();
 
     expect((await readFrames()).frames).toEqual(["978,85"]);

@@ -1,24 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { fillLoginForm, login } from "./fixtures/session";
+import {
+  fillLoginForm,
+  login,
+  loginUntilHomeSettles,
+} from "./fixtures/session";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /*
  * Premium motion on real rendering (jsdom has no layout or 3D transforms). Each check
  * runs with and without `prefers-reduced-motion: reduce`.
  */
-
-async function loginUntilHomeSettles(page: Page) {
-  await login(page);
-  // Home dissolves in after login; it takes drags once it has arrived, and the card deck
-  // once it has hydrated and measured its cards.
-  await waitForScreenToSettle(page);
-  await expect(
-    page.getByRole("list", { name: "Tus tarjetas" }),
-  ).toHaveAttribute("data-measured");
-  // Home has built itself (HomeEntrance): the cards rest where they will stay.
-  await expect(page.locator("html")).toHaveAttribute("data-home-entered");
-}
 
 function primaryCardSurface(page: Page) {
   return page.getByTestId("living-card-surface").first();
@@ -73,6 +65,43 @@ async function pressAndDragDeck(page: Page, dx: number, steps = 10) {
   await page.mouse.down();
   await page.mouse.move(x + dx, y + 2, { steps });
   return { x: x + dx, y: y + 2 };
+}
+
+/**
+ * Flicks the primary card sideways by `dx`: pressed, moved in three steps and lifted,
+ * 16ms apart (one frame each). The events carry those times themselves (CDP's
+ * `timestamp`), so the throw's velocity is the same however long the browser or the test
+ * runner takes to deliver them; with `page.mouse`, a loaded machine stretches a flick
+ * into a slow drag.
+ */
+async function flickDeck(page: Page, dx: number) {
+  const box = await page.getByTestId("living-card").first().boundingBox();
+  if (!box) throw new Error("The primary card is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  const cdp = await page.context().newCDPSession(page);
+  const start = Date.now() / 1000;
+  const frames: Array<
+    ["mousePressed" | "mouseMoved" | "mouseReleased", number]
+  > = [
+    ["mousePressed", 0],
+    ["mouseMoved", dx / 3],
+    ["mouseMoved", (2 * dx) / 3],
+    ["mouseMoved", dx],
+    ["mouseReleased", dx],
+  ];
+  for (const [index, [type, offset]] of frames.entries()) {
+    await cdp.send("Input.dispatchMouseEvent", {
+      type,
+      x: x + offset,
+      y: y + 2,
+      button: "left",
+      buttons: type === "mouseReleased" ? 0 : 1,
+      clickCount: 1,
+      timestamp: start + index * 0.016,
+    });
+  }
+  await cdp.detach();
 }
 
 function currentDot(page: Page) {
@@ -275,8 +304,7 @@ test.describe("with motion allowed", () => {
     );
 
     // Quick: the same distance released while moving carries on to the next card.
-    await pressAndDragDeck(page, -50, 3);
-    await page.mouse.up();
+    await flickDeck(page, -50);
     await expect.poll(() => deckOffset(page)).toBe(rest);
     await expect(currentDot(page)).toHaveAttribute(
       "aria-label",

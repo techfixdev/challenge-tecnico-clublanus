@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { DEMO_USER, login } from "./fixtures/session";
+import { settle } from "./fixtures/view-transitions";
 
 /*
  * Sending money is a focused task: no bottom nav inside it, and each step's primary
@@ -9,7 +10,11 @@ import { DEMO_USER, login } from "./fixtures/session";
  * Signing out moved off the nav into the profile sheet on Home, behind a confirmation.
  */
 
-/** Inside the viewport and on top at its center: a tap there reaches it. */
+/**
+ * Inside the viewport and on top at its center: a tap there reaches it. "On top" is
+ * polled: while a step rearranges in place, the browser does not hit-test the elements
+ * still animating, and the check is about where the action rests.
+ */
 async function expectTappableWithoutScrolling(page: Page, target: Locator) {
   await expect(target).toBeVisible();
   const box = await target.boundingBox();
@@ -18,15 +23,20 @@ async function expectTappableWithoutScrolling(page: Page, target: Locator) {
   if (!box || !viewport) return;
   expect(box.y).toBeGreaterThanOrEqual(0);
   expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
-  const onTop = await target.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const hit = document.elementFromPoint(
-      rect.left + rect.width / 2,
-      rect.top + rect.height / 2,
-    );
-    return hit !== null && element.contains(hit);
-  });
-  expect(onTop, "nothing covers the action").toBe(true);
+  await expect
+    .poll(
+      () =>
+        target.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          return hit !== null && element.contains(hit);
+        }),
+      { message: "nothing covers the action" },
+    )
+    .toBe(true);
 }
 
 test.describe("the transfer flow is a focused task", () => {
@@ -41,6 +51,8 @@ test.describe("the transfer flow is a focused task", () => {
     await expect(
       page.getByRole("heading", { name: "¿A quién le enviás?" }),
     ).toBeVisible();
+    // A cold load: the screen is still dissolving in until it settles.
+    await settle(page);
     await expect(
       page.getByRole("navigation", { name: "Principal" }),
     ).toHaveCount(0);
