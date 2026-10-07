@@ -17,6 +17,14 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  AXIS_LOCK_SLOP_PX,
+  lockAxis,
+  releaseVelocity,
+  settleVelocity,
+  type Axis,
+  type DragSample,
+} from "@/shared/ui/gestures/drag-physics";
 import { SPRING } from "@/shared/ui/motion/springs";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
@@ -28,19 +36,9 @@ import {
   scaleAt,
 } from "./card-deck";
 import { DeckDraggingContext } from "./card-deck-drag";
-import {
-  releaseVelocity,
-  resistEdges,
-  settleVelocity,
-  snapIndex,
-  snapProgress,
-  type FingerSample,
-} from "./card-snap";
+import { resistEdges, snapIndex, snapProgress } from "./card-snap";
 
 export type DeckSlide = { id: string; content: ReactNode };
-
-/** Finger travel (CSS px) before a press commits to an axis: sideways drags the deck. */
-const AXIS_LOCK_PX = 8;
 
 /** Width of each dot button (`w-6`): the indicator travels one of these per card. */
 const DOT_PITCH_PX = 24;
@@ -52,8 +50,8 @@ type Press = {
   startY: number;
   /** The deck's offset when the finger landed: the grabbed point stays under it. */
   startOffset: number;
-  axis: "x" | "y" | null;
-  samples: FingerSample[];
+  axis: Axis | null;
+  samples: DragSample[];
 };
 
 /**
@@ -177,7 +175,7 @@ export function CardDeck({
       startY: event.clientY,
       startOffset: offset.get(),
       axis: null,
-      samples: [{ time: event.timeStamp, x: event.clientX }],
+      samples: [{ time: event.timeStamp, position: event.clientX }],
     };
   }
 
@@ -187,19 +185,17 @@ export function CardDeck({
     const dx = event.clientX - current.startX;
     const dy = event.clientY - current.startY;
     if (current.axis === null) {
-      if (Math.abs(dx) > AXIS_LOCK_PX && Math.abs(dx) >= Math.abs(dy)) {
-        current.axis = "x";
+      current.axis = lockAxis(dx, dy, AXIS_LOCK_SLOP_PX);
+      if (current.axis === "x") {
         dragFrom.current = activeRef.current;
         // The deck keeps the press even if the finger leaves it, and the click that
         // ends a drag lands on the row, not on the card it started on.
         event.currentTarget.setPointerCapture?.(event.pointerId);
         dragging.set(true);
-      } else if (Math.abs(dy) > AXIS_LOCK_PX) {
-        current.axis = "y";
       }
     }
     if (current.axis !== "x") return;
-    current.samples.push({ time: event.timeStamp, x: event.clientX });
+    current.samples.push({ time: event.timeStamp, position: event.clientX });
     offset.set(resistEdges(current.startOffset - dx, maxOffset.current));
   }
 
