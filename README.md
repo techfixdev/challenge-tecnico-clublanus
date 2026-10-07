@@ -66,6 +66,32 @@ Barandas: la variable solo se acepta con el valor `1`; con `VERCEL`/`VERCEL_ENV`
 | `ALLOWED_DEV_ORIGINS`   | No          | Hosts extra (separados por coma) que pueden cargar los assets de `next dev`, p. ej. la IP de la LAN       |
 | `GRANABANK_LAN_PREVIEW` | No          | `1` solo para el preview local del build en el celular (`pnpm preview:lan`); nunca en un deploy           |
 
+## Tour del código
+
+Un recorrido corto para leerlo sin perderse. Cada feature tiene la misma forma: `domain/` (reglas puras, sin Prisma ni React), `data/` (Prisma), `server/` (solo servidor) y `ui/` (componentes).
+
+**Por dónde empezar**
+
+| Tema                        | Dónde leer                                                                                                                                                                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rutas de entrada            | [Home](<src/app/(app)/(home)/page.tsx>), [Movimientos](<src/app/(app)/movimientos/(list)/page.tsx>), [Transferir](<src/app/(app)/transferir/page.tsx>), [login](src/app/login), [API REST](src/app/api) y [`proxy.ts`](src/proxy.ts) (protección de rutas)                                 |
+| Transferencia (caso de uso) | [`transfer.ts`](src/features/transfers/domain/transfer.ts) (`planTransfer`, `sendTransfer`) → [`prisma-transfer-repository.ts`](src/features/transfers/data/prisma-transfer-repository.ts): una transacción con débito condicional (sin sobregiro) e idempotencia por `(remitente, clave)` |
+| Movimientos (keyset)        | [`movement-cursor.ts`](src/features/movements/domain/movement-cursor.ts) (cursor `fecha + id`) y [`prisma-movement-repository.ts`](src/features/movements/data/prisma-movement-repository.ts) (`(fecha, id) < cursor`, sin `OFFSET`)                                                       |
+| Autenticación y sesión      | [`sign-in.ts`](src/features/auth/server/sign-in.ts) → [`session-token.ts`](src/features/auth/server/session-token.ts) (JWT HS256 en cookie `httpOnly`) → [`current-user.ts`](src/features/auth/server/current-user.ts) (`requireUser`)                                                     |
+| Sistema de movimiento       | [`shared/ui/motion/`](src/shared/ui/motion): duraciones y curvas ([`tokens.ts`](src/shared/ui/motion/tokens.ts)), resortes ([`springs.ts`](src/shared/ui/motion/springs.ts)) y transiciones de navegación ([`navigation.ts`](src/shared/ui/motion/navigation.ts))                          |
+| Tokens de diseño            | [`globals.css`](src/app/globals.css) (colores, sombras y movimiento por secciones) → `pnpm tokens:figma` → [`design/tokens.figma.json`](design/tokens.figma.json)                                                                                                                          |
+
+**Mapa de carpetas**
+
+| Carpeta                                  | Qué hay                                                                       |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| `src/app/`                               | Rutas delgadas: páginas, `loading`/`error`, API REST. Solo conectan features. |
+| `src/features/<x>/{domain,data,ui}`      | `auth`, `account`, `movements`, `transfers` (más `server/` donde hace falta)  |
+| `src/shared/`                            | `lib/` (dinero, fechas, errores de API, db), `ui/` (botones, barras, motion)  |
+| `prisma/`, `e2e/`, `scripts/`, `design/` | Esquema y seed, Playwright, herramientas (base de tests, Figma), tokens       |
+
+**Tests:** al lado del código (`x.ts` + `x.test.ts`). Unitarios con `pnpm test` (924 en 98 archivos, sin base), integración `*.integration.test.ts` con `pnpm test:integration` (54 en 5 archivos, PostgreSQL real) y e2e en `e2e/` con `pnpm test:e2e` (79 en Chromium móvil, en dos proyectos: solo lectura y con escrituras). Detalle en [Testing](#testing).
+
 ## Scripts
 
 | Script                               | Qué hace                                                    |
@@ -95,7 +121,7 @@ src/
 │   ├── auth/            domain/ data/ server/ ui/
 │   ├── movements/       domain/ data/ ui/
 │   ├── account/         domain/ data/ server/ ui/
-│   └── transfers/       domain/ data/ server/   (UI en camino)
+│   └── transfers/       domain/ data/ server/ ui/
 ├── shared/              lib/ (db, errores de API, fechas, formato, dinero exacto) · ui/ (Button, BottomNav…)
 ├── proxy.ts             protección optimista de rutas
 └── test/                fixtures y repositorio en memoria
@@ -194,9 +220,9 @@ Hay un segundo usuario demo para probar transferencias en los dos sentidos: `hin
 
 | Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                                                                                                                                                     | Cantidad |
 | ----------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes, transferencias: alias/CVU, montos exactos, reglas e idempotencia), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación)                                                                           | 874      |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes, transferencias: alias/CVU, montos exactos, reglas e idempotencia), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación)                                                                           | 924      |
 | Integración | `pnpm test:integration` | SQL real: transferencias (atomicidad, sin sobregiro con N transferencias en paralelo, idempotencia, sin deadlock A↔B); búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes              | 54       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones, navegación tipo iOS (push, pop, pestañas, cromo fijo, intro) y CLS < 0.05 en Home (con y sin movimiento reducido), transferencias y ninguna pantalla con scroll lateral ni texto cortado de 180 a 1024 px, en Chromium móvil | 78       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones, navegación tipo iOS (push, pop, pestañas, cromo fijo, intro) y CLS < 0.05 en Home (con y sin movimiento reducido), transferencias y ninguna pantalla con scroll lateral ni texto cortado de 180 a 1024 px, en Chromium móvil | 79       |
 
 **Base de datos de los tests.** Integración y e2e corren contra su propia base, `granabank_test`, en el mismo PostgreSQL: así una transferencia de un test nunca mueve los saldos demo con los que alguien está probando la app a mano. Solo hace falta `pnpm db:up`; cada corrida crea la base si no existe y aplica las migraciones (`scripts/test-database.ts`).
 
@@ -328,8 +354,8 @@ Para importarlo: en Figma, plugin **Tokens Studio** → _Load from file/folder_ 
 ```bash
 pnpm build
 pnpm db:test next start -p 3150                               # base granabank_test, recién cargada
-BASE_URL=http://localhost:3150 pnpm screens:capture           # solo lectura (17 pantallas)
-CAPTURE_ALLOW_MUTATION=1 BASE_URL=http://localhost:3150 pnpm screens:capture   # + transferencia enviada
+BASE_URL=http://localhost:3150 pnpm screens:capture           # solo lectura (18 pantallas)
+CAPTURE_ALLOW_MUTATION=1 BASE_URL=http://localhost:3150 pnpm screens:capture   # las 19, con la transferencia enviada
 ```
 
 La pantalla de "¡Transferencia enviada!" mueve plata entre los usuarios demo, así que solo se captura con `CAPTURE_ALLOW_MUTATION=1` (y, si `DATABASE_URL` está en el entorno, tiene que nombrar una base `_test`). `BASE_URL` es `http://localhost:3000` por defecto.

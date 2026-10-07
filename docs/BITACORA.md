@@ -608,6 +608,27 @@ Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → 
 
 ---
 
+### T22 — Pase de legibilidad (07/10/2026)
+
+**Objetivo:** que el código se lea de arriba hacia abajo antes de entregarlo, sin cambiar lo que hace. Cinco ramas en paralelo, una por área, integradas en orden herramientas → shared → auth/cuenta → movimientos → transferencias, sin conflictos.
+
+**Política:** cambios que preservan el comportamiento, sin debilitar aserciones; nombres por intención en lugar de comentarios; los comentarios que quedan explican el porqué, no la historia del cambio. Cada bug encontrado se arregló junto con el test que lo reproduce.
+
+**Qué cambió por área:**
+- **Herramientas:** `globals.css` ordenado en secciones con título; fixtures compartidos en `e2e/fixtures` (usuarios demo, login, localizadores); los e2e y la captura de pantallas esperan condiciones reales en lugar de tiempos; el seed declara las tarjetas de cada usuario como datos; tests que fallan si un token de color se declara dos veces o si el ícono se aparta del escudo oficial.
+- **Shared:** formas del monto con nombre, helpers de dinero y fechas más planos, el fundido de vidrio pegajoso con nombre; tests nuevos: el QR decodifica a su contenido en nivel H y la barra se vuelve vidrio al scrollear y vuelve.
+- **Auth y cuenta:** los grupos enmascarados del número de tarjeta salen del mismo formateador; handlers del menú de perfil, brillo, anuncio de la vuelta y slide del carrusel con nombre.
+- **Movimientos:** filtros importados de su propio módulo, helpers de dominio nombrados por intención, texto del estado vacío extraído; tests del límite de las fechas del seed (independiente del huso), del respaldo de compartir y del tope del escalonado inicial.
+- **Transferencias:** la máquina de estados del envío se lee de arriba hacia abajo; pasos partidos en piezas de presentación con nombre (fila de resumen y etiqueta de tarjeta compartidas); la transacción con pasos nombrados y la regla de repetición idempotente documentada; pantalla "sin tarjeta" extraída.
+- **Integración:** se borró la sombra `--shadow-lifted` (sin usos) y los comentarios de las tintas de la tarjeta dejaron de describirlas como papel (`design/tokens.figma.json` regenerado); valores exportados que solo usaba su propio módulo pasaron a privados. El README suma un "Tour del código".
+
+**Bugs que encontró el pase:**
+- **Borrar sobre un punto abierto** (monto a transferir): con `12.|`, retroceso volvía a escribir el punto y el cursor no se movía. Un punto abierto (posible decimal) no es de miles: ahora borrar lo quita (`12.|` → `12|`).
+- **`color-mix()` sin normalizar** (exportación a Figma): dos porcentajes que no suman 100 % se escalan como dice CSS Color 5, y el faltante pasa a transparencia; sumas en cero o fuera de 0–100 % se rechazan.
+- **QR de Recibir con identificadores inválidos:** un alias o CVU guardado que no pasa las reglas rompía la pantalla. Ahora no hay QR (la pantalla sigue con los datos) y un valor guardado nunca puede agregar ni falsificar una línea del contenido.
+
+---
+
 ## 6. Estructura del proyecto
 
 Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.
