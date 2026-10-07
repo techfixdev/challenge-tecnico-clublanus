@@ -5,9 +5,19 @@
  * Club Atlético Lanús brand manual (README → Brand): the official granate, gold and
  * Cool Gray 7C replace the design's approximations.
  * Exposed as Tailwind utilities, e.g. `bg-primary`, `text-sent`, `bg-subscription-soft`.
+ *
+ * Sections, in order: design tokens (brand palette, roles, surfaces, the light system),
+ * motion tokens, base styles, utilities, view transitions, components.
  */
+
+/* ==========================================================================
+ * Design tokens
+ * ========================================================================== */
+
 @theme {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+
+  /* --- Brand palette --- */
 
   /* Granate, Pantone 188 C (brand manual). Every tint and shade below derives from it. */
   --color-primary: #70192d;
@@ -60,18 +70,7 @@
   --color-card-signature-ink: #3b2a2e;
   --color-card-cvv-ink: #1b1416;
 
-  /* Neutral off-white on Cool Gray 7C's hue (OKLCH L 0.982): no blue tint. */
-  --color-background: #f9f9fa;
-  --color-surface: #ffffff;
-
-  /* Near-black ink on Cool Gray 7C's hue (OKLCH L 0.22): 17.3:1 on white. */
-  --color-foreground: #1b1a1d;
-  /* Cool Gray 7C's hue, darkened to the lightest grey with AA 4.5:1 on every background
-     it sits on (4.6 on the page and lit surfaces, 4.9 on white). The design's #8a8d9b
-     was 3.2:1. */
-  --color-muted: #727174;
-  /* Cool Gray 7C at 20% over white: hairlines and placeholders. */
-  --color-border: #ebebed;
+  /* --- Roles --- */
 
   /*
    * Roles, all on the brand palette: each movement type keeps its own brand color
@@ -106,7 +105,24 @@
   /* Errors on the granate login backdrop: 5.8:1 at its lightest, 4.8:1 inside a field. */
   --color-danger-on-brand: #ffb4ab;
 
+  /* --- Surfaces and ink --- */
+
+  /* Neutral off-white on Cool Gray 7C's hue (OKLCH L 0.982): no blue tint. */
+  --color-background: #f9f9fa;
+  --color-surface: #ffffff;
+
+  /* Near-black ink on Cool Gray 7C's hue (OKLCH L 0.22): 17.3:1 on white. */
+  --color-foreground: #1b1a1d;
+  /* Cool Gray 7C's hue, darkened to the lightest grey with AA 4.5:1 on every background
+     it sits on (4.6 on the page and lit surfaces, 4.9 on white). The design's #8a8d9b
+     was 3.2:1. */
+  --color-muted: #727174;
+  /* Cool Gray 7C at 20% over white: hairlines and placeholders. */
+  --color-border: #ebebed;
+
   --color-skeleton: #ebebed;
+
+  /* --- Elevation (light system) --- */
 
   /*
    * Light system: one key light from the top-left for the whole app (see `--light-angle`
@@ -176,18 +192,18 @@
   --font-display: var(--font-arvo), ui-serif, Georgia, serif;
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
-  /* A word longer than its line (a narrow phone, Android's page zoom) breaks instead of
-     pushing the page sideways; text that fits is laid out exactly as before. */
-  overflow-wrap: break-word;
+:root {
+  /* Direction the key light travels (top-left → bottom-right): every gradient runs along it. */
+  --light-angle: 155deg;
 }
 
+/* ==========================================================================
+ * Motion tokens
+ * ========================================================================== */
+
 /*
- * Motion tokens (mirrored for JavaScript in shared/ui/motion/tokens.ts; tokens.test.ts
- * keeps both in step). Three durations and one curve, nothing else:
+ * Mirrored for JavaScript in shared/ui/motion/tokens.ts (tokens.test.ts keeps both in
+ * step). Three durations and one curve, nothing else:
  * - fast (160ms): feedback and small swaps (press, fades, a skeleton leaving);
  * - base (280ms): content arriving in place (rows, a reveal, a container morph);
  * - nav (400ms): a whole screen travelling (push, pop).
@@ -196,9 +212,6 @@ body {
  * composites them without re-layout or repaint.
  */
 :root {
-  /* Direction the key light travels (top-left → bottom-right): every gradient runs along it. */
-  --light-angle: 155deg;
-
   --motion-duration-fast: 160ms;
   --motion-duration-base: 280ms;
   --motion-duration-nav: 400ms;
@@ -215,7 +228,22 @@ body {
   --motion-push-dim: brightness(0.92);
   /* How far content rises as it arrives (rows, a reveal): a hint of direction, no more. */
   --motion-reveal-rise: 4px;
+}
 
+/* ==========================================================================
+ * Base
+ * ========================================================================== */
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  /* A word longer than its line (a narrow phone, Android's page zoom) breaks instead of
+     pushing the page sideways; text that fits is laid out exactly as before. */
+  overflow-wrap: break-word;
+}
+
+:root {
   /* Room the fixed bottom nav takes at the end of every signed-in screen: its height,
      some breathing room and the device's bottom safe area. */
   --nav-clearance: calc(7rem + env(safe-area-inset-bottom));
@@ -226,6 +254,11 @@ body {
 :root:not(:has([data-bottom-nav])) {
   --nav-clearance: 0px;
 }
+
+/* ==========================================================================
+ * Utilities
+ * Tailwind `@utility` classes, usable with variants (`hover:`, `md:`…).
+ * ========================================================================== */
 
 /*
  * Press feedback for anything tappable (rows, chips, nav items, buttons): a quick shrink
@@ -402,6 +435,74 @@ body {
     translate: 0 var(--motion-reveal-rise);
   }
 }
+
+/*
+ * Frosted glass for bars that float over content (sticky headers, bottom nav): the
+ * content behind is blurred and slightly saturated, as on iOS. Where `backdrop-filter`
+ * is unsupported the bar falls back to an almost opaque background, so text over it
+ * stays readable.
+ */
+@utility glass {
+  background-color: rgb(249 250 252 / 0.96);
+
+  @supports (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+  ) {
+    background-color: rgb(249 250 252 / 0.74);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+  }
+
+  /* Asked for less transparency: a solid bar. */
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/*
+ * Payment cards scale like a physical card: everything inside is sized from the card's
+ * own width, never from the viewport. The design was polished on a 390px phone, where
+ * the card is 287.265625px wide (84% of 342px, on the browser's 1/64px layout grid), so
+ * `--card-px` is one design pixel of the current card, and the spacing, type and radius
+ * scales are re-rooted on it: `p-5`, `text-lg` or `rounded-3xl` inside the card render
+ * exactly as designed at 390px and shrink or grow with the card (small phones, Android's
+ * page zoom, the 420px-wide shell on tablets).
+ *
+ * The variables hold `cqi` lengths unresolved, so each element resolves them against
+ * this container. Arbitrary sizes use `var(--card-px, 1px)`, which also renders the
+ * design size outside a card.
+ */
+@utility card-scale {
+  container-type: inline-size;
+  --card-px: calc(100cqi / 287.265625);
+  --spacing: calc(var(--card-px) * 4);
+  --text-xs: calc(var(--card-px) * 12);
+  --text-sm: calc(var(--card-px) * 14);
+  --text-lg: calc(var(--card-px) * 18);
+  --radius-md: calc(var(--card-px) * 6);
+  --radius-3xl: calc(var(--card-px) * 24);
+
+  /* Snapped to 1/1024px so it is exactly 1px at 390px: an unsnapped 0.9999999px shifts
+     the glyphs' subpixel positions and the card no longer renders as designed. */
+  @supports (width: round(1px, 1px)) {
+    --card-px: round(calc(100cqi / 287.265625), 1px / 1024);
+  }
+
+  /* Scaled text is laid out unhinted: hinting rounds each glyph advance to whole pixels,
+     which opens gaps inside words ("Gran ate") at the card's smaller sizes. The design
+     width keeps the hinted rendering it was polished with. */
+  @container (width < 287px) or (width > 288px) {
+    & > * {
+      text-rendering: geometricPrecision;
+    }
+  }
+}
+
+/* ==========================================================================
+ * View transitions
+ * ========================================================================== */
 
 /*
  * View transitions on navigation (React `<ViewTransition>`, see shared/ui/motion).
@@ -639,6 +740,11 @@ body {
   }
 }
 
+/* ==========================================================================
+ * Components
+ * Classes for one component each (the brand intro, the login screen, the sheet).
+ * ========================================================================== */
+
 /*
  * Branded intro on a cold load of the signed-in area (BrandIntro.tsx): the club's shield
  * rises into place under the key light, then the overlay dissolves into the screen while
@@ -859,31 +965,6 @@ body {
 }
 
 /*
- * Frosted glass for bars that float over content (sticky headers, bottom nav): the
- * content behind is blurred and slightly saturated, as on iOS. Where `backdrop-filter`
- * is unsupported the bar falls back to an almost opaque background, so text over it
- * stays readable.
- */
-@utility glass {
-  background-color: rgb(249 250 252 / 0.96);
-
-  @supports (
-    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
-  ) {
-    background-color: rgb(249 250 252 / 0.74);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    backdrop-filter: blur(16px) saturate(180%);
-  }
-
-  /* Asked for less transparency: a solid bar. */
-  @media (prefers-reduced-transparency: reduce) {
-    background-color: var(--color-background);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
-/*
  * Bottom sheet (shared/ui/Sheet.tsx), a modal <dialog>: it rises from the bottom edge
  * while the page dims, and sinks back on close. `display` and `overlay` transition as
  * discrete properties, so the dialog stays rendered (and in the top layer) until it has
@@ -933,44 +1014,5 @@ body {
   .sheet,
   .sheet::backdrop {
     transition: none;
-  }
-}
-
-/*
- * Payment cards scale like a physical card: everything inside is sized from the card's
- * own width, never from the viewport. The design was polished on a 390px phone, where
- * the card is 287.265625px wide (84% of 342px, on the browser's 1/64px layout grid), so
- * `--card-px` is one design pixel of the current card, and the spacing, type and radius
- * scales are re-rooted on it: `p-5`, `text-lg` or `rounded-3xl` inside the card render
- * exactly as designed at 390px and shrink or grow with the card (small phones, Android's
- * page zoom, the 420px-wide shell on tablets).
- *
- * The variables hold `cqi` lengths unresolved, so each element resolves them against
- * this container. Arbitrary sizes use `var(--card-px, 1px)`, which also renders the
- * design size outside a card.
- */
-@utility card-scale {
-  container-type: inline-size;
-  --card-px: calc(100cqi / 287.265625);
-  --spacing: calc(var(--card-px) * 4);
-  --text-xs: calc(var(--card-px) * 12);
-  --text-sm: calc(var(--card-px) * 14);
-  --text-lg: calc(var(--card-px) * 18);
-  --radius-md: calc(var(--card-px) * 6);
-  --radius-3xl: calc(var(--card-px) * 24);
-
-  /* Snapped to 1/1024px so it is exactly 1px at 390px: an unsnapped 0.9999999px shifts
-     the glyphs' subpixel positions and the card no longer renders as designed. */
-  @supports (width: round(1px, 1px)) {
-    --card-px: round(calc(100cqi / 287.265625), 1px / 1024);
-  }
-
-  /* Scaled text is laid out unhinted: hinting rounds each glyph advance to whole pixels,
-     which opens gaps inside words ("Gran ate") at the card's smaller sizes. The design
-     width keeps the hinted rendering it was polished with. */
-  @container (width < 287px) or (width > 288px) {
-    & > * {
-      text-rendering: geometricPrecision;
-    }
   }
 }
