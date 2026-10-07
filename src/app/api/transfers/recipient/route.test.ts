@@ -51,7 +51,7 @@ describe("GET /api/transfers/recipient", () => {
       data: {
         fullName: "Hincha Granate",
         alias: "hincha.granate",
-        cvuMasked: "•••• •••• •••• •••• ••02 02",
+        cvuMasked: "•• •••• •••• •••• •••• 0202",
       },
     });
   });

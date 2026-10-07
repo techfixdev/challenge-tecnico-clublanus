@@ -202,7 +202,7 @@ describe("previewRecipient", () => {
       recipient: {
         fullName: "Hincha Granate",
         alias: "hincha.granate",
-        cvuMasked: "•••• •••• •••• •••• ••01 76",
+        cvuMasked: "•• •••• •••• •••• •••• 0176",
       },
     });
   });

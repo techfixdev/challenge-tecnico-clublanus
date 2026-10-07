@@ -12,7 +12,7 @@ const DETAILS = {
   holderName: "Granate Lanús",
   alias: "soy.granate.lanus",
   cvu: "0000003100010000000174",
-  cvuFormatted: "0000 0031 0001 0000 0001 74",
+  cvuFormatted: "00 0000 3100 0100 0000 0174",
 };
 
 function setShare(share: ((data: ShareData) => Promise<void>) | undefined) {

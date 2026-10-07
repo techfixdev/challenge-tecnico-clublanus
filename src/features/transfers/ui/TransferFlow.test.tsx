@@ -22,7 +22,7 @@ import { TransferFlow } from "./TransferFlow";
 const HINCHA: ConfirmedRecipient = {
   fullName: "Hincha Granate",
   alias: "hincha.granate",
-  cvuMasked: "•••• •••• •••• •••• ••02 55",
+  cvuMasked: "•• •••• •••• •••• •••• 0255",
   query: "hincha.granate",
 };
 

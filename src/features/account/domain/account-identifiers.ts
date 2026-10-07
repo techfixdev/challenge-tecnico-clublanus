@@ -52,11 +52,16 @@ export function buildCvu(entity: string, account: string): string {
   return `${entity}${checkDigit(entity, ENTITY_WEIGHTS)}${account}${checkDigit(account, ACCOUNT_WEIGHTS)}`;
 }
 
+/**
+ * Fours counted from the end (22 digits = a leading pair + five fours), the way long
+ * numbers are grouped for reading: the CVU never ends on a lone pair, and the last group
+ * is exactly the 4 digits `maskCvu` keeps visible.
+ */
 function groupForReading(value: string): string {
-  return value.replace(/(.{4})(?=.)/g, "$1 ");
+  return value.replace(/(.)(?=(.{4})+$)/g, "$1 ");
 }
 
-/** "2850 5909 4009 0418 1352 01": easier to read aloud or compare. */
+/** "28 5059 0940 0904 1813 5201": easier to read aloud or compare. */
 export function formatCvu(cvu: string): string {
   return groupForReading(cvu);
 }
@@ -71,7 +76,7 @@ export type ReceiveDetails = {
   alias: string;
   /** Raw 22 digits, for copying. */
   cvu: string;
-  /** Grouped in fours, for display. */
+  /** Grouped in fours from the end, for display. */
   cvuFormatted: string;
 };
 

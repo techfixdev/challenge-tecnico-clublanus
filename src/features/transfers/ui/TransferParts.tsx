@@ -92,7 +92,7 @@ export function RecipientAvatar({ fullName }: { fullName: string }) {
   );
 }
 
-/** "•••• •••• … ••02 55" → "0255": the only digits a masked CVU shows. */
+/** "•• •••• … •••• 0255" → "0255": the only digits a masked CVU shows. */
 export function lastFourDigits(cvuMasked: string): string {
   return cvuMasked.replace(/\D/g, "").slice(-4);
 }

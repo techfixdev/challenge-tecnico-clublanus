@@ -45,9 +45,13 @@ describe("CVU", () => {
     expect(normalizeCvu(" 2850590-9 4009041813520 1 ")).toBe(KNOWN_VALID);
   });
 
-  it("masks all but the last 4 digits and groups it for reading", () => {
-    expect(maskCvu(KNOWN_VALID)).toBe("•••• •••• •••• •••• ••52 01");
-    expect(formatCvu(KNOWN_VALID)).toBe("2850 5909 4009 0418 1352 01");
+  it("groups it in fours from the end, so it never ends on a short group", () => {
+    // 22 digits = a leading pair + five fours; the last group is the last 4 digits.
+    expect(formatCvu(KNOWN_VALID)).toBe("28 5059 0940 0904 1813 5201");
+  });
+
+  it("masks all but the last 4 digits, which stay one whole group", () => {
+    expect(maskCvu(KNOWN_VALID)).toBe("•• •••• •••• •••• •••• 5201");
   });
 });
 
@@ -86,7 +90,7 @@ describe("getReceiveDetails", () => {
       holderName: "Granate Lanús",
       alias: "soy.granate.lanus",
       cvu: KNOWN_VALID,
-      cvuFormatted: "2850 5909 4009 0418 1352 01",
+      cvuFormatted: "28 5059 0940 0904 1813 5201",
     });
   });
 
@@ -108,7 +112,7 @@ describe("receiveShareText", () => {
         holderName: "Granate Lanús",
         alias: "soy.granate.lanus",
         cvu: KNOWN_VALID,
-        cvuFormatted: "2850 5909 4009 0418 1352 01",
+        cvuFormatted: "28 5059 0940 0904 1813 5201",
       }),
     ).toBe(
       [

@@ -14,7 +14,7 @@ const RECIPIENT = { email: "hincha@clublanus.com", password: "GRANATE2@" };
 /** Seed facts (prisma/seed.ts). */
 const SEED = {
   senderAlias: "soy.granate.lanus",
-  senderCvuGrouped: "0000 0031 1000 0000 0001 75",
+  senderCvuGrouped: "00 0000 3110 0000 0000 0175",
   /** The sender's peso Visa and the recipient's peso Mastercard. */
   senderPesoCard: "5678",
   recipientPesoCard: "1915",

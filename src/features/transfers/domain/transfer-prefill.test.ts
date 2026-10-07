@@ -76,7 +76,7 @@ describe("resolveTransferPrefill", () => {
       recipient: {
         fullName: "Hincha Granate",
         alias: "hincha.granate",
-        cvuMasked: expect.stringContaining("01 76"),
+        cvuMasked: "•• •••• •••• •••• •••• 0176",
         query: "hincha.granate",
       },
     });

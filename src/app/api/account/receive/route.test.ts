@@ -40,7 +40,8 @@ describe("GET /api/account/receive", () => {
         holderName: "Granate Lanús",
         alias: "soy.granate.lanus",
         cvu: CVU,
-        cvuFormatted: CVU.replace(/(.{4})(?=.)/g, "$1 "),
+        // Fours from the end: the last group is the last 4 digits.
+        cvuFormatted: "00 0000 3110 0000 0000 0175",
       },
     });
   });
