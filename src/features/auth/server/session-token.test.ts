@@ -157,6 +157,27 @@ describe("session lifetime (remember me)", () => {
     ).toBe(false);
   });
 
+  it("decides production once: the caller's isProduction, not NODE_ENV again", () => {
+    // A production server whose env object carries no NODE_ENV: the opt-in still applies.
+    expect(
+      buildSessionCookieOptions({
+        remember: false,
+        expiresAt: new Date(),
+        isProduction: true,
+        env: { GRANABANK_LAN_PREVIEW: "1" },
+      }).secure,
+    ).toBe(false);
+    // Not production by the caller's word: no Secure, and the flag is not validated.
+    expect(
+      buildSessionCookieOptions({
+        remember: false,
+        expiresAt: new Date(),
+        isProduction: false,
+        env: { NODE_ENV: "production", GRANABANK_LAN_PREVIEW: "true" },
+      }).secure,
+    ).toBe(false);
+  });
+
   it("never issues a non-Secure cookie on Vercel, even with the opt-in", () => {
     expect(() =>
       buildSessionCookieOptions({

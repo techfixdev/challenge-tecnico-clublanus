@@ -103,7 +103,7 @@ export function buildSessionCookieOptions({
 }): SessionCookieOptions {
   return {
     httpOnly: true,
-    secure: isProduction && !isLanPreviewEnabled(env),
+    secure: isProduction && !isLanPreviewEnabled({ env, isProduction }),
     sameSite: "lax",
     path: "/",
     ...(remember ? { expires: expiresAt } : {}),
