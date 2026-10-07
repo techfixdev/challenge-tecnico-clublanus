@@ -60,8 +60,8 @@ describe("BalanceAmount odometer", () => {
   });
 
   it("sizes each column by its own final digit, so a narrow 1 keeps natural spacing", () => {
-    // Poppins has no tabular figures: a column as wide as the widest digit would leave
-    // a gap around every 1 ("31 2.40"). An invisible copy of the final digit sizes it.
+    // The display face has no tabular figures: a column as wide as the widest digit would
+    // leave a gap around every 1 ("31 2.40"). An invisible copy of the final digit sizes it.
     const { container } = render(
       <BalanceAmount balance="111.11" currency="USD" />,
     );
@@ -94,7 +94,7 @@ describe("BalanceAmount odometer", () => {
     expect(screen.getByText("Saldo oculto")).toHaveClass("sr-only");
   });
 
-  it("pulls in the narrow 1's column while shown (the control for the hidden case)", () => {
+  it("keeps every column at the font's own spacing: no optical correction around a 1", () => {
     const { container } = render(
       <BalanceAmount balance="312.41" currency="USD" />,
     );
@@ -104,13 +104,11 @@ describe("BalanceAmount odometer", () => {
         "[data-odometer] [data-digit-sizer]",
       ),
     ).map((sizer) => sizer.parentElement!);
-    expect(columns.map((column) => column.style.marginLeft)).toEqual([
-      "",
-      "-0.02em",
-      "",
-      "",
-      "-0.02em",
-    ]);
+    // Rokkitt's sidebearings are even on every digit (measured: 0.03–0.04em), unlike
+    // Poppins', whose 1 needed its neighbors pulled in.
+    expect(columns).toHaveLength(5);
+    for (const column of columns)
+      expect(column.getAttribute("style")).toBeNull();
   });
 
   it("gives screen readers only the final value, never the digit strips", () => {

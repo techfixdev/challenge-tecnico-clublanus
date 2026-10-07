@@ -7,7 +7,7 @@ import { formatMoneyForSpeech } from "@/shared/lib/format";
 import { FADE, INSTANT, ROLL_SPRING } from "@/shared/ui/motion/springs";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
-import { digitOffset, digitSidebearing, odometerCells } from "./odometer";
+import { digitOffset, odometerCells } from "./odometer";
 
 const MASK = "••••••";
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -23,11 +23,14 @@ const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
  * - Screen readers get only the final value with its currency in words ("978,85
  *   dólares"), or "Saldo oculto", from a separate text; the strips are `aria-hidden`,
  *   so nobody hears "0123456789". Under reduced motion every change is instant.
- * - Poppins has no tabular figures, so each column is as wide as its own final digit
- *   (an invisible copy of it sizes the column) and the number keeps the font's natural
- *   spacing: no gap around a narrow 1. The width is fixed by the final text, never by
- *   the digit passing through, so nothing shifts while it rolls; a wider digit rolling
- *   through a narrow column spills sideways instead of being cropped.
+ * - Set in the display face (Rokkitt), whose digits are proportional (its 1 is 0.32em
+ *   wide, its 0 0.55em) and have no tabular variant. So each column is as wide as its own
+ *   final digit (an invisible copy of it sizes the column) and the number keeps the
+ *   font's natural spacing: no gap around a narrow 1. Rokkitt's sidebearings are even
+ *   (0.03–0.04em on every digit), so no column needs an optical correction. The width is
+ *   fixed by the final text, never by the digit passing through, so nothing shifts while
+ *   it rolls; a wider digit rolling through a narrow column spills sideways instead of
+ *   being cropped.
  * - The row fades at its top and bottom edges, so digits roll in instead of popping.
  */
 export function BalanceAmount({
@@ -45,7 +48,7 @@ export function BalanceAmount({
   return (
     <span
       data-testid="balance-amount"
-      className="inline-flex text-[length:calc(var(--card-px,1px)*26)] leading-none font-medium tracking-[-0.02em]"
+      className="inline-flex font-display text-[length:calc(var(--card-px,1px)*30)] leading-none font-medium"
     >
       <span aria-hidden="true" className="inline-grid">
         <AnimatePresence initial={false}>
@@ -65,7 +68,6 @@ export function BalanceAmount({
                   <span
                     key={cell.key}
                     className="relative inline-block h-[1.15em] overflow-y-clip"
-                    style={digitSidebearing(cell.digit)}
                   >
                     <span data-digit-sizer className="invisible leading-[1.15]">
                       {cell.digit}
@@ -98,11 +100,11 @@ export function BalanceAmount({
             </m.span>
           )}
         </AnimatePresence>
-        {/* Poppins' bullets sit 0.035em lower than the digits' center: lifted to match. */}
+        {/* Rokkitt's bullets sit 0.1em lower than its digits' center: lifted to match. */}
         <m.span
           data-balance-mask
           data-state={hidden ? "shown" : "hidden"}
-          className="col-start-1 row-start-1 -translate-y-[0.035em] self-center leading-[1.15]"
+          className="col-start-1 row-start-1 -translate-y-[0.1em] self-center leading-[1.15]"
           initial={false}
           animate={{ opacity: hidden ? 1 : 0 }}
           transition={morph}

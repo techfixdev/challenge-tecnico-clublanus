@@ -49,17 +49,3 @@ export function odometerText(cells: OdometerCell[]): string {
 export function digitOffset(digit: number): string {
   return `${-digit * 10}%`;
 }
-
-/**
- * Optical spacing for a column. Poppins' 1 is set with wider sidebearings than the other
- * digits (about 0.12em around it against 0.08em between the rest), so "31 2" reads as a
- * gap even at natural widths. Pulling its neighbors in evens the ink gaps; the right side
- * gets more because that is where the 1's flagless stem leaves the space.
- */
-export function digitSidebearing(
-  digit: number,
-): { marginLeft: string; marginRight: string } | undefined {
-  return digit === 1
-    ? { marginLeft: "-0.02em", marginRight: "-0.035em" }
-    : undefined;
-}

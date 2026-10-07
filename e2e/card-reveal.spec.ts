@@ -235,13 +235,16 @@ function readPrimaryOdometer(page: Page) {
 /**
  * Records every value the primary odometer shows, sampled on every animation frame from
  * the first one (installed before any page script runs). It proves what was actually
- * painted, instead of sampling once and hoping to catch an intermediate frame.
+ * painted, instead of sampling once and hoping to catch an intermediate frame. It also
+ * records the columns' layout (each one's offset and width) whenever it changes, so a
+ * roll that resizes a column (the number jittering sideways) shows up.
  */
 async function recordBalanceFrames(page: Page) {
   await installOdometerReader(page);
   await page.addInitScript(() => {
     const frames: string[] = [];
-    Object.assign(window, { balanceFrames: frames });
+    const layouts: string[] = [];
+    Object.assign(window, { balanceFrames: frames, balanceLayouts: layouts });
     const read = (
       window as unknown as { readOdometer: (amount: Element) => string }
     ).readOdometer;
@@ -253,6 +256,17 @@ async function recordBalanceFrames(page: Page) {
           continue;
         const shown = read(amount);
         if (frames.at(-1) !== shown) frames.push(shown);
+        const layer = amount.querySelector("[data-odometer]");
+        if (!layer) continue;
+        // Relative to the first column: the row as a whole may move with the card.
+        const cells = Array.from(
+          layer.children as HTMLCollectionOf<HTMLElement>,
+        );
+        const origin = cells[0]?.offsetLeft ?? 0;
+        const layout = cells
+          .map((cell) => `${cell.offsetLeft - origin}+${cell.offsetWidth}`)
+          .join(" ");
+        if (layouts.at(-1) !== layout) layouts.push(layout);
       }
       requestAnimationFrame(sample);
     });
@@ -264,7 +278,11 @@ async function recordBalanceFrames(page: Page) {
     return page.evaluate(async () => {
       for (let frame = 0; frame < 2; frame += 1)
         await new Promise(requestAnimationFrame);
-      return (window as unknown as { balanceFrames: string[] }).balanceFrames;
+      const { balanceFrames, balanceLayouts } = window as unknown as {
+        balanceFrames: string[];
+        balanceLayouts: string[];
+      };
+      return { frames: balanceFrames, layouts: balanceLayouts };
     });
   };
 }
@@ -279,12 +297,14 @@ test.describe("with motion allowed", () => {
     await login(page);
     await eye(page, "Mastercard terminada en 1234").click();
 
-    const frames = await readFrames();
+    const { frames, layouts } = await readFrames();
     // The recorder sees the digits mid-roll, so the reduced-motion case below would
     // catch a roll too.
     expect(frames.length).toBeGreaterThan(2);
     expect(frames[0]).not.toBe("978,85");
     expect(frames.at(-1)).toBe("978,85");
+    // Every column kept its place and width through the whole roll: no jitter.
+    expect(layouts).toHaveLength(1);
   });
 });
 
@@ -298,6 +318,6 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     await login(page);
     await eye(page, "Mastercard terminada en 1234").click();
 
-    expect(await readFrames()).toEqual(["978,85"]);
+    expect((await readFrames()).frames).toEqual(["978,85"]);
   });
 });

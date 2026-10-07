@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   ODOMETER_STAGGER_S,
   digitOffset,
-  digitSidebearing,
   odometerCells,
   odometerText,
 } from "./odometer";
@@ -50,14 +49,5 @@ describe("odometer cells", () => {
   it("offsets each strip by a tenth per digit", () => {
     expect(digitOffset(0)).toBe("0%");
     expect(digitOffset(7)).toBe("-70%");
-  });
-
-  it("tightens only the narrow 1, whose sidebearings are wider than the other digits'", () => {
-    expect(digitSidebearing(1)).toEqual({
-      marginLeft: "-0.02em",
-      marginRight: "-0.035em",
-    });
-    for (const digit of [0, 2, 3, 4, 5, 6, 7, 8, 9])
-      expect(digitSidebearing(digit)).toBeUndefined();
   });
 });
