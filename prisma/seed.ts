@@ -9,6 +9,7 @@ import { seedDate } from "../src/features/movements/domain/seed-date";
 import { movementReference } from "../src/features/transfers/domain/transfer-reference";
 import {
   PrismaClient,
+  type CardBrand,
   type MovementType,
   type Prisma,
 } from "../src/generated/prisma/client";
@@ -30,6 +31,7 @@ const DEMO_USER = {
   lastName: "Lanús",
   alias: "soy.granate.lanus",
   cvu: buildCvu("0000003", "1000000000017"),
+  cardHolder: "Soy Granate",
 } as const;
 
 /** Second demo user, so transfers can go both ways. */
@@ -40,7 +42,61 @@ const SECOND_USER = {
   lastName: "Granate",
   alias: "hincha.granate",
   cvu: buildCvu("0000003", "1000000000025"),
+  cardHolder: "Hincha Granate",
 } as const;
+
+type CardSeed = {
+  brand: CardBrand;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  balance: string;
+  currency: "USD" | "ARS";
+};
+
+/** A user's two cards: the primary one Home shows first, and a second one. */
+type UserCards = { primary: CardSeed; secondary: CardSeed };
+
+/** Balances are seed facts the e2e specs assert (they already include DEMO_TRANSFER). */
+const DEMO_USER_CARDS: UserCards = {
+  primary: {
+    brand: "MASTERCARD",
+    last4: "1234",
+    expMonth: 2,
+    expYear: 2030,
+    balance: "978.85",
+    currency: "USD",
+  },
+  // The peso account: Argentine banks pair a dollar and a peso card.
+  secondary: {
+    brand: "VISA",
+    last4: "5678",
+    expMonth: 11,
+    expYear: 2028,
+    balance: "312400.50",
+    currency: "ARS",
+  },
+};
+
+const SECOND_USER_CARDS: UserCards = {
+  primary: {
+    brand: "VISA",
+    last4: "1910",
+    expMonth: 1,
+    expYear: 2031,
+    balance: "650.00",
+    currency: "USD",
+  },
+  // So a peso transfer to the second user has a peso card to land on (no FX).
+  secondary: {
+    brand: "MASTERCARD",
+    last4: "1915",
+    expMonth: 6,
+    expYear: 2030,
+    balance: "185000.00",
+    currency: "ARS",
+  },
+};
 
 type UserSeed = typeof DEMO_USER | typeof SECOND_USER;
 
@@ -63,7 +119,7 @@ type MovementSeed = {
 // Ordered newest first; the first rows match the "Últimos movimientos" list in the design.
 // Amounts are in the card's currency: dollars on the primary Mastercard, pesos on the
 // secondary Visa ("card: secondary").
-const MOVEMENTS: MovementSeed[] = [
+const DEMO_USER_MOVEMENTS: MovementSeed[] = [
   {
     counterparty: "Adobe",
     type: "SUBSCRIPTION",
@@ -332,17 +388,52 @@ async function upsertUser(
 
 type SeededCard = { id: string; currency: string };
 
+/** Creates one of `owner`'s cards. */
+function createCard(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  owner: UserSeed,
+  card: CardSeed,
+  isPrimary: boolean,
+) {
+  return tx.card.create({
+    data: {
+      userId,
+      ...card,
+      // Fictitious, Luhn-valid and stable across re-seeds (seeded by the owner's email).
+      pan: buildDemoPan(card.brand, card.last4, owner.email),
+      holderName: owner.cardHolder,
+      isPrimary,
+    },
+  });
+}
+
+/** Creates `owner`'s primary card, then the second one. */
+async function createCards(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  owner: UserSeed,
+  cards: UserCards,
+) {
+  const primary = await createCard(tx, userId, owner, cards.primary, true);
+  const secondary = await createCard(tx, userId, owner, cards.secondary, false);
+  return { primary, secondary };
+}
+
+/**
+ * The rows to insert for `seeds`: each on the card it names (the primary by default),
+ * in that card's currency, with a reference numbered in list order after
+ * `referencePrefix`.
+ */
 function toMovementRows(
   userId: string,
   seeds: MovementSeed[],
-  cards: { primary: SeededCard; secondary?: SeededCard },
+  cards: { primary: SeededCard; secondary: SeededCard },
   referencePrefix: string,
 ) {
   return seeds.map((movement, index) => {
     const card =
-      movement.card === "secondary" && cards.secondary
-        ? cards.secondary
-        : cards.primary;
+      movement.card === "secondary" ? cards.secondary : cards.primary;
     return {
       userId,
       cardId: card.id,
@@ -356,6 +447,64 @@ function toMovementRows(
       reference: `${referencePrefix}${String(index + 1).padStart(6, "0")}`,
       occurredAt: seedDate(movement.daysAgo, movement.hour),
     };
+  });
+}
+
+/** DEMO_TRANSFER, with its two movements: sent by the demo user, received by the second. */
+async function createDemoTransfer(
+  tx: Prisma.TransactionClient,
+  {
+    senderId,
+    recipientId,
+    sourceCardId,
+    destinationCardId,
+  }: {
+    senderId: string;
+    recipientId: string;
+    sourceCardId: string;
+    destinationCardId: string;
+  },
+) {
+  const transferAt = seedDate(DEMO_TRANSFER.daysAgo, DEMO_TRANSFER.hour);
+  const transferMovement = {
+    amount: DEMO_TRANSFER.amount,
+    currency: "USD",
+    description: DEMO_TRANSFER.description,
+    status: "COMPLETED",
+    occurredAt: transferAt,
+  } as const;
+  await tx.transfer.create({
+    data: {
+      senderId,
+      recipientId,
+      sourceCardId,
+      destinationCardId,
+      amount: DEMO_TRANSFER.amount,
+      currency: "USD",
+      description: DEMO_TRANSFER.description,
+      idempotencyKey: DEMO_TRANSFER.idempotencyKey,
+      createdAt: transferAt,
+      movements: {
+        create: [
+          {
+            ...transferMovement,
+            userId: senderId,
+            cardId: sourceCardId,
+            counterparty: `${SECOND_USER.firstName} ${SECOND_USER.lastName}`,
+            type: "SENT",
+            reference: movementReference(DEMO_TRANSFER.code, "SENT"),
+          },
+          {
+            ...transferMovement,
+            userId: recipientId,
+            cardId: destinationCardId,
+            counterparty: `${DEMO_USER.firstName} ${DEMO_USER.lastName}`,
+            type: "RECEIVED",
+            reference: movementReference(DEMO_TRANSFER.code, "RECEIVED"),
+          },
+        ],
+      },
+    },
   });
 }
 
@@ -383,123 +532,39 @@ async function main() {
     await tx.movement.deleteMany({ where: { userId: { in: userIds } } });
     await tx.card.deleteMany({ where: { userId: { in: userIds } } });
 
-    const primary = await tx.card.create({
-      data: {
-        userId: demo.id,
-        brand: "MASTERCARD",
-        last4: "1234",
-        // Fictitious, Luhn-valid and stable across re-seeds (seeded by the owner's email).
-        pan: buildDemoPan("MASTERCARD", "1234", DEMO_USER.email),
-        holderName: "Soy Granate",
-        expMonth: 2,
-        expYear: 2030,
-        balance: "978.85",
-        currency: "USD",
-        isPrimary: true,
-      },
-    });
-
-    // The peso account: Argentine banks pair a dollar and a peso card.
-    const secondary = await tx.card.create({
-      data: {
-        userId: demo.id,
-        brand: "VISA",
-        last4: "5678",
-        pan: buildDemoPan("VISA", "5678", DEMO_USER.email),
-        holderName: "Soy Granate",
-        expMonth: 11,
-        expYear: 2028,
-        balance: "312400.50",
-        currency: "ARS",
-        isPrimary: false,
-      },
-    });
-
-    const secondPrimary = await tx.card.create({
-      data: {
-        userId: second.id,
-        brand: "VISA",
-        last4: "1910",
-        pan: buildDemoPan("VISA", "1910", SECOND_USER.email),
-        holderName: "Hincha Granate",
-        expMonth: 1,
-        expYear: 2031,
-        balance: "650.00",
-        currency: "USD",
-        isPrimary: true,
-      },
-    });
-
-    // So a peso transfer to the second user has a peso card to land on (no FX).
-    const secondPesos = await tx.card.create({
-      data: {
-        userId: second.id,
-        brand: "MASTERCARD",
-        last4: "1915",
-        pan: buildDemoPan("MASTERCARD", "1915", SECOND_USER.email),
-        holderName: "Hincha Granate",
-        expMonth: 6,
-        expYear: 2030,
-        balance: "185000.00",
-        currency: "ARS",
-        isPrimary: false,
-      },
-    });
+    const demoCards = await createCards(
+      tx,
+      demo.id,
+      DEMO_USER,
+      DEMO_USER_CARDS,
+    );
+    const secondCards = await createCards(
+      tx,
+      second.id,
+      SECOND_USER,
+      SECOND_USER_CARDS,
+    );
 
     const demoMovements = await tx.movement.createMany({
-      data: toMovementRows(demo.id, MOVEMENTS, { primary, secondary }, "GB-"),
+      data: toMovementRows(demo.id, DEMO_USER_MOVEMENTS, demoCards, "GB-"),
     });
     const secondMovements = await tx.movement.createMany({
       data: toMovementRows(
         second.id,
         SECOND_USER_MOVEMENTS,
-        { primary: secondPrimary, secondary: secondPesos },
+        secondCards,
         "GB-H",
       ),
     });
 
-    const transferAt = seedDate(DEMO_TRANSFER.daysAgo, DEMO_TRANSFER.hour);
-    const transferMovement = {
-      amount: DEMO_TRANSFER.amount,
-      currency: "USD",
-      description: DEMO_TRANSFER.description,
-      status: "COMPLETED",
-      occurredAt: transferAt,
-    } as const;
-    await tx.transfer.create({
-      data: {
-        senderId: demo.id,
-        recipientId: second.id,
-        sourceCardId: primary.id,
-        destinationCardId: secondPrimary.id,
-        amount: DEMO_TRANSFER.amount,
-        currency: "USD",
-        description: DEMO_TRANSFER.description,
-        idempotencyKey: DEMO_TRANSFER.idempotencyKey,
-        createdAt: transferAt,
-        movements: {
-          create: [
-            {
-              ...transferMovement,
-              userId: demo.id,
-              cardId: primary.id,
-              counterparty: `${SECOND_USER.firstName} ${SECOND_USER.lastName}`,
-              type: "SENT",
-              reference: movementReference(DEMO_TRANSFER.code, "SENT"),
-            },
-            {
-              ...transferMovement,
-              userId: second.id,
-              cardId: secondPrimary.id,
-              counterparty: `${DEMO_USER.firstName} ${DEMO_USER.lastName}`,
-              type: "RECEIVED",
-              reference: movementReference(DEMO_TRANSFER.code, "RECEIVED"),
-            },
-          ],
-        },
-      },
+    await createDemoTransfer(tx, {
+      senderId: demo.id,
+      recipientId: second.id,
+      sourceCardId: demoCards.primary.id,
+      destinationCardId: secondCards.primary.id,
     });
 
+    // The demo transfer adds one movement to each user.
     return { demo: demoMovements.count + 1, second: secondMovements.count + 1 };
   });
 
