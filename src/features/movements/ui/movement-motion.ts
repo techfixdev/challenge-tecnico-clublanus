@@ -7,12 +7,11 @@
 export const MAX_STAGGER_STEPS = 5;
 
 /**
- * Stagger step of the row at `index` in a list whose newest batch starts at `batchStart`
- * ("Cargar más" appends batches). Rows above the batch are already on screen and are
- * never re-inserted, so their value does not matter; the batch's first row starts at 0.
+ * Stagger step of the row at `index` on the first paint. Rows inserted later never
+ * animate (`data-rows-entered`), so there is no later batch to restart from.
  */
-export function rowEnterStep(index: number, batchStart = 0): number {
-  return Math.min(Math.max(index - batchStart, 0), MAX_STAGGER_STEPS);
+export function rowEnterStep(index: number): number {
+  return Math.min(Math.max(index, 0), MAX_STAGGER_STEPS);
 }
 
 /**

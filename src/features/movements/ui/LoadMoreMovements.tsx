@@ -86,7 +86,6 @@ export function LoadMoreMovements({
 }: LoadMoreMovementsProps) {
   const router = useRouter();
   const [loaded, setLoaded] = useState<Movement[]>([]);
-  const [batchStart, setBatchStart] = useState(0);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [announcement, setAnnouncement] = useState("");
@@ -118,7 +117,6 @@ export function LoadMoreMovements({
         controller.signal,
       );
       const next = page.movements;
-      setBatchStart(initialMovements.length + loaded.length);
       setLoaded((current) => [...current, ...next]);
       setCursor(page.nextCursor);
       setAnnouncement(loadedAnnouncement(next.length));
@@ -146,7 +144,6 @@ export function LoadMoreMovements({
         movements={[...initialMovements, ...loaded]}
         today={today}
         detailSearch={toMovementSearchParams(filters).toString()}
-        enterFrom={batchStart}
       />
       {/* One polite live region: visible for errors and the redirect, screen-reader-only
           for progress. Only when there are more pages: a single page announces nothing. */}

@@ -18,8 +18,6 @@ type MovementListProps = {
    * detail returns to the same filtered list.
    */
   detailSearch?: string;
-  /** Index of the newest batch ("Cargar más"): its rows stagger in from 0. */
-  enterFrom?: number;
 };
 
 export function movementDetailHref(id: string, detailSearch = ""): string {
@@ -29,9 +27,9 @@ export function movementDetailHref(id: string, detailSearch = ""): string {
 }
 
 /** Style that staggers a row's entrance (`row-enter` utility in globals.css). */
-export function rowEnterStyle(index: number, batchStart = 0): CSSProperties {
+export function rowEnterStyle(index: number): CSSProperties {
   return {
-    "--row-enter-step": rowEnterStep(index, batchStart),
+    "--row-enter-step": rowEnterStep(index),
   } as CSSProperties;
 }
 
@@ -50,16 +48,14 @@ function dayHeadingId(day: string): string {
 
 /**
  * Movements grouped by day ("Hoy", "Ayer", "5 de octubre"), each day one grouped surface
- * under a sticky header. Rows fade and slide up a few pixels, one after another, when they
- * are inserted: on the first render, on each new result set (the results remount per
- * search) and for rows appended by "Cargar más" (they join their day's group). A CSS
- * animation only runs on insertion, so re-renders of rows already on screen never replay it.
+ * under a sticky header. Rows fade and slide up a few pixels, one after another, on the
+ * page's first paint only; rows inserted later (a filter, a search, "Cargar más", which
+ * joins its rows to their day's group) simply appear (`row-enter` in globals.css).
  */
 export function MovementList({
   movements,
   today,
   detailSearch,
-  enterFrom = 0,
 }: MovementListProps) {
   let index = 0;
   return (
@@ -81,7 +77,7 @@ export function MovementList({
               <li
                 key={movement.id}
                 className="row-enter"
-                style={rowEnterStyle(index++, enterFrom)}
+                style={rowEnterStyle(index++)}
               >
                 <MovementRow
                   movement={movement}

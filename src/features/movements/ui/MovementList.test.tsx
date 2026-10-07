@@ -64,16 +64,4 @@ describe("MovementList", () => {
       expect(item).toHaveClass("row-enter");
     }
   });
-
-  it("starts the stagger at the newest batch", () => {
-    render(
-      <MovementList
-        today={TODAY}
-        movements={Array.from({ length: 4 }, () => makeMovement())}
-        enterFrom={2}
-      />,
-    );
-
-    expect(enterSteps()).toEqual(["0", "0", "0", "1"]);
-  });
 });
