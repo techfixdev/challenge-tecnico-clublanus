@@ -291,4 +291,78 @@ describe("prismaMovementRepository (PostgreSQL)", () => {
       expect(paged).toEqual(all.map((row) => row.id));
     });
   });
+
+  describe("detail lookup", () => {
+    it("names the recipient's alias on the sender's side of a transfer only", async () => {
+      const senderId = await createUser("sender");
+      const recipient = await db.user.create({
+        data: {
+          email: `it-recipient-${RUN_ID}@granabank.test`,
+          passwordHash: "not-a-real-hash",
+          firstName: "Integration",
+          lastName: "recipient",
+          alias: `it.${RUN_ID}`,
+        },
+      });
+      try {
+        const reference = `IT-${RUN_ID}-transfer`;
+        const transfer = await db.transfer.create({
+          data: {
+            senderId,
+            recipientId: recipient.id,
+            amount: "10.00",
+            currency: "USD",
+            idempotencyKey: randomUUID(),
+            movements: {
+              create: [
+                {
+                  userId: senderId,
+                  counterparty: "Integration recipient",
+                  description: "Transferencia enviada",
+                  type: "SENT",
+                  amount: "10.00",
+                  reference: `${reference}-sent`,
+                  occurredAt: daysAgo(1),
+                },
+                {
+                  userId: recipient.id,
+                  counterparty: "Integration sender",
+                  description: "Transferencia recibida",
+                  type: "RECEIVED",
+                  amount: "10.00",
+                  reference: `${reference}-received`,
+                  occurredAt: daysAgo(1),
+                },
+              ],
+            },
+          },
+          select: { movements: { select: { id: true, type: true } } },
+        });
+        const idOf = (type: MovementType) =>
+          transfer.movements.find((movement) => movement.type === type)!.id;
+
+        await expect(
+          repository.findById(senderId, idOf("SENT")),
+        ).resolves.toMatchObject({ recipientAlias: `it.${RUN_ID}` });
+        await expect(
+          repository.findById(recipient.id, idOf("RECEIVED")),
+        ).resolves.toMatchObject({ recipientAlias: null });
+      } finally {
+        await db.user.deleteMany({
+          where: { id: { in: [senderId, recipient.id] } },
+        });
+      }
+    });
+
+    it("has no recipient for a movement with no transfer behind it", async () => {
+      const [row] = await repository.findMany({
+        userId: otherUserId,
+        filters: {},
+        take: 1,
+      });
+      await expect(
+        repository.findById(otherUserId, row.id),
+      ).resolves.toMatchObject({ recipientAlias: null });
+    });
+  });
 });

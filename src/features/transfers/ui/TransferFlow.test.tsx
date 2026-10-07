@@ -14,6 +14,7 @@ import type {
   SendTransferAction,
   SendTransferState,
 } from "../domain/transfer-form";
+import type { TransferPrefill } from "../domain/transfer-prefill";
 import { TRANSFER_MESSAGES } from "../domain/transfer-schema";
 import type { SourceCard } from "./AmountStep";
 import { TransferFlow } from "./TransferFlow";
@@ -71,6 +72,7 @@ function renderFlow({
   })),
   recent = [] as ConfirmedRecipient[],
   key = randomUUID(),
+  prefill = null as TransferPrefill | null,
 } = {}) {
   const user = userEvent.setup();
   render(
@@ -80,6 +82,7 @@ function renderFlow({
       idempotencyKey={key}
       lookupAction={lookup}
       sendAction={send}
+      prefill={prefill}
     />,
   );
   return { user, lookup, send, key };
@@ -106,6 +109,32 @@ async function toReviewStep(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("TransferFlow", () => {
+  it("opens on the amount step for a recipient the server already confirmed (repeat)", async () => {
+    const { user, lookup } = renderFlow({
+      prefill: { kind: "confirmed", recipient: HINCHA },
+    });
+
+    expect(
+      screen.getByRole("heading", { name: "¿Cuánto le enviás?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Hincha Granate")).toBeInTheDocument();
+    expect(lookup).not.toHaveBeenCalled();
+
+    // Back a step keeps the alias typed, so the user can change it.
+    await user.click(screen.getByRole("button", { name: "Volver" }));
+    await screen.findByRole("heading", { name: "¿A quién le enviás?" });
+    expect(screen.getByLabelText("Alias o CVU")).toHaveValue("hincha.granate");
+  });
+
+  it("only types an alias the server could not confirm, on the first step", () => {
+    renderFlow({ prefill: { kind: "typed", text: "nadie.granate" } });
+
+    expect(
+      screen.getByRole("heading", { name: "¿A quién le enviás?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Alias o CVU")).toHaveValue("nadie.granate");
+  });
+
   it("sends pesos from the peso card, in the Argentine format", async () => {
     const { user, send } = renderFlow();
     await toAmountStep(user);

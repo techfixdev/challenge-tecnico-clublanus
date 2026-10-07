@@ -565,6 +565,19 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 ---
 
+### T12b-C1 — Barra de navegación tipo iOS y acciones en el detalle (07/10/2026)
+
+**Pedido (auditoría de UX):** la píldora "Volver" con sombra pesaba más que el contenido de las pantallas apiladas, y el detalle del movimiento era un callejón sin salida que además repetía el estado (etiqueta + fila "Estado").
+
+**Qué se hizo y por qué:**
+- **`NavBar`** (`shared/ui`): chevron solo de 44×44 con nombre "Volver", título corto centrado ("Movimiento", "Transferir", "Recibir") y un lugar a la derecha ("Paso 2 de 3"). Se pega arriba y se vuelve vidrio ligado al scroll, sin duración propia. Se conservan el link real, el `prefetch` completo y los tipos de transición (pop, o cierre de acción rápida), así que el pop y los morphs siguen iguales. En los pasos de Transferir el encabezado pasó a ser un fragmento para que la barra quede pegada durante todo el paso. Se borraron `BackLink` y `back-control.ts`.
+- **Detalle:** se sacó la fila "Estado" (queda la etiqueta, más clara junto al monto) y se agregó una lista agrupada de acciones: compartir comprobante (Web Share API, o copiar con un "Copiado" discreto), copiar referencia y repetir transferencia.
+- **Repetir:** solo para transferencias enviadas a una cuenta con alias (el repositorio lee el alias del destinatario solo en el detalle). Lleva a `/transferir?to=alias`; el servidor valida el alias con las reglas del formulario (nada de CVU en URLs) y lo resuelve como la búsqueda del paso 1 antes de saltar al paso del monto.
+
+**Tests primero (rojo → verde):** `NavBar`, `MovementActions` (compartir, cancelar la hoja, copiar como respaldo, error al copiar, repetir solo si corresponde), `movementShareText` / `repeatTransferAlias`, `parseTransferTo` / `resolveTransferPrefill`, el detalle (un solo estado, repetir solo en enviadas con alias) y `TransferFlow` con prefill; 6 tests y 4 módulos en rojo antes del cambio. Integración: `findById` trae el alias solo del lado que envía. E2E (proyecto de solo lectura): detalle de la transferencia del seed → chevron ≥ 44 px, un estado, copiar comprobante, repetir abre el paso del monto; `?to=` con un CVU o el alias propio se ignora.
+
+---
+
 ## 6. Estructura del proyecto
 
 Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.

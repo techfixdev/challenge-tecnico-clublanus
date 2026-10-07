@@ -20,6 +20,7 @@ import {
   type SendTransferAction,
   type TransferStep,
 } from "../domain/transfer-form";
+import type { TransferPrefill } from "../domain/transfer-prefill";
 import { AmountStep, type SourceCard } from "./AmountStep";
 import { RecipientStep } from "./RecipientStep";
 import { ReviewStep } from "./ReviewStep";
@@ -60,6 +61,10 @@ const VIEW_ORDER: Record<View, number> = {
  * Idempotency: the key comes from the server with the page and stays fixed for this
  * attempt, whatever happens (a retry after a network error must replay, not pay twice).
  * It only changes when the server says so: after a success (next transfer) or a conflict.
+ *
+ * `prefill` (from a `?to=` link, resolved on the server) starts the flow addressed to
+ * someone: on the amount step when the account was confirmed, else on the first step with
+ * the alias typed in. Either way the alias stays in the field, so going back can change it.
  */
 export function TransferFlow({
   cards,
@@ -67,16 +72,25 @@ export function TransferFlow({
   idempotencyKey: initialKey,
   lookupAction,
   sendAction,
+  prefill = null,
 }: {
   cards: SourceCard[];
   recentRecipients: ConfirmedRecipient[];
   idempotencyKey: string;
   lookupAction: LookupRecipientAction;
   sendAction: SendTransferAction;
+  prefill?: TransferPrefill | null;
 }) {
-  const [step, setStep] = useState<TransferStep>("recipient");
-  const [recipientText, setRecipientText] = useState("");
-  const [recipient, setRecipient] = useState<ConfirmedRecipient | null>(null);
+  const confirmed = prefill?.kind === "confirmed" ? prefill.recipient : null;
+  const [step, setStep] = useState<TransferStep>(
+    confirmed ? "amount" : "recipient",
+  );
+  const [recipientText, setRecipientText] = useState(
+    confirmed?.query ?? (prefill?.kind === "typed" ? prefill.text : ""),
+  );
+  const [recipient, setRecipient] = useState<ConfirmedRecipient | null>(
+    confirmed,
+  );
   const [amount, setAmount] = useState("");
   const [cardId, setCardId] = useState(() => defaultSourceCardId(cards));
   const [description, setDescription] = useState("");

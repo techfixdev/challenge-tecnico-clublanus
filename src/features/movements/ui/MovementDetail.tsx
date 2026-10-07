@@ -1,14 +1,17 @@
 import type { ReactNode } from "react";
 
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
+import { transferToHref } from "@/features/transfers/domain/transfer-prefill";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
 import { NavBar } from "@/shared/ui/NavBar";
 
 import type { Movement } from "../domain/movement";
+import { MOVEMENT_TYPE_LABEL } from "../domain/movement-display";
 import {
-  MOVEMENT_STATUS_LABEL,
-  MOVEMENT_TYPE_LABEL,
-} from "../domain/movement-display";
+  movementShareText,
+  repeatTransferAlias,
+} from "../domain/movement-receipt";
+import { MovementActions } from "./MovementActions";
 import { MovementAmount } from "./MovementAmount";
 import { MovementTile } from "./MovementTile";
 import { MovementTypeIcon } from "./MovementTypeIcon";
@@ -28,7 +31,9 @@ function DetailRow({ term, children }: { term: string; children: ReactNode }) {
 
 /**
  * Movement detail (not in the Figma): same visual language as the list — the type tile,
- * the type color for the amount — plus the data a bank receipt shows.
+ * the type color for the amount — plus the data a bank receipt shows and what can be done
+ * with it (share, copy the reference, send again). The status shows once, as the badge
+ * under the amount.
  */
 export function MovementDetail({
   movement,
@@ -38,6 +43,7 @@ export function MovementDetail({
   backHref: string;
 }) {
   const { card } = movement;
+  const repeatAlias = repeatTransferAlias(movement);
   return (
     <main className="flex flex-col px-6 pt-8">
       <NavBar title="Movimiento" back={{ href: backHref }} />
@@ -85,10 +91,13 @@ export function MovementDetail({
         <DetailRow term="Referencia">
           <span className="tabular-nums">{movement.reference}</span>
         </DetailRow>
-        <DetailRow term="Estado">
-          {MOVEMENT_STATUS_LABEL[movement.status]}
-        </DetailRow>
       </dl>
+
+      <MovementActions
+        shareText={movementShareText(movement)}
+        reference={movement.reference}
+        repeatHref={repeatAlias ? transferToHref(repeatAlias) : null}
+      />
     </main>
   );
 }

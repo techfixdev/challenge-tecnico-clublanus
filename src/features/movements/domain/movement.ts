@@ -27,4 +27,10 @@ export type Movement = {
   reference: string;
   occurredAt: Date;
   card: MovementCard | null;
+  /**
+   * For a transfer the user sent: the alias of the account it went to, so the detail can
+   * offer to send again. Only the detail lookup reads it (null when unknown: a seeded
+   * movement with no transfer behind it, or an account without an alias); lists leave it out.
+   */
+  recipientAlias?: string | null;
 };

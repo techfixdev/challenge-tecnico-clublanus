@@ -123,6 +123,64 @@ test("home → search → filter → detail → back", async ({ page }) => {
   await expect(chip(page, "Recibido")).toHaveAttribute("aria-current", "true");
 });
 
+test("a sent transfer's detail shares, copies and repeats it", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  // The seeded transfer to the second user (prisma/seed.ts).
+  await page.goto("/movimientos?type=enviado");
+  await movementRows(page)
+    .filter({ hasText: "Hincha Granate" })
+    .first()
+    .getByRole("link")
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Hincha Granate" }),
+  ).toBeVisible();
+
+  // An iOS navigation bar: a bare chevron (≥ 44×44) and the screen's title.
+  const back = page.getByRole("link", { name: "Volver" });
+  await expect(back).toHaveText("");
+  const box = await back.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+  await expect(page.getByTestId("nav-bar-title")).toHaveText("Movimiento");
+
+  // One status: the badge, no "Estado" row repeating it.
+  await expect(page.getByText("Completado")).toHaveCount(1);
+  await expect(page.getByText("Estado")).toHaveCount(0);
+
+  // Desktop Chromium has no share sheet here: the receipt is copied instead.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { value: undefined });
+  });
+  await page.getByRole("button", { name: "Compartir comprobante" }).click();
+  await expect(page.getByRole("status")).toHaveText("Copiado");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+    "Comprobante de GranaBank",
+  );
+
+  await page.getByRole("link", { name: "Repetir transferencia" }).click();
+  await expect(page).toHaveURL(/\/transferir\?to=hincha\.granate$/);
+  // Resolved on the server: the flow opens on the amount step, addressed to them.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "¿Cuánto le enviás?" }),
+  ).toBeVisible();
+  await expect(page.getByText("hincha.granate")).toBeVisible();
+});
+
+test("the send flow ignores a ?to= it cannot use", async ({ page }) => {
+  // A CVU never travels in a link, and the user's own alias is no recipient.
+  for (const to of ["0000003100010000000176", "soy.granate.lanus"]) {
+    await page.goto(`/transferir?to=${to}`);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "¿A quién le enviás?" }),
+    ).toBeVisible();
+  }
+  await expect(page.getByLabel("Alias o CVU")).toHaveValue("soy.granate.lanus");
+});
+
 test("the search box is at least 16px so iOS does not zoom on focus", async ({
   page,
 }) => {

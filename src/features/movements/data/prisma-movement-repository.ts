@@ -111,9 +111,18 @@ export const prismaMovementRepository: MovementRepository &
     // missing one, so the detail page returns 404 and never confirms the id exists.
     const row = await db.movement.findFirst({
       where: { id, userId },
-      select: movementSelect,
+      select: {
+        ...movementSelect,
+        transfer: { select: { recipient: { select: { alias: true } } } },
+      },
     });
-    return row ? toMovement(row) : null;
+    if (!row) return null;
+    const { transfer, ...movement } = row;
+    // Only the sender's side names someone to send to again (on the RECEIVED side the
+    // transfer's recipient is the user).
+    const recipientAlias =
+      movement.type === "SENT" ? (transfer?.recipient.alias ?? null) : null;
+    return { ...toMovement(movement), recipientAlias };
   },
 
   /**

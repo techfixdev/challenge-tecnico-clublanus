@@ -5,8 +5,15 @@ import type { Metadata } from "next";
 import { prismaCardRepository } from "@/features/account/data/prisma-card-repository";
 import { getAccountCards } from "@/features/account/domain/card";
 import { requireUser } from "@/features/auth/server/current-user";
-import { prismaRecentTransfersRepository } from "@/features/transfers/data/prisma-transfer-repository";
+import {
+  prismaRecentTransfersRepository,
+  prismaTransferRepository,
+} from "@/features/transfers/data/prisma-transfer-repository";
 import { getRecentRecipients } from "@/features/transfers/domain/transfer-form";
+import {
+  resolveTransferPrefill,
+  TRANSFER_TO_PARAM,
+} from "@/features/transfers/domain/transfer-prefill";
 import {
   lookupRecipient,
   submitTransfer,
@@ -26,11 +33,17 @@ export const metadata: Metadata = {
   title: "Transferir · GranaBank",
 };
 
-export default async function TransferPage() {
+export default async function TransferPage({
+  searchParams,
+}: PageProps<"/transferir">) {
   const user = await requireUser();
-  const [cards, recentRecipients] = await Promise.all([
+  // `?to=` ("Repetir transferencia") is validated and resolved here, on the server, with
+  // the same rules as the recipient lookup: the browser never decides who gets the money.
+  const to = (await searchParams)[TRANSFER_TO_PARAM];
+  const [cards, recentRecipients, prefill] = await Promise.all([
     getAccountCards(prismaCardRepository, user.id),
     getRecentRecipients(prismaRecentTransfersRepository, user.id),
+    resolveTransferPrefill(prismaTransferRepository, user.id, to),
   ]);
 
   if (cards.length === 0) {
@@ -68,6 +81,7 @@ export default async function TransferPage() {
             idempotencyKey={randomUUID()}
             lookupAction={lookupRecipient}
             sendAction={submitTransfer}
+            prefill={prefill}
           />
         </main>
       </QuickActionMorph>
