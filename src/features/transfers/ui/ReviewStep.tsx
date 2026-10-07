@@ -43,7 +43,7 @@ export function ReviewStep({
         transition={morphTransition(reduced)}
         className="flex flex-col items-center text-center"
       >
-        <p className="text-4xl font-semibold text-foreground tabular-nums">
+        <p className="font-display text-[40px] leading-[1.1] font-semibold text-foreground">
           <Money value={amount} currency={card.currency} />
         </p>
         <p aria-hidden="true" className="mt-1 text-xs font-medium text-muted">

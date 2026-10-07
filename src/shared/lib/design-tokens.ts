@@ -314,7 +314,7 @@ function colorPath(name: string): string[] {
 /** next/font families, which globals.css only knows by their CSS variable. */
 const NEXT_FONTS: Record<string, string> = {
   "--font-poppins": "Poppins",
-  "--font-arvo": "Arvo",
+  "--font-rokkitt": "Rokkitt",
 };
 
 const MOTION_DURATIONS: Record<string, string[]> = {

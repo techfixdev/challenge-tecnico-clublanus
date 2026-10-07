@@ -37,7 +37,7 @@ export default async function ReceivePage() {
         <QuickActionMorph name={QUICK_ACTION_MORPH.receive}>
           <main className="flex flex-col px-6 pt-8">
             <NavBar title="Recibir" back={BACK_HOME} />
-            <h1 className="mt-6 text-xl font-semibold text-foreground">
+            <h1 className="mt-6 font-display text-[22px] font-semibold text-foreground">
               Recibir dinero
             </h1>
             <p className="mt-1 text-sm text-muted">

@@ -110,7 +110,7 @@ export function GlassHeader({
             <h1
               ref={titleLine}
               data-testid="glass-header-title"
-              className="origin-left text-xl font-semibold wrap-anywhere text-foreground"
+              className="origin-left font-display text-[22px] font-semibold wrap-anywhere text-foreground"
               style={{ transform: "none" }}
             >
               {title}

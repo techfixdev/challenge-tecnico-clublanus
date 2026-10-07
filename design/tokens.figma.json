@@ -244,9 +244,9 @@
   },
   "font": {
     "display": {
-      "$description": "Font family (--font-display).",
+      "$description": "Wordmark, screen titles and large amounts. Its x-height is lower than Poppins' (0.40em against 0.55em), so it is set a couple of pixels larger where it replaces it.",
       "$type": "fontFamily",
-      "$value": ["Arvo", "ui-serif", "Georgia", "serif"]
+      "$value": ["Rokkitt", "ui-serif", "Georgia", "serif"]
     },
     "sans": {
       "$description": "Font family (--font-sans).",

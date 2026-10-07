@@ -109,7 +109,7 @@ export function NavBar({
         </div>
         <p
           data-testid="nav-bar-title"
-          className="truncate text-[15px] font-semibold text-foreground"
+          className="truncate font-display text-[17px] font-semibold text-foreground"
         >
           {title}
         </p>

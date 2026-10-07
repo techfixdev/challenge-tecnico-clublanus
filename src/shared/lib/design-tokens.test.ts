@@ -28,7 +28,7 @@ describe("parseCustomProperties", () => {
   --color-c: #00ff00;
 }
 @theme inline {
-  --font-display: var(--font-arvo), serif;
+  --font-display: var(--font-rokkitt), serif;
 }
 .ignored {
   --color-z: #000000;
@@ -221,6 +221,10 @@ describe("buildFigmaTokens (globals.css)", () => {
     expect(token("font.sans")).toMatchObject({
       $type: "fontFamily",
       $value: ["Poppins", "ui-sans-serif", "system-ui", "sans-serif"],
+    });
+    expect(token("font.display")).toMatchObject({
+      $type: "fontFamily",
+      $value: ["Rokkitt", "ui-serif", "Georgia", "serif"],
     });
   });
 });

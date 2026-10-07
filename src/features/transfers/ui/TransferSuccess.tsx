@@ -71,7 +71,7 @@ export function TransferSuccess({
         <h1
           ref={headingRef}
           tabIndex={-1}
-          className="mt-6 text-xl font-semibold text-foreground outline-none"
+          className="mt-6 font-display text-[22px] font-semibold text-foreground outline-none"
         >
           ¡Transferencia enviada!
         </h1>
@@ -82,7 +82,7 @@ export function TransferSuccess({
         <m.p
           layoutId={MORPH_ID.amount}
           transition={morphTransition(reduced)}
-          className="mt-4 text-4xl font-semibold text-foreground tabular-nums"
+          className="mt-4 font-display text-[40px] leading-[1.1] font-semibold text-foreground"
         >
           <Money value={receipt.amount} currency={receipt.currency} />
         </m.p>

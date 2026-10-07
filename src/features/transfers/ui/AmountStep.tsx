@@ -191,18 +191,18 @@ function AmountField({
       <m.div
         layoutId={MORPH_ID.amount}
         transition={morphTransition(reduced)}
-        className="flex items-baseline justify-center gap-1"
+        className="flex items-baseline justify-center gap-1 font-display"
       >
         <span
           aria-hidden="true"
           data-testid="amount-currency"
-          className="text-3xl font-medium text-muted"
+          className="text-[32px] font-medium text-muted"
         >
           {currencySymbol(currency)}
         </span>
         {/* The input sits on an invisible copy of its text, so its width follows the
             digits and the symbol stays right next to the number, centered as a whole. */}
-        <span className="inline-grid max-w-[calc(100%-4.5rem)] text-5xl font-semibold tabular-nums">
+        <span className="inline-grid max-w-[calc(100%-4.5rem)] text-[52px] leading-none font-semibold">
           <span
             aria-hidden="true"
             className="invisible col-start-1 row-start-1 overflow-hidden whitespace-pre"

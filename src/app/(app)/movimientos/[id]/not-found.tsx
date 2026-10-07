@@ -11,7 +11,7 @@ export default function MovementNotFound() {
       <span className="flex size-16 items-center justify-center rounded-3xl bg-primary-soft/50 text-primary">
         <SearchIcon className="size-7" />
       </span>
-      <h1 className="mt-5 text-lg font-semibold text-foreground">
+      <h1 className="mt-5 font-display text-xl font-semibold text-foreground">
         No encontramos este movimiento
       </h1>
       <p className="mt-1 text-sm text-muted">

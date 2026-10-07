@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import { Poppins, Rokkitt } from "next/font/google";
 
 import { APP_BACKGROUND_COLOR } from "@/shared/lib/theme";
 import { AppShell } from "@/shared/ui/AppShell";
@@ -12,6 +12,18 @@ const poppins = Poppins({
   // Only the weights the UI uses (font-normal, font-medium, font-semibold): each one is
   // a font file the browser may download.
   weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+/*
+ * The display face (OFL), a geometric slab serif: the "GranaBank" wordmark, screen
+ * titles and large amounts (`font-display`). Its variable file covers every weight it
+ * is set in (medium for the card balance, semibold for titles and amounts, bold for the
+ * wordmark) in one download, where static weights would be three.
+ */
+const rokkitt = Rokkitt({
+  variable: "--font-rokkitt",
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -45,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // injects `__gcrremoteframetoken`); this silences that one-level mismatch only.
     <html
       lang="es"
-      className={`${poppins.variable} h-full antialiased`}
+      className={`${poppins.variable} ${rokkitt.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">

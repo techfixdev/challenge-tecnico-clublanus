@@ -16,6 +16,9 @@
 
 @theme {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  /* Wordmark, screen titles and large amounts. Its x-height is lower than Poppins' (0.40em
+     against 0.55em), so it is set a couple of pixels larger where it replaces it. */
+  --font-display: var(--font-rokkitt), ui-serif, Georgia, serif;
 
   /* --- Brand palette --- */
 
@@ -178,15 +181,6 @@
   --inset-shadow-recessed:
     inset 0.5px 1px 2px rgb(52 24 38 / 0.08),
     inset 0 0 0 1px rgb(52 24 38 / 0.06);
-}
-
-/*
- * A geometric slab serif for the wordmark only. `inline`, so
- * `font-display` reads `--font-arvo` where it is used (the login page defines it), not on
- * the root, where it does not exist.
- */
-@theme inline {
-  --font-display: var(--font-arvo), ui-serif, Georgia, serif;
 }
 
 :root {

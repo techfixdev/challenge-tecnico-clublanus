@@ -52,11 +52,11 @@ export function MovementDetail({
         <MovementTile id={movement.id}>
           <MovementTypeIcon type={movement.type} size="lg" />
         </MovementTile>
-        <h1 className="mt-5 text-xl font-semibold text-foreground">
+        <h1 className="mt-5 font-display text-[22px] font-semibold text-foreground">
           {movement.counterparty}
         </h1>
         <p className="mt-1 text-sm text-muted">{movement.description}</p>
-        <p className="mt-4 text-4xl font-semibold">
+        <p className="mt-4 font-display text-[40px] leading-[1.1] font-semibold">
           <MovementAmount
             type={movement.type}
             amount={movement.amount}

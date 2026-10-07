@@ -68,7 +68,7 @@ export function StepHeader({
       <h1
         ref={headingRef}
         tabIndex={-1}
-        className="mt-6 text-xl font-semibold text-foreground outline-none"
+        className="mt-6 font-display text-[22px] font-semibold text-foreground outline-none"
       >
         {title}
       </h1>
