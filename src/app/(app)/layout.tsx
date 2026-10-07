@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { logout } from "@/features/auth/server/actions";
 import { BottomNav } from "@/shared/ui/BottomNav";
 import { BrandIntro } from "@/shared/ui/BrandIntro";
+import { Escudo } from "@/shared/ui/brand/Escudo";
 import { MotionProvider } from "@/shared/ui/motion/MotionProvider";
 
 /**
@@ -24,7 +25,9 @@ export default function AuthenticatedLayout({
         {children}
       </div>
       <BottomNav logoutAction={logout} />
-      <BrandIntro />
+      <BrandIntro>
+        <Escudo className="brand-intro-shield" />
+      </BrandIntro>
     </MotionProvider>
   );
 }
