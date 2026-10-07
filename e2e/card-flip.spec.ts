@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { login } from "./fixtures/session";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /*
@@ -8,12 +9,8 @@ import { waitForScreenToSettle } from "./fixtures/view-transitions";
  * the back fades in without any rotation.
  */
 
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
+async function loginUntilCardsSettle(page: Page) {
+  await login(page);
   // The URL changes while Home still shows its skeleton: the cards stream in later and
   // dissolve in with a view transition, and a raw pointer tap made before they are there,
   // or while that transition runs, never reaches the card. Wait for both.
@@ -64,7 +61,7 @@ test.describe("with motion allowed", () => {
   test("a tap turns the card over in 3D and another tap turns it back", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilCardsSettle(page);
     const { x, y } = await cardCenter(page);
 
     await page.mouse.click(x, y);
@@ -89,7 +86,7 @@ test.describe("with motion allowed", () => {
   });
 
   test("Enter and Space flip the focused card", async ({ page }) => {
-    await login(page);
+    await loginUntilCardsSettle(page);
     await flipButton(page).focus();
 
     await page.keyboard.press("Enter");
@@ -100,7 +97,7 @@ test.describe("with motion allowed", () => {
   });
 
   test("the eye on the card reveals instead of flipping", async ({ page }) => {
-    await login(page);
+    await loginUntilCardsSettle(page);
 
     await page
       .getByRole("button", {
@@ -120,7 +117,7 @@ test.describe("with motion allowed", () => {
   test("a horizontal swipe or a tilt drag does not flip the card", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilCardsSettle(page);
     const { x, y } = await cardCenter(page);
 
     // Swipe-like drag to the left, released on the card.
@@ -149,7 +146,7 @@ test.describe("with motion allowed", () => {
   test("a swipe to the next card leaves both cards on their front", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilCardsSettle(page);
     await page.getByRole("button", { name: "Tarjeta 2 de 2" }).click();
     await expect(
       page.getByRole("button", { name: "Tarjeta 2 de 2" }),
@@ -173,7 +170,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
   test("the back fades in over the front without any rotation", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilCardsSettle(page);
     const frontFace = page.locator("[data-face=front]").first();
     const backFace = page.locator("[data-face=back]").first();
     await expect(backFace).toHaveCSS("opacity", "0");

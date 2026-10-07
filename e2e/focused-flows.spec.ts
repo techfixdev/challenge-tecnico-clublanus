@@ -1,19 +1,13 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { DEMO_USER, login } from "./fixtures/session";
+
 /*
  * Sending money is a focused task: no bottom nav inside it, and each step's primary
  * action stays pinned to the bottom of the screen, fully visible and tappable without
  * scrolling. Nothing here confirms a transfer (read-only for the shared test database).
  * Signing out moved off the nav into the profile sheet on Home, behind a confirmation.
  */
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
 
 /** Inside the viewport and on top at its center: a tap there reaches it. */
 async function expectTappableWithoutScrolling(page: Page, target: Locator) {
@@ -109,7 +103,7 @@ test("signs out from the profile sheet, after confirming", async ({ page }) => {
   await page.getByRole("button", { name: "Tu perfil" }).click();
   const sheet = page.getByRole("dialog", { name: "Tu perfil" });
   await expect(sheet).toBeVisible();
-  await expect(sheet).toContainText("soygranate@clublanus.com");
+  await expect(sheet).toContainText(DEMO_USER.email);
 
   // A first tap only asks; cancelling keeps the session.
   await sheet.getByRole("button", { name: "Cerrar sesión" }).click();

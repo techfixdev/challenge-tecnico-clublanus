@@ -2,14 +2,17 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { formatAmount, formatMoney } from "../src/shared/lib/format";
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
+import { primaryCard } from "./fixtures/screens";
+import { DEMO_USER, login, SECOND_USER } from "./fixtures/session";
 import {
   cardBalance,
   primaryCardBalance,
   undoDemoTransfersSince,
 } from "./fixtures/transfers-db";
 
-const SENDER = { email: "soygranate@clublanus.com", password: "GRANATE1@" };
-const RECIPIENT = { email: "hincha@clublanus.com", password: "GRANATE2@" };
+/** Every transfer here goes from the demo user to the second seeded one. */
+const SENDER = DEMO_USER;
+const RECIPIENT = SECOND_USER;
 
 /** Seed facts (prisma/seed.ts). */
 const SEED = {
@@ -28,21 +31,6 @@ function amountToCents(amount: string): number {
 /** 96655 → "966,55", as the card shows it (the app's one formatter). */
 function centsToAmount(cents: number): string {
   return formatAmount(cents / 100);
-}
-
-async function login(page: Page, user: { email: string; password: string }) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(user.email);
-  await page.getByLabel("Contraseña", { exact: true }).fill(user.password);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
-
-function primaryCard(page: Page) {
-  return page.getByRole("region", {
-    name: "Tarjeta Mastercard terminada en 1234",
-    exact: true,
-  });
 }
 
 /** Balances are masked on load: the card's eye fetches and shows its balance. */

@@ -12,6 +12,8 @@ import {
   watchPrefetch,
   type TransitionEntry,
 } from "./fixtures/view-transitions";
+import { login } from "./fixtures/session";
+import { movementRows } from "./fixtures/screens";
 
 /*
  * iOS-like navigation motion (shared/ui/motion/navigation.ts), on real computed styles:
@@ -19,19 +21,10 @@ import {
  * cold-load intro. Each case runs with and without `prefers-reduced-motion: reduce`.
  */
 
-async function login(page: Page) {
+/** Signs in with the network tracked from the start, so `settle` sees every request. */
+async function loginTrackingNetwork(page: Page) {
   trackNetwork(page);
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
-
-function movementRows(page: Page) {
-  return page
-    .getByRole("region", { name: "Lista de movimientos" })
-    .getByRole("listitem");
+  await login(page);
 }
 
 function mainNav(page: Page) {
@@ -123,7 +116,7 @@ test.describe("with motion allowed", () => {
   test("a row pushes its detail in from the right; the list shifts left and dims", async ({
     page,
   }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     const transitions = await pushFirstDetail(page);
 
     expect(keyframesOf(transitions, "new", "nav-push-in")).toEqual(
@@ -148,7 +141,7 @@ test.describe("with motion allowed", () => {
   test('"Volver" pops back: the detail slides out to the right over the returning list', async ({
     page,
   }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     await pushFirstDetail(page);
 
     await settle(page);
@@ -176,7 +169,7 @@ test.describe("with motion allowed", () => {
     const prefetch = watchPrefetch(page, (request) =>
       isFullPrefetch(request, "/movimientos", "/"),
     );
-    await login(page);
+    await loginTrackingNetwork(page);
     await skipWithoutViewTransitions(page);
     await prefetch.done();
     await settle(page);
@@ -208,7 +201,7 @@ test.describe("with motion allowed", () => {
   test("switching tabs swaps the sections instantly: no fade, no scale, no slide", async ({
     page,
   }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     await skipWithoutViewTransitions(page);
     await settle(page);
     const readLog = await recordViewTransitions(page);
@@ -234,7 +227,7 @@ test.describe("with motion allowed", () => {
   test("a type filter swaps the results in place: no slide, no tiles flying", async ({
     page,
   }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     await page.goto("/movimientos");
     await expect(movementRows(page).first()).toBeVisible();
     await skipWithoutViewTransitions(page);
@@ -256,7 +249,7 @@ test.describe("with motion allowed", () => {
   });
 
   test("taps during a transition still land and navigate", async ({ page }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     await skipWithoutViewTransitions(page);
     await settle(page);
     const nav = mainNav(page);
@@ -284,7 +277,7 @@ test.describe("with motion allowed", () => {
   test("a cold load plays the branded intro, which never blocks and leaves by itself", async ({
     page,
   }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     await watchIntro(page);
     await page.goto("/");
     const seen = await introSeen(page);
@@ -309,7 +302,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
   test("push, pop and tab switches are instant (no duration, no delay)", async ({
     page,
   }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     const push = await pushFirstDetail(page);
 
     await settle(page);
@@ -334,7 +327,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
   });
 
   test("a cold load skips the branded intro", async ({ page }) => {
-    await login(page);
+    await loginTrackingNetwork(page);
     await watchIntro(page);
     await page.goto("/");
     await expect(

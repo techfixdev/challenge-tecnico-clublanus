@@ -1,6 +1,7 @@
 import { Client } from "pg";
 
 import { testDatabaseUrl } from "../../scripts/test-database";
+import { DEMO_USER, SECOND_USER } from "./session";
 
 /**
  * Undoes the transfers an e2e test made between the two demo users, so the seed facts the
@@ -9,7 +10,7 @@ import { testDatabaseUrl } from "../../scripts/test-database";
  * deleted, in one database transaction. Narrower and faster than re-running the seed,
  * which would recreate every movement (new ids) under other specs' feet.
  */
-const DEMO_EMAILS = ["soygranate@clublanus.com", "hincha@clublanus.com"];
+const DEMO_EMAILS = [DEMO_USER.email, SECOND_USER.email];
 
 /** The same database the e2e web server uses (playwright.config.ts), never the dev one. */
 async function connect(): Promise<Client> {

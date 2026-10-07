@@ -5,29 +5,14 @@ import {
   type Page,
 } from "@playwright/test";
 
+import { primaryCard } from "./fixtures/screens";
+import { login, SECOND_USER } from "./fixtures/session";
+
 /*
  * Per-card reveal: every card is masked on load (balance, full number, CVV), each eye
  * reveals only its own card by fetching that card's data, and the data masks itself
  * again after 30 seconds or when the tab is hidden.
  */
-
-const DEMO = { email: "soygranate@clublanus.com", password: "GRANATE1@" };
-const HINCHA = { email: "hincha@clublanus.com", password: "GRANATE2@" };
-
-async function login(page: Page, user = DEMO) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(user.email);
-  await page.getByLabel("Contraseña", { exact: true }).fill(user.password);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
-
-function primaryCard(page: Page) {
-  return page.getByRole("region", {
-    name: "Tarjeta Mastercard terminada en 1234",
-    exact: true,
-  });
-}
 
 function visaCard(page: Page) {
   return page.getByRole("region", {
@@ -182,7 +167,7 @@ test("the details endpoint needs a session and only serves the owner's cards", a
 }) => {
   // Another user's card id, read from that user's own session.
   const other = await browser.newPage();
-  await login(other, HINCHA);
+  await login(other, SECOND_USER);
   const hinchaCards = (await (
     await other.request.get("/api/account/cards")
   ).json()) as {

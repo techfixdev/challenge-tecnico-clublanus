@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
+import { DEMO_USER, login } from "./fixtures/session";
 
 /*
  * Real phones reach narrow CSS viewports: 320px handsets, and Android's page zoom shrinks
@@ -11,14 +12,6 @@ import { expectFitsEveryWidth } from "./fixtures/layout-audit";
  */
 
 const CARD_WIDTHS = [240, 280, 320, 390, 768];
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
 
 /**
  * Elements of each card face (front and back) that leave the face's content box (its
@@ -128,7 +121,7 @@ test.describe("every screen fits every width", () => {
     await page.goto("/login");
     await expectFitsEveryWidth(page, "login");
 
-    await page.getByLabel("Email").fill("soygranate@clublanus.com");
+    await page.getByLabel("Email").fill(DEMO_USER.email);
     await page.getByLabel("Contraseña", { exact: true }).fill("incorrecta1");
     await page.getByRole("button", { name: "Ingresar" }).click();
     await expect(

@@ -1,14 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { formatSignedMoney } from "../src/shared/lib/format";
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
+import { login } from "./fixtures/session";
 
 type CurrencyTotals = { currency: string; income: string; expenses: string };
 

@@ -1,9 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const DEMO_USER = {
-  email: "soygranate@clublanus.com",
-  password: "GRANATE1@",
-};
+import { movementRows } from "./fixtures/screens";
+import { login } from "./fixtures/session";
 
 /**
  * Seed facts (prisma/seed.ts): 28 movements (27 plus the demo transfer sent to the second
@@ -16,20 +14,6 @@ const SEED = {
   adobe: 2,
   pageSize: 20,
 };
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(DEMO_USER.email);
-  await page.getByLabel("Contraseña", { exact: true }).fill(DEMO_USER.password);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
-
-function movementRows(page: Page) {
-  return page
-    .getByRole("region", { name: "Lista de movimientos" })
-    .getByRole("listitem");
-}
 
 function dayHeaders(page: Page) {
   return page
