@@ -100,6 +100,25 @@ export function amountInputError(
   return null;
 }
 
+/** The currency of the user's everyday account: transfers start from it. */
+const EVERYDAY_CURRENCY = "ARS";
+
+/**
+ * The card a new transfer starts from: the peso account (the everyday one in Argentina,
+ * even when the dollar card is the primary one on Home), else the first card; "" when
+ * there is none. The app does not track the last card used, so there is nothing to
+ * prefer over it.
+ */
+export function defaultSourceCardId(
+  cards: readonly { id: string; currency: string }[],
+): string {
+  return (
+    cards.find((card) => card.currency === EVERYDAY_CURRENCY)?.id ??
+    cards[0]?.id ??
+    ""
+  );
+}
+
 /**
  * The amount as the app writes it, once the field is left: "1234,5" → "1.234,50", like
  * the review and the receipt show it. A whole amount stays as typed ("12"), and so does

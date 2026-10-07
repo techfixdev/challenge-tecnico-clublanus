@@ -97,12 +97,15 @@ test("sends money to hincha.granate, who receives it", async ({
   await page.getByLabel("Alias o CVU").fill("hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
-  // Step 2: amount (decimal comma), primary card preselected, optional reason.
+  // Step 2: amount (decimal comma) from the dollar card (the peso card is
+  // preselected), optional reason.
   const amountHeading = page.getByRole("heading", {
     name: "¿Cuánto le enviás?",
   });
   await expect(amountHeading).toBeFocused();
   await expect(page.getByText("Hincha Granate")).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Visa/ })).toBeChecked();
+  await page.locator("label", { hasText: "Mastercard" }).click();
   await expect(page.getByRole("radio", { name: /Mastercard/ })).toBeChecked();
   await page.getByLabel("Monto en USD").fill("12,30");
   await page.getByLabel(/Motivo/).fill("Entradas e2e");
@@ -169,8 +172,7 @@ test("sends pesos from the Visa, credited to the recipient's peso card", async (
   await page.getByLabel("Alias o CVU").fill("hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
-  // The peso card: the field turns to pesos and takes the Argentine format.
-  await page.locator("label", { hasText: "Visa" }).click();
+  // The peso card is the default: the field is in pesos and takes the Argentine format.
   await expect(page.getByRole("radio", { name: /Visa/ })).toBeChecked();
   await expect(page.getByTestId("amount-currency")).toHaveText("$");
   const amount = page.getByLabel("Monto en ARS");
@@ -214,6 +216,7 @@ test("refuses an amount above the balance, in Spanish, and moves nothing", async
   await page.getByLabel("Alias o CVU").fill("hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
+  await page.locator("label", { hasText: "Mastercard" }).click();
   await page.getByLabel("Monto en USD").fill("5000");
 
   await expect(

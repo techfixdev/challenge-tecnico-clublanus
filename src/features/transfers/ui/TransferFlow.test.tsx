@@ -91,8 +91,14 @@ async function toAmountStep(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
 }
 
-async function toReviewStep(user: ReturnType<typeof userEvent.setup>) {
+/** The amount step from the dollar card (the peso card is the default). */
+async function toDollarAmountStep(user: ReturnType<typeof userEvent.setup>) {
   await toAmountStep(user);
+  await user.click(screen.getByRole("radio", { name: /Mastercard/ }));
+}
+
+async function toReviewStep(user: ReturnType<typeof userEvent.setup>) {
+  await toDollarAmountStep(user);
   await user.type(screen.getByLabelText("Monto en USD"), "12,30");
   await user.type(screen.getByLabelText(/Motivo/), "Entradas");
   await user.click(screen.getByRole("button", { name: "Continuar" }));
@@ -103,7 +109,8 @@ describe("TransferFlow", () => {
   it("sends pesos from the peso card, in the Argentine format", async () => {
     const { user, send } = renderFlow();
     await toAmountStep(user);
-    await user.click(screen.getByRole("radio", { name: /Visa/ }));
+    // The peso card is preselected: no need to pick it.
+    expect(screen.getByRole("radio", { name: /Visa/ })).toBeChecked();
     expect(screen.getByText("Disponible:").parentElement).toHaveTextContent(
       "$ 312.400,50",
     );
@@ -202,7 +209,7 @@ describe("TransferFlow", () => {
 
   it("checks the amount against the chosen card and keeps every value when going back", async () => {
     const { user } = renderFlow();
-    await toAmountStep(user);
+    await toDollarAmountStep(user);
     const amount = screen.getByLabelText("Monto en USD");
     const proceed = screen.getByRole("button", { name: "Continuar" });
 
@@ -242,7 +249,7 @@ describe("TransferFlow", () => {
 
   it("flags an amount above the balance while typing, but a half-typed one only on blur", async () => {
     const { user } = renderFlow();
-    await toAmountStep(user);
+    await toDollarAmountStep(user);
     const amount = screen.getByLabelText("Monto en USD");
 
     await user.type(amount, "5000");
@@ -258,7 +265,7 @@ describe("TransferFlow", () => {
 
   it("writes a decimal comma amount the app's way once the field is left", async () => {
     const { user } = renderFlow();
-    await toAmountStep(user);
+    await toDollarAmountStep(user);
     const amount = screen.getByLabelText("Monto en USD");
 
     await user.type(amount, "12,3");

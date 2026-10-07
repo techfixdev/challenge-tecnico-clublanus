@@ -12,6 +12,7 @@ import {
 import { parseAmount } from "@/shared/lib/money";
 
 import {
+  defaultSourceCardId,
   INITIAL_SEND_TRANSFER_STATE,
   type ConfirmedRecipient,
   type LookupRecipientAction,
@@ -76,7 +77,7 @@ export function TransferFlow({
   const [recipientText, setRecipientText] = useState("");
   const [recipient, setRecipient] = useState<ConfirmedRecipient | null>(null);
   const [amount, setAmount] = useState("");
-  const [cardId, setCardId] = useState(cards[0]?.id ?? "");
+  const [cardId, setCardId] = useState(() => defaultSourceCardId(cards));
   const [description, setDescription] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState(initialKey);
   const [stepError, setStepError] = useState<StepError | null>(null);

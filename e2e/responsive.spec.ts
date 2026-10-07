@@ -186,6 +186,8 @@ test.describe("every screen fits every width", () => {
 
       await page.getByLabel("Alias o CVU").fill("hincha.granate");
       await page.getByRole("button", { name: "Continuar" }).click();
+      // The peso card is preselected; the dollar one has the smaller balance.
+      await page.locator("label", { hasText: "Mastercard" }).click();
       await page.getByLabel("Monto en USD").fill("99999,99");
       await expect(
         page.getByText("No tenés saldo suficiente en esta tarjeta"),

@@ -8,6 +8,7 @@ import {
 import { TRANSFER_FAILURE_MESSAGE } from "./transfer";
 import {
   amountInputError,
+  defaultSourceCardId,
   firstErrorMessage,
   normalizeAmountInput,
   pickRecentRecipients,
@@ -88,6 +89,23 @@ describe("amountInputError", () => {
 
   it("skips the balance check when no card is known", () => {
     expect(amountInputError("5000")).toBeNull();
+  });
+});
+
+describe("defaultSourceCardId", () => {
+  const usd = { id: "card_usd", currency: "USD" };
+  const ars = { id: "card_ars", currency: "ARS" };
+
+  it("starts from the peso account, wherever it sits in the list", () => {
+    expect(defaultSourceCardId([usd, ars])).toBe("card_ars");
+    expect(defaultSourceCardId([ars, usd])).toBe("card_ars");
+  });
+
+  it("falls back to the first card without a peso one, and to nothing without cards", () => {
+    expect(
+      defaultSourceCardId([usd, { id: "card_eur", currency: "EUR" }]),
+    ).toBe("card_usd");
+    expect(defaultSourceCardId([])).toBe("");
   });
 });
 
