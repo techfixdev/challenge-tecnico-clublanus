@@ -268,6 +268,12 @@ test.describe("receive", () => {
     ).toBeVisible();
     await expect(page.getByText(SEED.senderAlias)).toBeVisible();
     await expect(page.getByText(SEED.senderCvuGrouped)).toBeVisible();
+    // The QR (plain text alias + CVU) is drawn on the server as one labelled SVG.
+    await expect(
+      page.getByRole("img", {
+        name: `Código QR con tu alias ${SEED.senderAlias} y tu CVU`,
+      }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Copiar CVU" }).click();
     await expect(

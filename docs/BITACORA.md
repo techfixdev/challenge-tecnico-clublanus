@@ -550,6 +550,21 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 ---
 
+### T12b-C3 — QR en Recibir y errores del login sobre granate (07/10/2026)
+
+**Pedido (auditoría de UX):** Recibir no tenía QR y su recuadro informativo era un cuarto estilo de superficie; en el login, el aviso de credenciales incorrectas era un recuadro rosa pálido con texto rojo pegado sobre el granate, distinto del rojo claro de los errores de cada campo.
+
+**Qué se hizo:**
+- **QR de Recibir:** `receiveQrPayload` (dominio, puro) arma `GranaBank` / `Alias: …` / `CVU: …` y rechaza un alias o CVU inválido. Es texto plano a propósito: no se finge un QR de "Transferencias 3.0" (payload EMVCo de un adquirente registrado). `QrCode` (`src/shared/ui/qr/`) lo dibuja en el servidor como un solo `<path>` SVG (las corridas de módulos se unen en rectángulos, sin costuras al escalar), granate sobre blanco, zona de silencio de 4 módulos, corrección H y sin logo. Ancho fluido hasta 208 px. Librería: `uqr` (sin dependencias); se descartó `qrcode` por sus tres dependencias.
+- **Recuadro informativo:** dejó de ser una caja rosada; es una nota sin fondo con el ícono en el azulejo suave de la app. Quedan dos superficies en la pantalla: la tarjeta blanca y el texto.
+- **Login:** el aviso es un recuadro granate oscuro translúcido (`primary-deep` al 60 %) con anillo fino, ícono y texto `#FFB4AB`: 8,2:1 sobre la zona más clara del fondo, 9,9:1 en la más oscura. Los errores de campo usan el mismo color y el mismo ícono. Se mantienen `role="alert"` y el mensaje genérico (no revela si el email existe); la lógica de autenticación no se tocó.
+
+**Tests primero:** payload del QR, matriz → path SVG, `QrCode` con `role="img"` y etiqueta, y el aviso del login con sus clases: en rojo antes del cambio, verdes después. `brand-palette.test.ts` suma el contraste del aviso compuesto sobre el fondo.
+
+**Pendiente:** "Copiar" al lado del valor y el agrupado del CVU (que hoy termina en un par suelto) necesitan tocar `ReceiveDetailsCard` y dos tests de la API, fuera del alcance autorizado de esta tarea.
+
+---
+
 ## 6. Estructura del proyecto
 
 Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.

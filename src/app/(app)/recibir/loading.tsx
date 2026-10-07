@@ -10,7 +10,7 @@ export default function ReceiveLoading() {
         <Skeleton className="mt-6 h-6 w-40" />
         <Skeleton className="mt-2 h-4 w-64" />
         <Skeleton className="mt-8 h-[228px] w-full rounded-3xl" />
-        <Skeleton className="mt-6 h-14 w-full rounded-2xl" />
+        <Skeleton className="mt-6 h-[300px] w-full rounded-3xl" />
       </div>
     </ScreenTransition>
   );
