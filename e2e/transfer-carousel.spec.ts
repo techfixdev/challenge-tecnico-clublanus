@@ -6,8 +6,8 @@ import { login } from "./fixtures/session";
  * The send flow is one surface moved by the finger: recents are a strip of tiles dragged
  * sideways, the amount comes from the flow's own keypad, and the steps rearrange in place.
  * Nothing here confirms a transfer (read-only for the shared test database). The seed
- * gives the demo user one recent recipient (the other demo user), so the drag checked
- * here is the strip's edge: it stretches under the finger and settles back.
+ * gives the demo user six recent recipients, newest first: the other demo user, then
+ * Valentina Sosa, Matías Herrera, Camila Benítez, Nicolás Acosta and Florencia Ríos.
  */
 
 async function centerX(target: Locator): Promise<number> {
@@ -33,7 +33,7 @@ test.describe("the transfer flow, by hand", () => {
     await page.goto("/transferir");
   });
 
-  test("the recents strip stretches past its end and settles back", async ({
+  test("the recents strip stretches past its start and settles back", async ({
     page,
   }) => {
     const strip = page.getByRole("listbox", { name: "Recientes" });
@@ -41,9 +41,9 @@ test.describe("the transfer flow, by hand", () => {
     await expect(tile).toBeVisible();
     const rest = await centerX(tile);
 
-    await dragBy(page, tile, -150);
-    // Past the strip's end the tile follows the finger, but resisting it.
-    const pulled = rest - (await centerX(tile));
+    await dragBy(page, tile, 150);
+    // Before the first tile the strip follows the finger, but resisting it.
+    const pulled = (await centerX(tile)) - rest;
     expect(pulled).toBeGreaterThan(10);
     expect(pulled).toBeLessThan(150);
 
@@ -56,6 +56,25 @@ test.describe("the transfer flow, by hand", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "¿A quién le enviás?" }),
     ).toBeVisible();
+  });
+
+  test("dragging the strip scrubs through the recents, one tile per step", async ({
+    page,
+  }) => {
+    const strip = page.getByRole("listbox", { name: "Recientes" });
+    const first = strip.getByRole("option", { name: /Hincha Granate/ });
+    const third = strip.getByRole("option", { name: /Matías Herrera/ });
+    await expect(first).toBeVisible();
+    const center = await centerX(first);
+
+    // Two tiles' worth to the left, slowly (no flick), then let go.
+    await dragBy(page, first, -2 * 108);
+    await page.mouse.up();
+
+    // The third person settles in the center and is the one chosen.
+    await expect.poll(() => centerX(third)).toBeCloseTo(center, 0);
+    await expect(third).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByLabel("Alias o CVU")).toHaveValue("mati.granate");
   });
 
   test("rearranges in place from recipient to amount to review, and back", async ({
@@ -109,7 +128,7 @@ test.describe("the transfer flow, by hand", () => {
     const strip = page.getByRole("listbox", { name: "Recientes" });
     await strip.focus();
     await page.keyboard.press("End");
-    await expect(page.getByLabel("Alias o CVU")).toHaveValue("hincha.granate");
+    await expect(page.getByLabel("Alias o CVU")).toHaveValue("flor.granate");
     await page.keyboard.press("Enter");
 
     const heading = page.getByRole("heading", {

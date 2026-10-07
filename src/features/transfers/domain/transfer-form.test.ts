@@ -226,6 +226,15 @@ describe("pickRecentRecipients", () => {
     ]);
   });
 
+  it("offers up to six people by default: enough to drag through, still one strip", () => {
+    const rows = Array.from({ length: 8 }, (_, index) => ({
+      sender: self,
+      recipient: { ...hincha, id: `user_${index}`, alias: `persona.${index}x` },
+    }));
+
+    expect(pickRecentRecipients(rows, me)).toHaveLength(6);
+  });
+
   it("skips accounts without an alias and honors the limit", () => {
     const rows = [
       { sender: self, recipient: { ...other, alias: null } },

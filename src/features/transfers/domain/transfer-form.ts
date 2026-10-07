@@ -183,6 +183,12 @@ export type TransferParties = {
 };
 
 /**
+ * How many recent people the send screen offers: enough to scrub through the strip by
+ * hand, few enough that the one the user wants is a short drag away.
+ */
+const RECENT_RECIPIENTS_LIMIT = 6;
+
+/**
  * People the user has exchanged money with (sent to or received from), newest first,
  * once each. Only accounts with an alias qualify: the alias is what the quick pick sends,
  * so no full CVU ever reaches the browser.
@@ -190,7 +196,7 @@ export type TransferParties = {
 export function pickRecentRecipients(
   transfers: readonly TransferParties[],
   userId: string,
-  limit = 4,
+  limit = RECENT_RECIPIENTS_LIMIT,
 ): ConfirmedRecipient[] {
   const seen = new Set<string>();
   const recipients: ConfirmedRecipient[] = [];

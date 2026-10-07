@@ -4,11 +4,11 @@ import { movementRows } from "./fixtures/screens";
 import { login } from "./fixtures/session";
 
 /**
- * Seed facts (prisma/seed.ts): 28 movements (27 plus the demo transfer sent to the second
- * user), 8 received, 11 subscriptions, 2 from Adobe.
+ * Seed facts (prisma/seed.ts): 33 movements (27 plus the six past transfers the demo user
+ * sent), 8 received, 11 subscriptions, 2 from Adobe.
  */
 const SEED = {
-  total: 28,
+  total: 33,
   received: 8,
   subscriptions: 11,
   adobe: 2,
