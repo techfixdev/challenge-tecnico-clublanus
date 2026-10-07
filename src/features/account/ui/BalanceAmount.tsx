@@ -49,7 +49,7 @@ export function BalanceAmount({
     >
       <span aria-hidden="true" className="inline-grid">
         <AnimatePresence initial={false}>
-          {balance !== null && (
+          {!hidden && (
             <m.span
               key="odometer"
               data-odometer
@@ -111,9 +111,7 @@ export function BalanceAmount({
         </m.span>
       </span>
       <span className="sr-only">
-        {balance === null
-          ? "Saldo oculto"
-          : formatMoneyForSpeech(balance, currency)}
+        {hidden ? "Saldo oculto" : formatMoneyForSpeech(balance, currency)}
       </span>
     </span>
   );

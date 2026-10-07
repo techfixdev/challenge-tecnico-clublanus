@@ -25,18 +25,24 @@ export function CardCarousel({ cards }: { cards: CardFace[] }) {
       label="Tus tarjetas"
       slides={cards.map((card) => ({
         id: card.id,
-        content: (
-          <CardRevealProvider cardId={card.id} phrase={cardPhrase(card)}>
-            <LivingCard
-              tone={card.brand === "VISA" ? "gold" : "primary"}
-              flipLabel={`Ver reverso de la ${cardPhrase(card)}`}
-              back={<PaymentCardBack card={card} />}
-            >
-              <PaymentCard card={card} />
-            </LivingCard>
-          </CardRevealProvider>
-        ),
+        content: <CarouselCard card={card} />,
       }))}
     />
+  );
+}
+
+/** One slide: the card with its own eye, tilt and flip. */
+function CarouselCard({ card }: { card: CardFace }) {
+  const phrase = cardPhrase(card);
+  return (
+    <CardRevealProvider cardId={card.id} phrase={phrase}>
+      <LivingCard
+        tone={card.brand === "VISA" ? "gold" : "primary"}
+        flipLabel={`Ver reverso de la ${phrase}`}
+        back={<PaymentCardBack card={card} />}
+      >
+        <PaymentCard card={card} />
+      </LivingCard>
+    </CardRevealProvider>
   );
 }

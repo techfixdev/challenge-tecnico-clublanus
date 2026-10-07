@@ -82,6 +82,7 @@ export function ReceiveDetailsCard({ details }: { details: ReceiveDetails }) {
         />
         <CopyRow
           term="CVU"
+          spokenTerm="CVU"
           value={details.cvuFormatted}
           numeric
           copied={copiedKey === "cvu"}
@@ -107,19 +108,21 @@ export function ReceiveDetailsCard({ details }: { details: ReceiveDetails }) {
 
 function CopyRow({
   term,
+  // "Copiar alias", but "Copiar CVU": an acronym keeps its capitals.
+  spokenTerm = term.toLowerCase(),
   value,
   numeric = false,
   copied,
   onCopy,
 }: {
   term: string;
+  /** How the copy button names the value, mid-sentence. */
+  spokenTerm?: string;
   value: string;
   numeric?: boolean;
   copied: boolean;
   onCopy: () => void;
 }) {
-  // "Copiar alias", but "Copiar CVU" (an acronym keeps its capitals).
-  const spokenTerm = numeric ? term : term.toLowerCase();
   return (
     <div className="py-4 last:pb-0">
       <dt className="text-xs text-muted">{term}</dt>

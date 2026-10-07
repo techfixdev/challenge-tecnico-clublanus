@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 
 import { ROUTES } from "@/shared/lib/routes";
 import { GlassHeader } from "@/shared/ui/GlassHeader";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 import { SECTION_PUSH } from "@/shared/ui/motion/navigation";
 import { SearchIcon } from "@/shared/ui/icons";
 
 import { NotificationsButton } from "./NotificationsButton";
-import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /** Link from the search icon: lands on Movements with the search box focused. */
 const SEARCH_FROM_HOME_HREF = `${ROUTES.movements}?focus=1`;

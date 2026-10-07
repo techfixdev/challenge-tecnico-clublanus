@@ -120,7 +120,7 @@ export async function revealCardDetails(
   if (!record) return null;
   return {
     id: record.id,
-    number: record.pan ?? null,
+    number: record.pan,
     cvv: deriveCvv(record.id),
     balance: record.balance,
     currency: record.currency,

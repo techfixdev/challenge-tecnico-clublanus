@@ -50,6 +50,18 @@ type Press = {
 const FACE =
   "overflow-hidden rounded-3xl shadow-[0_1px_2px_color-mix(in_srgb,var(--color-primary-dark)_18%,transparent),0_10px_20px_-12px_color-mix(in_srgb,var(--color-primary-dark)_45%,transparent)] [backface-visibility:hidden]";
 
+/** Which face a flip just turned up; silent until the user flips the card once. */
+function flipAnnouncement({
+  flipped,
+  flippedOnce,
+}: {
+  flipped: boolean;
+  flippedOnce: boolean;
+}): string {
+  if (!flippedOnce) return "";
+  return flipped ? "Reverso de la tarjeta" : "Frente de la tarjeta";
+}
+
 /**
  * A card that reacts like a physical object: only while pressed and dragged, it tilts
  * towards the finger in 3D, a faint gloss follows the light and its shadow shifts; on
@@ -127,6 +139,14 @@ export function LivingCard({
     else flipAngle.set(flipped ? 180 : 0);
   }, [flipped, reduced, flipAngle]);
   const fade = reduced && flippedOnce ? FADE : INSTANT;
+  // One gloss layer per face, so it turns with the face it lies on.
+  const sheen = (
+    <m.div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+      style={{ background: sheenBackground, opacity: sheenOpacity }}
+    />
+  );
 
   function follow(event: PointerEvent<HTMLDivElement>) {
     const box = event.currentTarget.getBoundingClientRect();
@@ -225,11 +245,7 @@ export function LivingCard({
           transition={fade}
         >
           {children}
-          <m.div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-            style={{ background: sheenBackground, opacity: sheenOpacity }}
-          />
+          {sheen}
         </m.div>
         {back && (
           <m.div
@@ -244,21 +260,13 @@ export function LivingCard({
             transition={fade}
           >
             {back}
-            <m.div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-              style={{ background: sheenBackground, opacity: sheenOpacity }}
-            />
+            {sheen}
           </m.div>
         )}
       </m.div>
       {back && (
         <span className="sr-only" aria-live="polite">
-          {flippedOnce
-            ? flipped
-              ? "Reverso de la tarjeta"
-              : "Frente de la tarjeta"
-            : ""}
+          {flipAnnouncement({ flipped, flippedOnce })}
         </span>
       )}
     </div>
