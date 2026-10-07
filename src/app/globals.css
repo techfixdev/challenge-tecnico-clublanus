@@ -1045,3 +1045,31 @@ body {
     transition: none;
   }
 }
+
+/*
+ * Dragging a sheet down (Sheet.tsx sets `--sheet-drag-progress`, 0 at rest, 1 when it
+ * has travelled its whole height): the page behind lightens with it. A one-finger drag
+ * is the sheet's while its content fits; once it scrolls, only the grab handle drags.
+ * `pinch-zoom` keeps two-finger zoom working everywhere.
+ */
+.sheet {
+  touch-action: pinch-zoom;
+}
+
+.sheet[data-overflowing] {
+  touch-action: auto;
+}
+
+.sheet-grab {
+  touch-action: pinch-zoom;
+}
+
+.sheet[open]::backdrop {
+  opacity: calc(1 - var(--sheet-drag-progress, 0));
+}
+
+/* A drag in progress never selects the text under the finger. */
+[data-dragging] {
+  -webkit-user-select: none;
+  user-select: none;
+}
