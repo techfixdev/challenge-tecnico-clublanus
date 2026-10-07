@@ -594,6 +594,20 @@ Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → 
 
 ---
 
+### T11 — Tokens y pantallas para Figma (07/10/2026)
+
+**Pedido:** llevar el sistema visual a Figma sin copiar valores a mano: tokens importables como variables y una captura de cada pantalla y estado. (La parte que usa la cuenta de Figma, vía MCP, queda para cuando esté conectada.)
+
+**Qué se hizo:**
+- **`pnpm tokens:figma`** lee los bloques `@theme` y `:root` de `globals.css` y escribe `design/tokens.figma.json` en formato DTCG: 43 colores (marca, roles, neutros y tarjeta) en hex final, 14 sombras, 2 familias tipográficas, 5 duraciones y la curva. La descripción de cada token sale del comentario que tiene arriba en el CSS, así que el porqué de cada color viaja con él. Salida determinística (claves ordenadas, formato de Prettier: `pnpm format` no la cambia).
+- **Un solo resolvedor:** `src/shared/lib/design-tokens.ts` (puro) resuelve `var()`, `rgb()` y `color-mix()` en sRGB. `brand-palette.test.ts` usa el mismo en lugar de su copia.
+- **`--check`** falla si el JSON commiteado quedó viejo; un test hace lo mismo dentro de `pnpm test`.
+- **`pnpm screens:capture`** (Playwright) guarda 18 PNG de 390×844 @2x en `design/screens/` (sin versionar, ~5 MB). Espera fuentes, imágenes, view transitions y animaciones antes de cada captura (la primera versión sacaba la vuelta de tarjeta a mitad del fundido). Solo envía una transferencia con `CAPTURE_ALLOW_MUTATION=1`, y se niega si `DATABASE_URL` no es una base `_test`.
+
+**Tests primero (rojo → verde):** parser de bloques y comentarios, resolvedor de colores (cadenas de `var()`, alfa, `color-mix()` contra transparente y contra un color, ciclos), sombras, agrupado DTCG, orden determinístico y detección de archivo viejo. El guard de la captura tiene sus tests; la captura en sí se verificó corriéndola contra `next start` sobre `granabank_test` y mirando las imágenes.
+
+---
+
 ## 6. Estructura del proyecto
 
 Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.

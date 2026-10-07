@@ -68,19 +68,21 @@ Barandas: la variable solo se acepta con el valor `1`; con `VERCEL`/`VERCEL_ENV`
 
 ## Scripts
 
-| Script                               | Qué hace                                                   |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `pnpm dev` / `build` / `start`       | Servidor de desarrollo, build de producción y servidor     |
-| `pnpm preview:lan`                   | Build + `next start` en `0.0.0.0:3001` para el celular     |
-| `pnpm lint` / `typecheck` / `format` | ESLint, `tsc --noEmit` (con tipos de rutas), Prettier      |
-| `pnpm format:check`                  | Verifica el formato sin modificar archivos                 |
-| `pnpm test` / `test:watch`           | Tests unitarios y de componentes (sin base de datos)       |
-| `pnpm test:integration`              | Tests de integración contra PostgreSQL                     |
-| `pnpm test:e2e`                      | Tests end-to-end con Playwright                            |
-| `pnpm db:up`                         | Levanta PostgreSQL con Docker Compose                      |
-| `pnpm db:migrate` / `db:deploy`      | `prisma migrate dev` / `prisma migrate deploy`             |
-| `pnpm db:seed` / `db:reset`          | Carga los datos demo / resetea la base y vuelve a cargar   |
-| `pnpm db:test [comando]`             | Prepara la base de tests y, opcional, corre un comando ahí |
+| Script                               | Qué hace                                                    |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `pnpm dev` / `build` / `start`       | Servidor de desarrollo, build de producción y servidor      |
+| `pnpm preview:lan`                   | Build + `next start` en `0.0.0.0:3001` para el celular      |
+| `pnpm lint` / `typecheck` / `format` | ESLint, `tsc --noEmit` (con tipos de rutas), Prettier       |
+| `pnpm format:check`                  | Verifica el formato sin modificar archivos                  |
+| `pnpm test` / `test:watch`           | Tests unitarios y de componentes (sin base de datos)        |
+| `pnpm test:integration`              | Tests de integración contra PostgreSQL                      |
+| `pnpm test:e2e`                      | Tests end-to-end con Playwright                             |
+| `pnpm db:up`                         | Levanta PostgreSQL con Docker Compose                       |
+| `pnpm db:migrate` / `db:deploy`      | `prisma migrate dev` / `prisma migrate deploy`              |
+| `pnpm db:seed` / `db:reset`          | Carga los datos demo / resetea la base y vuelve a cargar    |
+| `pnpm db:test [comando]`             | Prepara la base de tests y, opcional, corre un comando ahí  |
+| `pnpm tokens:figma [--check]`        | Exporta los tokens a Figma (`--check`: falla si está viejo) |
+| `pnpm screens:capture`               | Captura cada pantalla y estado en PNG para Figma            |
 
 ## Estructura del proyecto
 
@@ -297,6 +299,40 @@ Con la app corriendo e iniciada la sesión:
 | Carga                       | DevTools → Network → throttling "Slow 4G". Desde Inicio, tocar Movimientos en la barra inferior: se ven los esqueletos. "Cargar más" muestra "Cargando…".                                                                                                          |
 | Error                       | `docker stop granabank-db` y abrir Movimientos: aparece "No pudimos cargar tus movimientos" con "Reintentar". Después `docker start granabank-db` y tocar "Reintentar". Iniciar sesión antes de detener la base. ([captura](docs/screenshots/movements-error.png)) |
 | No encontrado (404)         | Abrir `/movimientos/abc`.                                                                                                                                                                                                                                          |
+
+## Figma
+
+Los tokens de `src/app/globals.css` y las pantallas de la app se exportan para armar el archivo de Figma desde el código (la fuente de verdad sigue siendo el CSS).
+
+**Tokens → variables.** `pnpm tokens:figma` escribe `design/tokens.figma.json` en formato [DTCG](https://www.designtokens.org/) (`$type`, `$value`, `$description`), con claves ordenadas y el mismo formato que Prettier. Los colores salen resueltos a hex final (también los `var()` y `color-mix()`); los alias lo dicen en la descripción (`Alias of {color.brand.gold.dark}`), igual que el rol de cada token, que sale de los comentarios del CSS.
+
+| Grupo                                             | Tokens | Tipo DTCG     |
+| ------------------------------------------------- | ------ | ------------- |
+| `color.brand` (`garnet`, `gold`, `cool-gray`)     | 14     | `color`       |
+| `color.role` (movimientos y estados)              | 13     | `color`       |
+| `color.neutral` (fondo, superficie, tinta, borde) | 6      | `color`       |
+| `color.card` (materiales de la tarjeta)           | 10     | `color`       |
+| `shadow.drop` / `shadow.inset`                    | 7 / 7  | `shadow`      |
+| `font` (`sans`, `display`)                        | 2      | `fontFamily`  |
+| `motion.duration` / `motion.rhythm`               | 3 / 2  | `duration`    |
+| `motion.ease`                                     | 1      | `cubicBezier` |
+
+Radios y tamaños de texto no son tokens propios (son los de Tailwind), así que no se exportan.
+
+Para importarlo: en Figma, plugin **Tokens Studio** → _Load from file/folder_ (o pegar el JSON) → activar los grupos → _Styles & Variables → Create variables_. Los colores pasan a variables y las sombras a estilos de efecto; las duraciones y la curva quedan como tokens (las variables de Figma no tienen esos tipos). Cualquier plugin que lea DTCG sirve igual.
+
+`pnpm tokens:figma --check` falla si el JSON commiteado no coincide con `globals.css`; `pnpm test` también lo verifica (`scripts/tokens-figma.test.ts`). Si cambia un token, correr `pnpm tokens:figma` y commitear el JSON.
+
+**Pantallas.** `pnpm screens:capture` recorre la app con Playwright y guarda PNG de 390×844 @2x en `design/screens/` (login vacío, validación y error; Inicio, tarjeta revelada y dada vuelta; Movimientos, filtrado, búsqueda y búsqueda vacía; detalle; Transferir pasos 1 a 3 y alias inexistente; Recibir; perfil y confirmación de cierre de sesión). Corre con movimiento reducido para que no haya transiciones a medias. Los PNG no se versionan (pesan ~5 MB): se regeneran contra un servidor apuntado a la base de tests, nunca a la de desarrollo.
+
+```bash
+pnpm build
+pnpm db:test next start -p 3150                               # base granabank_test, recién cargada
+BASE_URL=http://localhost:3150 pnpm screens:capture           # solo lectura (17 pantallas)
+CAPTURE_ALLOW_MUTATION=1 BASE_URL=http://localhost:3150 pnpm screens:capture   # + transferencia enviada
+```
+
+La pantalla de "¡Transferencia enviada!" mueve plata entre los usuarios demo, así que solo se captura con `CAPTURE_ALLOW_MUTATION=1` (y, si `DATABASE_URL` está en el entorno, tiene que nombrar una base `_test`). `BASE_URL` es `http://localhost:3000` por defecto.
 
 ## Qué mejoraría con más tiempo
 
