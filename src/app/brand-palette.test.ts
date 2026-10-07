@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { colorTokens } from "@/shared/lib/design-tokens";
 
 /*
- * Guards the rule "only the Club Atlético Lanús brand manual palette": granate
+ * Guards the rule "only the Club Atlético Lanús institutional colors": granate
  * (Pantone 188 C), gold (Pantone 618 C) and Cool Gray 7C, plus tints and shades of
  * them. Red for errors is the one documented exception (README → Brand).
  */

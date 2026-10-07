@@ -3,7 +3,7 @@
     "brand": {
       "cool-gray": {
         "base": {
-          "$description": "Cool Gray 7C (brand manual). Decorative only: 2.8:1 on white is below AA for text.",
+          "$description": "The club's institutional Cool Gray 7C. Decorative only: 2.8:1 on white is below AA for text.",
           "$type": "color",
           "$value": "#9a999d"
         },
@@ -20,7 +20,7 @@
       },
       "garnet": {
         "base": {
-          "$description": "Granate, Pantone 188 C (brand manual). Every tint and shade below derives from it.",
+          "$description": "The club's institutional granate, Pantone 188 C. Every tint and shade below derives from it.",
           "$type": "color",
           "$value": "#70192d"
         },
@@ -47,12 +47,12 @@
       },
       "gold": {
         "base": {
-          "$description": "Gold, Pantone 618 C (brand manual): the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
           "$type": "color",
           "$value": "#b4982f"
         },
         "bright": {
-          "$description": "Gold, Pantone 618 C (brand manual): the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
           "$type": "color",
           "$value": "#e6bf5d"
         },
@@ -62,12 +62,12 @@
           "$value": "#6f5c14"
         },
         "ink": {
-          "$description": "Gold, Pantone 618 C (brand manual): the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
           "$type": "color",
           "$value": "#352602"
         },
         "light": {
-          "$description": "Gold, Pantone 618 C (brand manual): the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
           "$type": "color",
           "$value": "#fae7b3"
         },

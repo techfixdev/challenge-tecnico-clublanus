@@ -18,7 +18,7 @@ describe("app icon (src/app/icon.svg)", () => {
     expect(icon).toContain(`viewBox="${ESCUDO_VIEW_BOX}"`);
   });
 
-  it("draws exactly the official shield paths, in order and in the manual's colors", () => {
+  it("draws exactly the official shield paths, in order and in the shield's own colors", () => {
     const paths = [
       ...icon.matchAll(
         /<path (?:fill-rule="(\w+)" )?fill="([^"]+)" d="([^"]+)"/g,

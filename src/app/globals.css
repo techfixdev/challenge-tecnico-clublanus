@@ -2,8 +2,8 @@
 
 /*
  * GranaBank design tokens (from the Figma reference in docs/design), normalized to the
- * Club Atlético Lanús brand manual (README → Brand): the official granate, gold and
- * Cool Gray 7C replace the design's approximations.
+ * Club Atlético Lanús institutional colors (README → Brand): the official granate, gold
+ * and Cool Gray 7C replace the design's approximations.
  * Exposed as Tailwind utilities, e.g. `bg-primary`, `text-sent`, `bg-subscription-soft`.
  *
  * Sections, in order: design tokens (brand palette, roles, surfaces, the light system),
@@ -19,7 +19,7 @@
 
   /* --- Brand palette --- */
 
-  /* Granate, Pantone 188 C (brand manual). Every tint and shade below derives from it. */
+  /* The club's institutional granate, Pantone 188 C. Every tint and shade below derives from it. */
   --color-primary: #70192d;
   /* 25% granate over white. */
   --color-primary-soft: #dbc6ca;
@@ -30,7 +30,7 @@
   /* Granate lifted (OKLCH L +0.035): the light around the shield on the login backdrop. */
   --color-primary-glow: #7e1f34;
 
-  /* Gold, Pantone 618 C (brand manual): the currency chip and focus accents on granate.
+  /* The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate.
      The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and
      `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its
      shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop. */
@@ -44,7 +44,7 @@
      `gold-soft`, 5.3:1 on `gold-light`. Subscriptions and pending statuses. */
   --color-gold-dark: #6f5c14;
 
-  /* Cool Gray 7C (brand manual). Decorative only: 2.8:1 on white is below AA for text. */
+  /* The club's institutional Cool Gray 7C. Decorative only: 2.8:1 on white is below AA for text. */
   --color-cool-gray: #9a999d;
   /* 25% Cool Gray 7C over white: the sent-movement tile. */
   --color-cool-gray-soft: #e6e6e7;
@@ -181,7 +181,7 @@
 }
 
 /*
- * Free stand-in for the club's Geometric Slabserif 712: the wordmark only. `inline`, so
+ * A geometric slab serif for the wordmark only. `inline`, so
  * `font-display` reads `--font-arvo` where it is used (the login page defines it), not on
  * the root, where it does not exist.
  */
@@ -915,7 +915,7 @@ body {
 }
 
 /*
- * Login (brand) screen, after the brand manual's cover: the club's granate as a radial
+ * Login (brand) screen: the club's granate as a radial
  * light centered on the shield, deepening to `--color-primary-deep` at the bottom and
  * the sides, plus the app's top-left key light as a faint sheen.
  */

@@ -8,7 +8,7 @@ const EMBLEM = { width: 112, height: 131 } as const;
 
 /**
  * Brand block of the login screen: the club's shield (the official vector, untouched,
- * with the gold stars of the brand manual for granate backgrounds), the "GranaBank"
+ * with the gold stars, the version for granate backgrounds), the "GranaBank"
  * wordmark and the tagline from the Figma design. The shield's depth is CSS only (see
  * `.login-emblem` in globals.css).
  */

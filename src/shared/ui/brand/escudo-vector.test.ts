@@ -26,12 +26,12 @@ describe("the club's shield", () => {
     expect(paths).toEqual(ESCUDO_PATHS);
   });
 
-  // The manual's colors only: granate #70192D, white initials and stars, gold stars.
+  // The shield's own colors only: granate #70192D, white initials and stars, gold stars.
   it.each([
     ["escudo.svg", ["#70192D", "#FFF"]],
     ["escudo-estrellas-doradas.svg", ["#70192D", "#B4923A", "#FFF"]],
     ["escudo-estrellas-blancas.svg", ["#70192D", "#FFF"]],
-  ])("%s paints with exactly the manual's colors %j", (name, colors) => {
+  ])("%s paints with exactly the shield's colors %j", (name, colors) => {
     const fills = new Set(
       [...publicSvg(name).matchAll(/fill="([^"]+)"/g)].map(([, fill]) => fill),
     );

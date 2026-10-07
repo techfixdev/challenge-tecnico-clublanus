@@ -32,7 +32,7 @@ describe("LoginForm", () => {
     expect(
       screen.getByText("Con cada compra, sumás orgullo granate"),
     ).toBeInTheDocument();
-    // The club's official shield (brand manual), not a drawn mark.
+    // The club's official shield, not a drawn mark.
     expect(
       screen.getByRole("img", { name: "Escudo del Club Atlético Lanús" }),
     ).toHaveAttribute(

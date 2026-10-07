@@ -1,6 +1,6 @@
 /*
- * The club's shield, the official vector from the Club Atlético Lanús brand manual
- * (page 2, "El escudo"), exactly as `public/brand/escudo.svg`: same viewBox, same path
+ * The club's shield, the official Club Atlético Lanús vector, exactly as
+ * `public/brand/escudo.svg`: same viewBox, same path
  * data, same colors (a test compares them). Never edit, recolor or re-draw it; see
  * README → Brand. Inline (not an <img>) only where it must paint without a request.
  */

@@ -5,8 +5,7 @@ import { login } from "@/features/auth/server/actions";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
 import { LOGIN_THEME_COLOR } from "@/shared/lib/theme";
 
-// The club's typeface (Geometric Slabserif 712, brand manual) is commercial; Arvo is a
-// free (OFL) geometric slab serif close to it. Only the "GranaBank" wordmark uses it, so
+// Arvo is a free (OFL) geometric slab serif. Only the "GranaBank" wordmark uses it, so
 // it is loaded here (one weight, preloaded on this route only), not in the root layout.
 const arvo = Arvo({
   variable: "--font-arvo",

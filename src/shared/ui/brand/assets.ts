@@ -2,8 +2,8 @@
 export const BRAND_ASSETS = {
   /** The shield alone: granate with white initials, for light backgrounds. */
   escudo: "/brand/escudo.svg",
-  /** With the gold stars (brand manual p. 6), for granate backgrounds. */
+  /** With the gold stars, for granate backgrounds (the login uses it). */
   escudoEstrellasDoradas: "/brand/escudo-estrellas-doradas.svg",
-  /** With white stars (brand manual p. 6 and cover), for granate backgrounds. */
+  /** With white stars, for granate backgrounds. */
   escudoEstrellasBlancas: "/brand/escudo-estrellas-blancas.svg",
 } as const;
