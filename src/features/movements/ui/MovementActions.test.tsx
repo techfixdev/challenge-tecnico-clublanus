@@ -68,6 +68,24 @@ describe("MovementActions", () => {
     );
 
     expect(mocks.copyText).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("falls back to copying the receipt when sharing fails for any other reason", async () => {
+    setShare(
+      vi.fn(async () => {
+        throw new DOMException("not allowed", "NotAllowedError");
+      }),
+    );
+    const user = userEvent.setup();
+    renderActions();
+
+    await user.click(
+      screen.getByRole("button", { name: "Compartir comprobante" }),
+    );
+
+    expect(mocks.copyText).toHaveBeenCalledWith(SHARE_TEXT);
+    expect(screen.getByRole("status")).toHaveTextContent("Copiado");
   });
 
   it("copies the summary where sharing is unavailable, with a quiet confirmation", async () => {
