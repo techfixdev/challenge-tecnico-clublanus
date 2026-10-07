@@ -457,9 +457,9 @@ Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsd
 
 **Checklist del enunciado:** `docs/CHECKLIST.md`, con el estado de cada requerimiento y su evidencia.
 
-### T12a — Solo colores del manual de marca (07/10/2026)
+### T12a — Solo colores institucionales del club (07/10/2026)
 
-**Pedido:** la app tiene que usar únicamente la paleta del manual del club (pág. 10: granate Pantone 188 C, oro Pantone 618 C y Cool Gray 7C), sin el violeta, el naranja, el verde ni el ámbar del Figma, y sin desequilibrar el diseño.
+**Pedido:** la app tiene que usar únicamente los colores institucionales del club (granate Pantone 188 C, oro Pantone 618 C y Cool Gray 7C), sin el violeta, el naranja, el verde ni el ámbar del Figma, y sin desequilibrar el diseño.
 
 **Qué se hizo:**
 - Todos los colores ya eran tokens en `globals.css`, así que se cambiaron los **valores**, no los nombres: los componentes y sus tests (`text-subscription`, `bg-sent-soft`…) no se tocaron.
@@ -538,7 +538,7 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 ### T12b-C2 — Tarjetas en español y segunda tarjeta en oro (07/10/2026)
 
-**Pedido:** las tarjetas de Home decían "Balance" y "Exp. Date", el número oculto usaba asteriscos y la segunda tarjeta era rosa, fuera del manual del club.
+**Pedido:** las tarjetas de Home decían "Balance" y "Exp. Date", el número oculto usaba asteriscos y la segunda tarjeta era rosa, fuera de los colores institucionales del club.
 
 **Qué se hizo y por qué:**
 - **Etiquetas en español:** "Saldo" y "Vence" (el reverso ya decía "Firma autorizada", "CVV" y "Tocá para volver").

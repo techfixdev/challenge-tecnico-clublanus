@@ -48,8 +48,6 @@ next-env.d.ts
 /.atl/
 /odd/
 /.pw-*.mjs
-# Club brand manual (reference only; the shield used by the app is extracted from it)
-/*Manual de Marca*.pdf
 
 # playwright
 /test-results/

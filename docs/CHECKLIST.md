@@ -34,7 +34,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 ## Qué se evalúa (cómo lo cubrimos)
 
 - [x] Claridad del código → lint y typecheck limpios, tests al lado del código (924 unitarios, 54 de integración, 79 e2e).
-- [x] Seguir el diseño → layout y pantallas del Figma (`docs/design/`); los desvíos son deliberados y documentados: paleta del Manual de Marca, formato argentino, montos con signo y cierre de sesión en el perfil. Ver README, "Marca" y "Decisiones técnicas".
+- [x] Seguir el diseño → layout y pantallas del Figma (`docs/design/`); los desvíos son deliberados y documentados: colores institucionales del club, formato argentino, montos con signo y cierre de sesión en el perfil. Ver README, "Marca" y "Decisiones técnicas".
 - [x] Organización del proyecto → estructura documentada en el README y en la bitácora.
 - [x] Criterio técnico → decisiones con su porqué en el README ("Decisiones técnicas") y en la bitácora.
 - [x] Uso de herramientas → Prisma, zod, Vitest, Playwright, CI, revisiones por commit.
@@ -55,7 +55,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 ### Hecho hoy
 
 - [x] Colores solo de la marca (T12a): cada rol de la UI usa granate, oro o Cool Gray 7C; el rojo de error queda como excepción documentada (`43bf0f2`).
-- [x] Marca del club (T21): paleta oficial como tokens, escudo extraído del manual y login rediseñado (`afd20d9`, `ee169df`, `80d077c`).
+- [x] Marca del club (T21): paleta oficial como tokens, escudo oficial en vector y login rediseñado (`afd20d9`, `ee169df`, `80d077c`).
 - [x] UX móvil (T12b-A): Transferir sin barra inferior, cierre de sesión en una hoja de perfil, separador de miles al tipear y cuenta en pesos por defecto (`e2d8581`, `9bf6390`, `fc6b41c`).
 - [x] Movimiento (T12b-B): un solo lenguaje de animación sobrio, con tokens compartidos (`745e493`).
 - [x] Lista tipo billetera (T12b-D): agrupada por día, montos con `+`/`−` y color por dirección (`8096a5e`, `72500af`).
