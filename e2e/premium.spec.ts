@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { waitForScreenToSettle } from "./fixtures/view-transitions";
+
 /*
  * Premium motion on real rendering (jsdom has no layout or 3D transforms). Each check
  * runs with and without `prefers-reduced-motion: reduce`.
@@ -11,6 +13,8 @@ async function login(page: Page) {
   await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/$/);
+  // Home dissolves in after login; it takes drags once it has arrived.
+  await waitForScreenToSettle(page);
 }
 
 function primaryCardSurface(page: Page) {
@@ -268,6 +272,30 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     await scrollPage(page, 0);
     const { xs, target } = await switchTabRecordingIndicator(page);
     expect(xs.every((x) => x === xs[0] || x === target)).toBe(true);
+  });
+
+  // Regression (T18): the header's scroll-linked styles used to go through Motion's lazy
+  // renderer, which loads after hydration; a scroll made before it arrived was lost and
+  // the header stayed transparent. Holding the app's scripts back makes that window
+  // certain instead of a race against a slow chunk.
+  test("the header follows a scroll made before Motion's features load", async ({
+    page,
+  }) => {
+    let holdScripts = false;
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      if (holdScripts) await new Promise((done) => setTimeout(done, 1_500));
+      await route.continue();
+    });
+    await page.goto("/login");
+    await page.getByLabel("Email").fill("soygranate@clublanus.com");
+    await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
+    holdScripts = true;
+    await page.getByRole("button", { name: "Ingresar" }).click();
+    await expect(page).toHaveURL(/\/$/);
+
+    await styleAfterScroll(page, 200, "glass-header-backdrop", "opacity").toBe(
+      "1",
+    );
   });
 
   test("the card stays flat when dragged, and cards do not scale", async ({

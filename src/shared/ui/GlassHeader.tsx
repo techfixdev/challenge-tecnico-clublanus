@@ -1,21 +1,31 @@
 "use client";
 
 import { useScroll, useTransform } from "motion/react";
-import * as m from "motion/react-m";
-import type { ReactNode } from "react";
+import { useRef, ViewTransition, type ReactNode } from "react";
 
 import { COMPACT_TITLE_SCALE, headerCollapsePx } from "./glass-header";
+import { PINNED_CHROME } from "./motion/navigation";
+import { useBoundStyle } from "./motion/use-bound-style";
 import { useReducedMotionPreference } from "./reduced-motion";
+
+const scaleTransform = (scale: number) =>
+  scale === 1 ? "none" : `scale(${scale})`;
 
 /**
  * Screen header that compacts on scroll, iOS large-title style: the eyebrow ("Hola")
  * fades, the title shrinks to 85% and the bar turns into frosted glass with a hairline.
  *
  * Every value is derived from the scroll position with `useScroll` + `useTransform`
- * (motion values, no React re-render per frame), so it follows the finger exactly and
- * reverses when scrolling back. The header never changes its height in the flow: it
- * sticks with a negative `top`, so the content below never shifts.
- * Under reduced motion the title does not scale; the glass still fades in.
+ * (motion values, no React re-render per frame) and written straight into the elements'
+ * style (`useBoundStyle`, which also applies a scroll made before Motion's lazy renderer
+ * loaded), so it follows the finger exactly and reverses when scrolling back. The header
+ * never changes its height in the flow: it sticks with a negative `top`, so the content
+ * below never shifts. Under reduced motion the title does not scale; the glass still
+ * fades in.
+ *
+ * During navigation the header is pinned chrome (view-transition name `screen-header`):
+ * when the next screen has a header too (Inicio ↔ Movimientos), it stays in place and
+ * only its contents crossfade, while the screens slide or fade underneath.
  */
 export function GlassHeader({
   title,
@@ -39,51 +49,84 @@ export function GlassHeader({
   // With an eyebrow, the actions sit lower once the eyebrow line has scrolled away.
   const actionsY = useTransform(progress, [0, 1], [0, eyebrow ? 8 : 0]);
 
+  const backdrop = useRef<HTMLDivElement>(null);
+  const eyebrowLine = useRef<HTMLParagraphElement>(null);
+  const titleLine = useRef<HTMLHeadingElement>(null);
+  const actionsBox = useRef<HTMLDivElement>(null);
+  useBoundStyle(backdrop, glass, (style, value) => {
+    style.opacity = String(value);
+  });
+  useBoundStyle(eyebrowLine, eyebrowOpacity, (style, value) => {
+    style.opacity = String(value);
+  });
+  useBoundStyle(
+    titleLine,
+    titleScale,
+    (style, value) => {
+      style.transform = reduced ? "none" : scaleTransform(value);
+    },
+    [reduced],
+  );
+  useBoundStyle(actionsBox, actionsY, (style, value) => {
+    style.transform = value === 0 ? "none" : `translateY(${value}px)`;
+  });
+
   return (
-    <header
-      data-testid="glass-header"
-      className="sticky z-10 px-6 pt-10 pb-3"
-      style={{ top: `calc(env(safe-area-inset-top) - ${collapse}px)` }}
+    <ViewTransition
+      name={PINNED_CHROME.header}
+      share={PINNED_CHROME.header}
+      default="none"
     >
-      {/* The glass also covers the status-bar area above the header (safe area). */}
-      <m.div
-        aria-hidden="true"
-        data-testid="glass-header-backdrop"
-        className="absolute inset-x-0 top-[calc(-1*env(safe-area-inset-top))] bottom-0 -z-10 glass"
-        style={{ opacity: glass }}
+      <header
+        data-testid="glass-header"
+        data-pinned-chrome
+        className="sticky z-10 px-6 pt-10 pb-3"
+        style={{ top: `calc(env(safe-area-inset-top) - ${collapse}px)` }}
       >
-        {hairline && (
-          <span className="absolute inset-x-0 bottom-0 h-px bg-border" />
-        )}
-      </m.div>
-      <div className="flex items-center justify-between gap-2">
-        {/* Under extreme page zoom a long name breaks rather than pushing the actions out. */}
-        <div className="min-w-0">
-          {eyebrow && (
-            <m.p
-              className="text-xs text-muted"
-              style={{ opacity: eyebrowOpacity }}
-            >
-              {eyebrow}
-            </m.p>
+        {/* The glass also covers the status-bar area above the header (safe area). */}
+        <div
+          ref={backdrop}
+          aria-hidden="true"
+          data-testid="glass-header-backdrop"
+          className="absolute inset-x-0 top-[calc(-1*env(safe-area-inset-top))] bottom-0 -z-10 glass"
+          style={{ opacity: 0 }}
+        >
+          {hairline && (
+            <span className="absolute inset-x-0 bottom-0 h-px bg-border" />
           )}
-          <m.h1
-            data-testid="glass-header-title"
-            className="origin-left text-xl font-semibold wrap-anywhere text-foreground"
-            style={{ scale: reduced ? 1 : titleScale }}
-          >
-            {title}
-          </m.h1>
         </div>
-        {actions && (
-          <m.div
-            className="flex shrink-0 items-center gap-1"
-            style={{ y: actionsY }}
-          >
-            {actions}
-          </m.div>
-        )}
-      </div>
-    </header>
+        <div className="flex items-center justify-between gap-2">
+          {/* Under extreme page zoom a long name breaks rather than pushing the actions out. */}
+          <div className="min-w-0">
+            {eyebrow && (
+              <p
+                ref={eyebrowLine}
+                className="text-xs text-muted"
+                style={{ opacity: 1 }}
+              >
+                {eyebrow}
+              </p>
+            )}
+            <h1
+              ref={titleLine}
+              data-testid="glass-header-title"
+              className="origin-left text-xl font-semibold wrap-anywhere text-foreground"
+              style={{ transform: "none" }}
+            >
+              {title}
+            </h1>
+          </div>
+          {actions && (
+            <div
+              ref={actionsBox}
+              className="flex shrink-0 items-center gap-1"
+              style={{ transform: "none" }}
+            >
+              {actions}
+            </div>
+          )}
+        </div>
+      </header>
+    </ViewTransition>
   );
 }
