@@ -37,6 +37,18 @@ function diff(previous: string, next: string) {
   };
 }
 
+/** A dot with at most 2 digits after it, at the end and with no comma: "12.", "12.3". */
+const OPEN_DOT_DECIMAL = /^[^,]*\.\d{0,2}$/;
+
+/**
+ * Whether the dot at `index` of a field `editAmount` wrote is still open (a candidate
+ * decimal point). Grouping always leaves 3 digits after a dot, so only the last dot, with
+ * at most 2 digits after it and no comma, can be open.
+ */
+function isOpenDot(field: string, index: number): boolean {
+  return OPEN_DOT_DECIMAL.test(field) && index === field.lastIndexOf(".");
+}
+
 /**
  * The field's new text and caret, from its text before the edit (`previous`, as this
  * function wrote it) and the raw text and caret the browser reports after it.
@@ -50,10 +62,15 @@ export function editAmount(
   let at = caret;
 
   // Backspace over a grouping dot deletes the digit before it, as in a banking app;
-  // otherwise the dot would come straight back and the caret would not move. (Every dot
-  // this function writes groups thousands.)
+  // otherwise the dot would come straight back and the caret would not move. An open
+  // dot is not a grouping one: deleting it just removes the dot ("12.|" → "12|").
   const change = diff(previous, text);
-  if (change.inserted === "" && change.removed === "." && change.start > 0) {
+  const deletedGroupingDot =
+    change.inserted === "" &&
+    change.removed === "." &&
+    change.start > 0 &&
+    !isOpenDot(previous, change.start);
+  if (deletedGroupingDot) {
     text = text.slice(0, change.start - 1) + text.slice(change.start);
     at = change.start - 1;
   }
@@ -113,9 +130,6 @@ export function editAmount(
   }
   return { value, caret: newCaret };
 }
-
-/** A dot with at most 2 digits after it, at the end and with no comma: "12.", "12.3". */
-const OPEN_DOT_DECIMAL = /^[^,]*\.\d{0,2}$/;
 
 /**
  * Index of the decimal separator in the sanitized text, or -1. The first comma is one.

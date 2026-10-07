@@ -89,6 +89,17 @@ describe("editAmount", () => {
   );
 
   it.each([
+    ["12.|", "⌫", "12|"],
+    ["12.|4", "⌫", "12|4"],
+    ["0.|", "⌫", "0|"],
+  ])(
+    "deletes only the dot when backspacing over a dot still open as a decimal: %j + %j → %j",
+    (before, typed, after) => {
+      expect(type(before, typed)).toBe(after);
+    },
+  );
+
+  it.each([
     ["1|.234", "5", "15|.234"],
     ["|1.234", "9", "9|1.234"],
     ["12.3|45", "9", "123.9|45"],
