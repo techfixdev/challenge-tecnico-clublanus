@@ -1,21 +1,21 @@
 "use client";
 
 import * as m from "motion/react-m";
-import type { ReactNode, Ref } from "react";
+import type { Ref } from "react";
 
-import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
-import { Money } from "@/shared/ui/Money";
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
+import { Money } from "@/shared/ui/Money";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 import { CLOSE_QUICK_ACTION, PUSH } from "@/shared/ui/motion/navigation";
 import { FADE } from "@/shared/ui/motion/springs";
 import { DURATION_S, EASE } from "@/shared/ui/motion/tokens";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
 import type { TransferReceipt } from "../domain/transfer-model";
-import { MotionLink } from "@/shared/ui/motion/MotionLink";
 import { StepActions } from "./StepActions";
+import { CardLabel, SummaryRow } from "./TransferParts";
 
 /** The check is traced like a pen once the badge is in (≈300ms, no bounce). */
 const DRAW = {
@@ -23,18 +23,6 @@ const DRAW = {
   delay: DURATION_S.fast / 2,
   ease: EASE,
 };
-
-function ReceiptRow({ term, children }: { term: string; children: ReactNode }) {
-  // On very narrow screens the value moves under its term instead of squeezing.
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-4 first:pt-0 last:pb-0">
-      <dt className="shrink-0 text-xs text-muted">{term}</dt>
-      <dd className="min-w-0 flex-1 basis-24 text-right text-sm font-medium break-words text-foreground">
-        {children}
-      </dd>
-    </div>
-  );
-}
 
 /**
  * The transfer went through. The badge fades in where it rests (no pop, no bounce) and
@@ -95,41 +83,38 @@ export function TransferSuccess({
       </div>
 
       <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">
-        <ReceiptRow term="Para">
+        <SummaryRow term="Para">
           <span className="block">{receipt.recipient.fullName}</span>
           {receipt.recipient.alias ? (
             <span className="block text-xs font-normal text-muted">
               {receipt.recipient.alias}
             </span>
           ) : null}
-        </ReceiptRow>
-        <ReceiptRow term="Fecha y hora">
+        </SummaryRow>
+        <SummaryRow term="Fecha y hora">
           <span className="block">{formatLongDate(receipt.createdAt)}</span>
           <span className="block text-xs font-normal text-muted">
             {formatTime(receipt.createdAt)} h
           </span>
-        </ReceiptRow>
+        </SummaryRow>
         {receipt.description ? (
-          <ReceiptRow term="Motivo">{receipt.description}</ReceiptRow>
+          <SummaryRow term="Motivo">{receipt.description}</SummaryRow>
         ) : null}
         {sourceCard ? (
-          <ReceiptRow term="Desde">
+          <SummaryRow term="Desde">
             <span className="block">
-              {CARD_BRAND_LABEL[sourceCard.brand]}{" "}
-              <span aria-hidden="true">•••• </span>
-              <span className="sr-only">terminada en </span>
-              {sourceCard.last4}
+              <CardLabel card={sourceCard} />
             </span>
             <span className="block text-xs font-normal text-muted">
               Saldo:{" "}
               <Money value={sourceCard.balance} currency={receipt.currency} />
             </span>
-          </ReceiptRow>
+          </SummaryRow>
         ) : null}
         {receipt.reference ? (
-          <ReceiptRow term="Referencia">
+          <SummaryRow term="Referencia">
             <span className="tabular-nums">{receipt.reference}</span>
-          </ReceiptRow>
+          </SummaryRow>
         ) : null}
       </dl>
 

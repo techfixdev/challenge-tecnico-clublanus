@@ -4,12 +4,17 @@ import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
 import { CLOSE_QUICK_ACTION } from "@/shared/ui/motion/navigation";
 import { NavBar } from "@/shared/ui/NavBar";
 
+import {
+  CARD_BRAND_LABEL,
+  type CardBrand,
+} from "@/features/account/domain/card";
+
 import type { ConfirmedRecipient } from "../domain/transfer-form";
 
 /** Text inputs of the send flow (same look as the login fields). */
 export const FIELD_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEXT_CLASS} text-foreground inset-shadow-recessed outline-none ring-1 ring-transparent transition placeholder:text-sm placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger`;
 
-export const STEP_COUNT = 3;
+const STEP_COUNT = 3;
 
 /**
  * Top of every step: the navigation bar (back chevron, "Transferir", "Paso n de 3"), a
@@ -93,7 +98,7 @@ export function RecipientAvatar({ fullName }: { fullName: string }) {
 }
 
 /** "•• •••• … •••• 0255" → "0255": the only digits a masked CVU shows. */
-export function lastFourDigits(cvuMasked: string): string {
+function lastFourDigits(cvuMasked: string): string {
   return cvuMasked.replace(/\D/g, "").slice(-4);
 }
 
@@ -134,6 +139,45 @@ export function RecipientIdentity({
         </span>
       ) : null}
     </span>
+  );
+}
+
+/**
+ * "Visa •••• 4242", read out as "Visa terminada en 4242": the one way the send flow
+ * names a card (the card picker, the review and the receipt).
+ */
+export function CardLabel({
+  card,
+}: {
+  card: { brand: CardBrand; last4: string };
+}) {
+  return (
+    <>
+      {CARD_BRAND_LABEL[card.brand]} <span aria-hidden="true">•••• </span>
+      <span className="sr-only">terminada en </span>
+      {card.last4}
+    </>
+  );
+}
+
+/**
+ * One term and its value in a summary list (the review and the receipt). On very narrow
+ * screens the value moves under its term instead of squeezing.
+ */
+export function SummaryRow({
+  term,
+  children,
+}: {
+  term: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-4 first:pt-0 last:pb-0">
+      <dt className="shrink-0 text-xs text-muted">{term}</dt>
+      <dd className="min-w-0 flex-1 basis-24 text-right text-sm font-medium break-words text-foreground">
+        {children}
+      </dd>
+    </div>
   );
 }
 

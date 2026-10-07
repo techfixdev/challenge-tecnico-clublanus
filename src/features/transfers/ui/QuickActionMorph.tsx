@@ -8,6 +8,9 @@ export const QUICK_ACTION_MORPH = {
   receive: "quick-action-receive",
 } as const;
 
+export type QuickActionMorphName =
+  (typeof QUICK_ACTION_MORPH)[keyof typeof QUICK_ACTION_MORPH];
+
 /**
  * Container transform between a Home quick action ("Enviar", "Recibir") and its screen:
  * the tile and the screen's `<main>` share a view-transition name, so the browser grows
@@ -28,7 +31,7 @@ export function QuickActionMorph({
   name,
   children,
 }: {
-  name: (typeof QUICK_ACTION_MORPH)[keyof typeof QUICK_ACTION_MORPH];
+  name: QuickActionMorphName;
   children: ReactNode;
 }) {
   return (

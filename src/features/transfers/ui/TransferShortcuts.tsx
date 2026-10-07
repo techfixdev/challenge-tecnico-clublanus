@@ -2,18 +2,21 @@ import type { ComponentType, SVGProps } from "react";
 
 import { ROUTES } from "@/shared/lib/routes";
 import { ReceiveIcon, SendIcon } from "@/shared/ui/icons";
-
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 import { OPEN_QUICK_ACTION } from "@/shared/ui/motion/navigation";
 
-import { QUICK_ACTION_MORPH, QuickActionMorph } from "./QuickActionMorph";
-import { MotionLink } from "@/shared/ui/motion/MotionLink";
+import {
+  QUICK_ACTION_MORPH,
+  QuickActionMorph,
+  type QuickActionMorphName,
+} from "./QuickActionMorph";
 
 type Shortcut = {
   href: string;
   label: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
   tile: string;
-  morph: (typeof QUICK_ACTION_MORPH)[keyof typeof QUICK_ACTION_MORPH];
+  morph: QuickActionMorphName;
 };
 
 const SHORTCUTS: Shortcut[] = [

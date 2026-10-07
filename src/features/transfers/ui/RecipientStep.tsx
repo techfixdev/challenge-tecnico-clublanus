@@ -114,33 +114,14 @@ export function RecipientStep({
       </form>
 
       {recentRecipients.length > 0 ? (
-        <section aria-labelledby="recent-recipients" className="mt-10">
-          <h2
-            id="recent-recipients"
-            className="text-base font-medium text-foreground"
-          >
-            Recientes
-          </h2>
-          <ul className="mt-4 flex flex-col gap-4">
-            {recentRecipients.map((recipient) => (
-              <li key={recipient.query}>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => {
-                    onChange(recipient.query);
-                    onResolve(recipient.query);
-                  }}
-                  className="flex w-full pressable items-center gap-4 rounded-2xl bg-surface lit-surface p-4 text-left shadow-card focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:shadow-1 disabled:opacity-70"
-                >
-                  <RecipientAvatar fullName={recipient.fullName} />
-                  <RecipientIdentity recipient={recipient} />
-                  <ChevronRightIcon className="size-5 shrink-0 text-muted" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <RecentRecipients
+          recipients={recentRecipients}
+          disabled={pending}
+          onPick={(recipient) => {
+            onChange(recipient.query);
+            onResolve(recipient.query);
+          }}
+        />
       ) : null}
 
       {/* Pinned under the recent recipients, the button still submits the form above. */}
@@ -156,5 +137,43 @@ export function RecipientStep({
         </Button>
       </StepActions>
     </div>
+  );
+}
+
+/** Recent counterparties: one tap fills the field and resolves the account. */
+function RecentRecipients({
+  recipients,
+  disabled,
+  onPick,
+}: {
+  recipients: ConfirmedRecipient[];
+  disabled: boolean;
+  onPick: (recipient: ConfirmedRecipient) => void;
+}) {
+  return (
+    <section aria-labelledby="recent-recipients" className="mt-10">
+      <h2
+        id="recent-recipients"
+        className="text-base font-medium text-foreground"
+      >
+        Recientes
+      </h2>
+      <ul className="mt-4 flex flex-col gap-4">
+        {recipients.map((recipient) => (
+          <li key={recipient.query}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(recipient)}
+              className="flex w-full pressable items-center gap-4 rounded-2xl bg-surface lit-surface p-4 text-left shadow-card focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:shadow-1 disabled:opacity-70"
+            >
+              <RecipientAvatar fullName={recipient.fullName} />
+              <RecipientIdentity recipient={recipient} />
+              <ChevronRightIcon className="size-5 shrink-0 text-muted" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

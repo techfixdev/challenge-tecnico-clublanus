@@ -1,27 +1,20 @@
 "use client";
 
-import type { ReactNode, Ref } from "react";
+import type { Ref } from "react";
 
-import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { Money } from "@/shared/ui/Money";
 import { Button } from "@/shared/ui/Button";
 
 import type { ConfirmedRecipient } from "../domain/transfer-form";
 import type { SourceCard } from "./AmountStep";
 import { PRIMARY_DISABLED_CLASSES, StepActions } from "./StepActions";
-import { FormAlert, MaskedCvu, StepHeader } from "./TransferParts";
-
-function SummaryRow({ term, children }: { term: string; children: ReactNode }) {
-  // On very narrow screens the value moves under its term instead of squeezing.
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-4 first:pt-0 last:pb-0">
-      <dt className="shrink-0 text-xs text-muted">{term}</dt>
-      <dd className="min-w-0 flex-1 basis-24 text-right text-sm font-medium break-words text-foreground">
-        {children}
-      </dd>
-    </div>
-  );
-}
+import {
+  CardLabel,
+  FormAlert,
+  MaskedCvu,
+  StepHeader,
+  SummaryRow,
+} from "./TransferParts";
 
 /**
  * Step 3: everything the transfer will do, and the only button that moves money. It
@@ -87,9 +80,7 @@ export function ReviewStep({
           </SummaryRow>
         ) : null}
         <SummaryRow term="Desde">
-          {CARD_BRAND_LABEL[card.brand]} <span aria-hidden="true">•••• </span>
-          <span className="sr-only">terminada en </span>
-          {card.last4}
+          <CardLabel card={card} />
         </SummaryRow>
         {description.trim() ? (
           <SummaryRow term="Motivo">{description.trim()}</SummaryRow>
