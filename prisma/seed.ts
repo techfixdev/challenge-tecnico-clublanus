@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 import { buildCvu } from "../src/features/account/domain/account-identifiers";
 import { buildDemoPan } from "../src/features/account/domain/card-number";
+import { seedDate } from "../src/features/movements/domain/seed-date";
 import { movementReference } from "../src/features/transfers/domain/transfer-reference";
 import {
   PrismaClient,
@@ -309,13 +310,6 @@ const DEMO_TRANSFER = {
   hour: 18,
 } as const;
 
-function dateDaysAgo(daysAgo: number, hour: number): Date {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  date.setHours(hour, 0, 0, 0);
-  return date;
-}
-
 /** Upserts the user by email, keeping its id (and so the sessions) across runs. */
 async function upsertUser(
   tx: Prisma.TransactionClient,
@@ -360,7 +354,7 @@ function toMovementRows(
       currency: card.currency,
       status: movement.pending ? ("PENDING" as const) : ("COMPLETED" as const),
       reference: `${referencePrefix}${String(index + 1).padStart(6, "0")}`,
-      occurredAt: dateDaysAgo(movement.daysAgo, movement.hour),
+      occurredAt: seedDate(movement.daysAgo, movement.hour),
     };
   });
 }
@@ -464,7 +458,7 @@ async function main() {
       ),
     });
 
-    const transferAt = dateDaysAgo(DEMO_TRANSFER.daysAgo, DEMO_TRANSFER.hour);
+    const transferAt = seedDate(DEMO_TRANSFER.daysAgo, DEMO_TRANSFER.hour);
     const transferMovement = {
       amount: DEMO_TRANSFER.amount,
       currency: "USD",
