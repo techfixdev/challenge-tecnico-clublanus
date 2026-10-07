@@ -4,8 +4,8 @@ import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 import { Skeleton } from "@/shared/ui/Skeleton";
 
 /**
- * Skeleton for the movements list only. It lives in a route group so its Suspense boundary does not
- * wrap `/movimientos/[id]`: a streamed response is committed as HTTP 200, and the detail
+ * Skeleton for the movements list only. It lives in a route group so its Suspense
+ * boundary does not wrap `/movimientos/[id]`: a streamed response is committed as HTTP 200, and the detail
  * needs to answer a real 404 when `notFound()` runs.
  */
 export default function MovementsLoading() {

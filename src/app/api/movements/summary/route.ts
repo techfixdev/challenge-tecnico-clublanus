@@ -22,16 +22,18 @@ export const GET = withApiErrorHandling(async (request: NextRequest) => {
   const user = await getCurrentUser();
   if (!user) return apiError("UNAUTHORIZED", API_MESSAGES.unauthorized);
 
-  const params = parseSummaryMonth(request.nextUrl.searchParams.get("month"));
-  if (!params.success) {
+  const parsedMonth = parseSummaryMonth(
+    request.nextUrl.searchParams.get("month"),
+  );
+  if (!parsedMonth.success) {
     return apiError("INVALID_INPUT", API_MESSAGES.invalidInput, {
-      fieldErrors: params.fieldErrors,
+      fieldErrors: parsedMonth.fieldErrors,
       formErrors: [],
     });
   }
 
   const summary = await getMonthlySummary(prismaMovementRepository, user.id, {
-    month: params.month,
+    month: parsedMonth.month,
   });
   return NextResponse.json({ data: summary });
 });
