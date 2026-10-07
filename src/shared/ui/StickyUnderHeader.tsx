@@ -6,6 +6,9 @@ import { useRef, type ReactNode } from "react";
 import { COMPACT_HEADER_PX } from "./glass-header";
 import { useBoundStyle } from "./motion/use-bound-style";
 
+/** Scroll distance over which the block's glass fades in as it reaches its sticky top. */
+const GLASS_FADE_PX = 8;
+
 /**
  * Controls that stick right under the compact GlassHeader (e.g. search and filters on
  * Movements) and join its glass once stuck, so header and controls read as one bar.
@@ -19,14 +22,14 @@ export function StickyUnderHeader({ children }: { children: ReactNode }) {
   const { scrollY } = useScroll();
   // 1px higher than the header's bottom edge, so the block covers the seam.
   const stickTop = COMPACT_HEADER_PX - 1;
-  const stuck = useTransform(() => {
-    scrollY.get();
+  const stuckProgress = useTransform(() => {
+    scrollY.get(); // read so the transform recomputes on every scroll frame
     const top = sentinel.current?.getBoundingClientRect().top;
     if (top === undefined) return 0;
-    return Math.min(1, Math.max(0, (stickTop - top) / 8));
+    return Math.min(1, Math.max(0, (stickTop - top) / GLASS_FADE_PX));
   });
   const backdrop = useRef<HTMLDivElement>(null);
-  useBoundStyle(backdrop, stuck, (style, value) => {
+  useBoundStyle(backdrop, stuckProgress, (style, value) => {
     style.opacity = String(value);
   });
 

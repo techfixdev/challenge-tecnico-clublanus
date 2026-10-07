@@ -11,13 +11,12 @@ import {
 
 import { ROUTES } from "@/shared/lib/routes";
 
+import { HomeIcon, ListIcon } from "./icons";
+import { MotionLink } from "./motion/MotionLink";
 import { PINNED_CHROME, TAB_SWITCH } from "./motion/navigation";
 import { installPinnedChromeTaps } from "./motion/pinned-chrome-taps";
-
-import { HomeIcon, ListIcon } from "./icons";
 import { INDICATOR_SPRING, INSTANT, PRESS_SPRING } from "./motion/springs";
 import { useReducedMotionPreference } from "./reduced-motion";
-import { MotionLink } from "./motion/MotionLink";
 
 type NavItem = {
   href: string;
@@ -53,8 +52,11 @@ function isFocusedTask(pathname: string): boolean {
   );
 }
 
-/** "page" on the exact URL; "true" inside the section (e.g. a movement detail). */
-function currentState(
+/**
+ * `aria-current` of an item: "page" on its exact URL, "true" inside its section (e.g. a
+ * movement detail).
+ */
+function ariaCurrentFor(
   pathname: string,
   href: string,
 ): "page" | "true" | undefined {
@@ -121,7 +123,7 @@ export function BottomNav() {
           always fit; from about 216px wide it is the design's 24px. */}
       <ul className="flex h-20 items-center justify-around px-[clamp(0px,calc((100%-10.5rem)/2),1.5rem)]">
         {NAV_ITEMS.map(({ href, label, Icon, prefetch }) => {
-          const current = currentState(pathname, href);
+          const current = ariaCurrentFor(pathname, href);
           return (
             <li key={href}>
               <MotionLink

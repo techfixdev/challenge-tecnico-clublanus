@@ -89,7 +89,8 @@ export function SkeletonTransition({ children }: { children: ReactNode }) {
 }
 
 /**
- * Content that streams in after its skeleton: it dissolves in and rises 8px, after the
+ * Content that streams in after its skeleton: it dissolves in and rises a few pixels
+ * (`--motion-reveal-rise`) after the
  * skeleton has left. When it arrives together with its screen (a prefetched navigation),
  * the screen's own motion runs instead: React animates only the outermost boundary.
  */
