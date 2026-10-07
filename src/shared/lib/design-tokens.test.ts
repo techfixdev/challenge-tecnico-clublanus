@@ -90,6 +90,27 @@ describe("resolveColor", () => {
     );
   });
 
+  it("normalizes color-mix() percentages that do not sum to 100%, as CSS does", () => {
+    // Summing over 100%: scaled down to 100% (60/60 → 50/50), fully opaque.
+    expect(
+      resolveColor("color-mix(in srgb, #ff0000 60%, #0000ff 60%)", vars),
+    ).toBe("#800080");
+    // Summing under 100%: scaled up (20/30 → 40/60), and the 50% left over becomes
+    // transparency (the result's alpha is multiplied by 0.5).
+    expect(
+      resolveColor("color-mix(in srgb, #ff0000 20%, #0000ff 30%)", vars),
+    ).toBe("#66009980");
+  });
+
+  it("rejects a color-mix() whose percentages sum to zero or leave 0–100%", () => {
+    expect(() =>
+      resolveColor("color-mix(in srgb, #ff0000 0%, #0000ff 0%)", vars),
+    ).toThrow(/color-mix/);
+    expect(() =>
+      resolveColor("color-mix(in srgb, #ff0000 120%, #0000ff)", vars),
+    ).toThrow(/color-mix/);
+  });
+
   it("throws on unknown references and cycles", () => {
     expect(() => resolveColor("var(--color-nope)", vars)).toThrow(/nope/);
     expect(() => resolveColor("var(--color-loop)", vars)).toThrow();

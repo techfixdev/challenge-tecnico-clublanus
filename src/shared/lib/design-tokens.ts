@@ -144,23 +144,19 @@ function parseRgba(
 
   const mix = /^color-mix\(\s*in srgb\s*,(.*)\)$/.exec(v);
   if (mix) {
-    const [first, second] = splitTopLevel(mix[1], ",").map((part) => {
-      const pieces = splitTopLevel(part, " ");
-      const pct = pieces.find((p) => /^[\d.]+%$/.test(p));
-      const color = pieces.filter((p) => p !== pct).join(" ");
-      return {
-        color,
-        pct: pct === undefined ? undefined : parseFloat(pct) / 100,
-      };
-    });
+    const [first, second] = splitTopLevel(mix[1], ",").map(parseMixComponent);
     if (!first || !second) throw new Error(`Malformed color-mix(): ${value}`);
-    const p1 = first.pct ?? (second.pct === undefined ? 0.5 : 1 - second.pct);
-    const p2 = second.pct ?? 1 - p1;
-    return mixSrgb(
+    const { firstShare, alphaMultiplier } = mixShares(
+      first.share,
+      second.share,
+      value,
+    );
+    const [r, g, b, a] = mixSrgb(
       parseRgba(first.color, vars, depth + 1),
-      p1 / (p1 + p2),
+      firstShare,
       parseRgba(second.color, vars, depth + 1),
     );
+    return [r, g, b, a * alphaMultiplier];
   }
 
   throw new Error(`Unsupported color value: ${value}`);
@@ -168,6 +164,39 @@ function parseRgba(
 
 const percentOrNumber = (raw: string) =>
   raw.endsWith("%") ? parseFloat(raw) / 100 : Number(raw);
+
+/** One `color [percentage]` argument of color-mix(); the share is 0–1 when given. */
+function parseMixComponent(argument: string): {
+  color: string;
+  share: number | undefined;
+} {
+  const pieces = splitTopLevel(argument, " ");
+  const percentage = pieces.find((piece) => /^[\d.]+%$/.test(piece));
+  return {
+    color: pieces.filter((piece) => piece !== percentage).join(" "),
+    share: percentage === undefined ? undefined : parseFloat(percentage) / 100,
+  };
+}
+
+/**
+ * color-mix()'s percentage normalization (CSS Color 5, §2.1): a missing percentage is
+ * what the other leaves of 100%; two that do not sum to 100% are scaled to it, and when
+ * they sum to less, the shortfall becomes transparency (`alphaMultiplier`).
+ */
+function mixShares(
+  first: number | undefined,
+  second: number | undefined,
+  value: string,
+): { firstShare: number; alphaMultiplier: number } {
+  const p1 = first ?? (second === undefined ? 0.5 : 1 - second);
+  const p2 = second ?? 1 - p1;
+  const total = p1 + p2;
+  const isInRange = (share: number) => share >= 0 && share <= 1;
+  if (!isInRange(p1) || !isInRange(p2) || total === 0) {
+    throw new Error(`Invalid color-mix() percentages: ${value}`);
+  }
+  return { firstShare: p1 / total, alphaMultiplier: Math.min(1, total) };
+}
 
 /** CSS color-mix() in sRGB: premultiplied-alpha interpolation, `p` of the first color. */
 function mixSrgb(a: Rgba, p: number, b: Rgba): Rgba {
