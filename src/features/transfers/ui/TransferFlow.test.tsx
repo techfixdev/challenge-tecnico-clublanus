@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -24,6 +30,13 @@ const HINCHA: ConfirmedRecipient = {
   alias: "hincha.granate",
   cvuMasked: "•• •••• •••• •••• •••• 0255",
   query: "hincha.granate",
+};
+
+const SOCIA: ConfirmedRecipient = {
+  fullName: "Socia Granate",
+  alias: "socia.granate",
+  cvuMasked: "•• •••• •••• •••• •••• 0310",
+  query: "socia.granate",
 };
 
 const CARDS: SourceCard[] = [
@@ -162,20 +175,25 @@ describe("TransferFlow", () => {
     });
   });
 
-  it("shows the first step at once and slides in only the steps that follow", async () => {
+  it("rearranges one surface between steps instead of mounting a new page", async () => {
     const { user } = renderFlow();
-    // The step wrapper: the closest element carrying Motion's inline style.
-    const stepWrapper = (name: string) =>
-      screen.getByRole("heading", { name }).closest("[style]");
-
-    // Server-rendered: no entrance state that would keep it hidden until hydration.
-    expect(stepWrapper("¿A quién le enviás?")).not.toHaveStyle({
-      opacity: "0",
-    });
+    const heading = screen.getByRole("heading", { level: 1 });
+    // Server-rendered: nothing on the first step waits for hydration to show.
+    expect(heading.closest("[style*='opacity: 0']")).toBeNull();
+    const proceed = screen.getByRole("button", { name: "Continuar" });
 
     await toAmountStep(user);
-    // jsdom loads no Motion features, so a later step stays at its entrance state.
-    expect(stepWrapper("¿Cuánto le enviás?")).toHaveStyle({ opacity: "0" });
+    // The same header and the same pinned button, with new texts.
+    expect(screen.getByRole("heading", { level: 1 })).toBe(heading);
+    expect(screen.getByRole("button", { name: "Continuar" })).toBe(proceed);
+
+    await user.click(screen.getByRole("radio", { name: /Mastercard/ }));
+    await user.type(screen.getByLabelText("Monto en USD"), "1");
+    await user.click(proceed);
+    await screen.findByRole("heading", { name: "Revisá la transferencia" });
+    expect(screen.getByRole("button", { name: "Confirmar y enviar" })).toBe(
+      proceed,
+    );
   });
 
   it("validates the alias or CVU live, with the server's messages", async () => {
@@ -226,7 +244,7 @@ describe("TransferFlow", () => {
   it("resolves a recent recipient in one tap and moves the focus to the next step", async () => {
     const { user, lookup } = renderFlow({ recent: [HINCHA] });
 
-    await user.click(screen.getByRole("button", { name: /Hincha Granate/ }));
+    await user.click(screen.getByRole("option", { name: /Hincha Granate/ }));
 
     expect(lookup).toHaveBeenCalledWith("hincha.granate");
     const heading = await screen.findByRole("heading", {
@@ -292,11 +310,12 @@ describe("TransferFlow", () => {
     expect(amount).toHaveAttribute("aria-invalid", "false");
   });
 
-  it("groups thousands while typing, on a decimal keypad, without moving the caret", async () => {
+  it("groups thousands while typing, without the phone's keyboard, keeping the caret", async () => {
     const { user } = renderFlow();
     await toAmountStep(user);
     const pesos = screen.getByLabelText("Monto en ARS");
-    expect(pesos).toHaveAttribute("inputmode", "decimal");
+    // The flow's keypad is the keyboard: the field asks the phone for none.
+    expect(pesos).toHaveAttribute("inputmode", "none");
 
     await user.type(pesos, "12500");
     expect(pesos).toHaveValue("12.500");
@@ -469,5 +488,93 @@ describe("TransferFlow", () => {
 
     await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
     expect(send.mock.calls[1][1].get("idempotencyKey")).toBe(fresh);
+  });
+
+  it("chooses a recent recipient from the carousel with the arrow keys", async () => {
+    const { user, lookup } = renderFlow({ recent: [HINCHA, SOCIA] });
+    const carousel = screen.getByRole("listbox", { name: "Recientes" });
+    const field = screen.getByLabelText("Alias o CVU");
+
+    // Nobody is chosen until the user says so.
+    expect(field).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+
+    carousel.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(
+      screen.getByRole("option", { name: /Socia Granate/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(carousel).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: /Socia Granate/ }).id,
+    );
+    expect(field).toHaveValue("socia.granate");
+
+    await user.keyboard("{Home}");
+    expect(field).toHaveValue("hincha.granate");
+    await user.keyboard("{Enter}");
+    expect(lookup).toHaveBeenCalledWith("hincha.granate");
+    await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
+  });
+
+  it("selects the recent whose alias is typed in the field", async () => {
+    const { user } = renderFlow({ recent: [HINCHA, SOCIA] });
+
+    await user.type(screen.getByLabelText("Alias o CVU"), "socia.granate");
+
+    expect(
+      screen.getByRole("option", { name: /Socia Granate/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("option", { name: /Hincha Granate/ }),
+    ).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("types the amount on the flow's keypad, in the Argentine format", async () => {
+    const { user } = renderFlow();
+    await toAmountStep(user);
+    const keypad = screen.getByRole("group", { name: "Teclado numérico" });
+    const press = async (...names: string[]) => {
+      for (const name of names) {
+        await user.click(within(keypad).getByRole("button", { name }));
+      }
+    };
+
+    await press("1", "2", "5", "0", "0", "Coma decimal", "5", "0", "7");
+    expect(screen.getByLabelText("Monto en ARS")).toHaveValue("12.500,50");
+    expect(screen.getByText("Monto: 12.500,50")).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
+
+    await press("Borrar", "Borrar", "Borrar");
+    expect(screen.getByLabelText("Monto en ARS")).toHaveValue("12.500");
+
+    // Holding delete clears it all.
+    const remove = within(keypad).getByRole("button", { name: "Borrar" });
+    fireEvent.pointerDown(remove);
+    await waitFor(
+      () => expect(screen.getByLabelText("Monto en ARS")).toHaveValue(""),
+      { timeout: 1500 },
+    );
+    fireEvent.pointerUp(remove);
+    fireEvent.click(remove);
+    expect(screen.getByLabelText("Monto en ARS")).toHaveValue("");
+  });
+
+  it("takes the amount from a hardware keyboard anywhere on the step", async () => {
+    const { user } = renderFlow();
+    await toAmountStep(user);
+    // The step's title has the focus when it opens.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "¿Cuánto le enviás?" }),
+      ).toHaveFocus(),
+    );
+
+    await user.keyboard("1500.5");
+    expect(screen.getByLabelText("Monto en ARS")).toHaveValue("1.500,5");
+    await user.keyboard("{Backspace}");
+    expect(screen.getByLabelText("Monto en ARS")).toHaveValue("1.500,");
   });
 });

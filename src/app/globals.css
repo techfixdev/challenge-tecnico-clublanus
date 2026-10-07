@@ -497,6 +497,38 @@ body {
   }
 }
 
+/*
+ * A key of the transfer's amount keypad: a bare 48px target (above the 44px minimum)
+ * whose press feedback is a brief fill, not a shrink, the way a phone's dialer answers.
+ * The fill comes in at once on press and fades out on the fast token on release.
+ */
+@utility keypad-key {
+  display: flex;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition-property: background-color;
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+
+  &:active {
+    background-color: var(--color-primary-soft);
+    transition-duration: 0s;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px
+      color-mix(in oklab, var(--color-primary) 30%, transparent);
+  }
+}
+
 /* ==========================================================================
  * View transitions
  * ========================================================================== */

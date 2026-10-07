@@ -1,37 +1,29 @@
 "use client";
 
-import { useState, type FormEvent, type Ref } from "react";
-
-import { ROUTES } from "@/shared/lib/routes";
-import { Button } from "@/shared/ui/Button";
-import { ChevronRightIcon } from "@/shared/ui/icons";
+import { useState, type FormEvent } from "react";
 
 import {
   recipientInputError,
   recipientInputHint,
   type ConfirmedRecipient,
 } from "../domain/transfer-form";
-import { PRIMARY_DISABLED_CLASSES, StepActions } from "./StepActions";
-import {
-  FIELD_CLASSES,
-  FieldMessage,
-  FormAlert,
-  RecipientAvatar,
-  RecipientIdentity,
-  StepHeader,
-} from "./TransferParts";
+import { RecipientCarousel } from "./RecipientCarousel";
+import { FIELD_CLASSES, FieldMessage, FormAlert } from "./TransferParts";
 
-const FORM_ID = "recipient-form";
+/** The recipient step's form; the flow's pinned button submits it from outside. */
+export const RECIPIENT_FORM_ID = "recipient-form";
+
 const FIELD_ID = "recipient";
 const MESSAGE_ID = "recipient-message";
 
 /**
- * Step 1: alias or CVU, checked while typing with the server's own rules, then resolved on
- * the server ("Continuar") to show who will receive the money. Recent counterparties are
- * one tap away.
+ * Step 1: who gets the money. Recent counterparties are a strip of tiles to drag through
+ * (settling on one chooses them, a tap goes on with them); anyone else is one alias or
+ * CVU away in the field below, checked while typing with the server's own rules. Either
+ * way the field holds the choice, and "Continuar" resolves it on the server to show who
+ * will receive the money.
  */
 export function RecipientStep({
-  headingRef,
   value,
   onChange,
   recentRecipients,
@@ -39,7 +31,6 @@ export function RecipientStep({
   pending,
   error,
 }: {
-  headingRef: Ref<HTMLHeadingElement>;
   value: string;
   onChange: (value: string) => void;
   recentRecipients: ConfirmedRecipient[];
@@ -53,6 +44,9 @@ export function RecipientStep({
   const [showErrors, setShowErrors] = useState(value !== "");
   const inputError = recipientInputError(value);
   const visibleError = showErrors && value !== "" ? inputError : null;
+  const chosenRecent =
+    recentRecipients.find((recipient) => recipient.query === value.trim()) ??
+    null;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,17 +55,22 @@ export function RecipientStep({
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <StepHeader
-        step={1}
-        title="¿A quién le enviás?"
-        description="Ingresá el alias o el CVU de la cuenta GranaBank de destino."
-        headingRef={headingRef}
-        back={{ href: ROUTES.home }}
-      />
+    <div className="flex flex-col">
+      {recentRecipients.length > 0 ? (
+        <RecipientCarousel
+          recipients={recentRecipients}
+          selectedQuery={chosenRecent?.query ?? null}
+          onSelect={(recipient) => onChange(recipient.query)}
+          onPick={(recipient) => {
+            onChange(recipient.query);
+            if (!pending) onResolve(recipient.query);
+          }}
+          disabled={pending}
+        />
+      ) : null}
 
       <form
-        id={FORM_ID}
+        id={RECIPIENT_FORM_ID}
         onSubmit={handleSubmit}
         noValidate
         className="mt-8 flex flex-col"
@@ -112,68 +111,6 @@ export function RecipientStep({
           </div>
         ) : null}
       </form>
-
-      {recentRecipients.length > 0 ? (
-        <RecentRecipients
-          recipients={recentRecipients}
-          disabled={pending}
-          onPick={(recipient) => {
-            onChange(recipient.query);
-            onResolve(recipient.query);
-          }}
-        />
-      ) : null}
-
-      {/* Pinned under the recent recipients, the button still submits the form above. */}
-      <StepActions>
-        <Button
-          type="submit"
-          form={FORM_ID}
-          className={PRIMARY_DISABLED_CLASSES}
-          disabled={pending || value.trim() === ""}
-          aria-busy={pending}
-        >
-          {pending ? "Buscando cuenta…" : "Continuar"}
-        </Button>
-      </StepActions>
     </div>
-  );
-}
-
-/** Recent counterparties: one tap fills the field and resolves the account. */
-function RecentRecipients({
-  recipients,
-  disabled,
-  onPick,
-}: {
-  recipients: ConfirmedRecipient[];
-  disabled: boolean;
-  onPick: (recipient: ConfirmedRecipient) => void;
-}) {
-  return (
-    <section aria-labelledby="recent-recipients" className="mt-10">
-      <h2
-        id="recent-recipients"
-        className="text-base font-medium text-foreground"
-      >
-        Recientes
-      </h2>
-      <ul className="mt-4 flex flex-col gap-4">
-        {recipients.map((recipient) => (
-          <li key={recipient.query}>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onPick(recipient)}
-              className="flex w-full pressable items-center gap-4 rounded-2xl bg-surface lit-surface p-4 text-left shadow-card focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none active:shadow-1 disabled:opacity-70"
-            >
-              <RecipientAvatar fullName={recipient.fullName} />
-              <RecipientIdentity recipient={recipient} />
-              <ChevronRightIcon className="size-5 shrink-0 text-muted" />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

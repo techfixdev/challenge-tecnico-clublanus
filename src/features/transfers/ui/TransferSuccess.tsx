@@ -16,6 +16,7 @@ import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 import type { TransferReceipt } from "../domain/transfer-model";
 import { StepActions } from "./StepActions";
 import { CardLabel, SummaryRow } from "./TransferParts";
+import { MORPH_ID, morphTransition } from "./transfer-morph";
 
 /** The check is traced like a pen once the badge is in (≈300ms, no bounce). */
 const DRAW = {
@@ -77,9 +78,14 @@ export function TransferSuccess({
         <p className="mt-1 text-sm text-muted">
           Le enviaste a {receipt.recipient.fullName}
         </p>
-        <p className="mt-4 text-4xl font-semibold text-foreground tabular-nums">
+        {/* The amount the review showed, carried on into the receipt (MORPH_ID). */}
+        <m.p
+          layoutId={MORPH_ID.amount}
+          transition={morphTransition(reduced)}
+          className="mt-4 text-4xl font-semibold text-foreground tabular-nums"
+        >
           <Money value={receipt.amount} currency={receipt.currency} />
-        </p>
+        </m.p>
       </div>
 
       <dl className="mt-8 divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">

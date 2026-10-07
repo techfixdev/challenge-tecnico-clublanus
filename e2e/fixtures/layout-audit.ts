@@ -11,8 +11,10 @@ export type LayoutReport = { overflow: number; problems: string[] };
  * What a narrow viewport breaks: the page scrolling sideways, an element sticking out of
  * the viewport, or text that does not fit its box (spilling over its neighbours, or cut
  * with an ellipsis). Text inside horizontal scrollers (the filter chips) may extend past
- * the viewport, since it scrolls into view. Visually hidden texts and the odometer strips
- * (taller than their row on purpose) are skipped.
+ * the viewport, since it scrolls into view, and so may the tiles of a dragged strip
+ * (`data-gesture-viewport`, the transfer's recipient carousel): its viewport clips them
+ * and the finger brings them in. Visually hidden texts and the odometer strips (taller
+ * than their row on purpose) are skipped.
  */
 export function auditLayout(page: Page): Promise<LayoutReport> {
   return page.evaluate(() => {
@@ -38,6 +40,7 @@ export function auditLayout(page: Page): Promise<LayoutReport> {
       ) {
         const overflowX = getComputedStyle(ancestor).overflowX;
         if (overflowX === "auto" || overflowX === "scroll") inScroller = true;
+        if (ancestor.hasAttribute("data-gesture-viewport")) inScroller = true;
       }
       if (!inScroller && rect.right > viewportWidth + 0.5) {
         problems.push(

@@ -80,7 +80,9 @@ test("sends money to hincha.granate, who receives it", async ({
   ).toBeVisible();
   // The seeded transfer makes the other demo user a recent recipient.
   const recents = page.getByRole("region", { name: "Recientes" });
-  await expect(recents).toContainText("Hincha Granate");
+  await expect(
+    recents.getByRole("option", { name: /Hincha Granate/ }),
+  ).toBeVisible();
   await expect(recents).toContainText(/•••• \d{4}$/);
   await page.getByLabel("Alias o CVU").fill("hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
