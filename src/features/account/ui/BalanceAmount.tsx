@@ -4,22 +4,21 @@ import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 
 import { formatMoneyForSpeech } from "@/shared/lib/format";
-import { INSTANT, ROLL_SPRING } from "@/shared/ui/motion/springs";
+import { FADE, INSTANT, ROLL_SPRING } from "@/shared/ui/motion/springs";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
 import { digitOffset, digitSidebearing, odometerCells } from "./odometer";
 
 const MASK = "••••••";
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-/** Mask ↔ digits morph: quick enough to feel like one gesture with the eye toggle. */
-const MORPH = { duration: 0.25, ease: [0.2, 0, 0, 1] } as const;
 
 /**
  * A card balance shown as an odometer: each digit is a 0–9 strip that rolls into place
  * with a spring, cents first. `balance` is null while the card is masked: then only the
  * mask is rendered, so neither the markup nor the width of the row can spell the amount
  * (the page does not even have it; it arrives with the reveal). Revealing fades the
- * digits in and rolls them up from 0; hiding blurs them out while the mask fades in.
+ * digits in (rising 4px) and rolls them up from 0; hiding fades them out while the mask
+ * fades in. Opacity and a short translate only: a blur would repaint the card each frame.
  *
  * - Screen readers get only the final value with its currency in words ("978,85
  *   dólares"), or "Saldo oculto", from a separate text; the strips are `aria-hidden`,
@@ -40,7 +39,8 @@ export function BalanceAmount({
 }) {
   const hidden = balance === null;
   const reduced = useReducedMotionPreference();
-  const morph = reduced ? INSTANT : MORPH;
+  // Mask ↔ digits: one fast fade, so it feels like part of the eye toggle's gesture.
+  const morph = reduced ? INSTANT : FADE;
 
   return (
     <span
@@ -55,9 +55,9 @@ export function BalanceAmount({
               data-odometer
               data-state="shown"
               className="col-start-1 row-start-1 -mx-[0.2em] flex [mask-image:linear-gradient(transparent,black_18%,black_82%,transparent)] px-[0.2em]"
-              initial={{ opacity: 0, filter: "blur(6px)" }}
-              animate={{ opacity: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, filter: "blur(6px)" }}
+              initial={reduced ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               transition={morph}
             >
               {odometerCells(balance).map((cell) =>

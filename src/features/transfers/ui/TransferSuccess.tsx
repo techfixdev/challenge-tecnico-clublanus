@@ -9,13 +9,19 @@ import { Money } from "@/shared/ui/Money";
 import { ROUTES } from "@/shared/lib/routes";
 import { buttonClassName } from "@/shared/ui/Button";
 import { CLOSE_QUICK_ACTION, PUSH } from "@/shared/ui/motion/navigation";
+import { FADE } from "@/shared/ui/motion/springs";
+import { DURATION_S, EASE } from "@/shared/ui/motion/tokens";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
 import type { TransferReceipt } from "../domain/transfer-model";
 import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
-const POP_SPRING = { type: "spring", stiffness: 380, damping: 22 } as const;
-const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
+/** The check is traced like a pen once the badge is in (≈300ms, no bounce). */
+const DRAW = {
+  duration: DURATION_S.base,
+  delay: DURATION_S.fast / 2,
+  ease: EASE,
+};
 
 function ReceiptRow({ term, children }: { term: string; children: ReactNode }) {
   // On very narrow screens the value moves under its term instead of squeezing.
@@ -30,8 +36,9 @@ function ReceiptRow({ term, children }: { term: string; children: ReactNode }) {
 }
 
 /**
- * The transfer went through. The check pops in and draws itself (a spring for the
- * badge, the stroke traced like a pen); under reduced motion everything is simply there.
+ * The transfer went through. The badge fades in where it rests (no pop, no bounce) and
+ * the check draws itself like a pen stroke; under reduced motion everything is simply
+ * there.
  */
 export function TransferSuccess({
   receipt,
@@ -50,9 +57,9 @@ export function TransferSuccess({
           aria-hidden="true"
           data-testid="success-badge"
           className="flex size-20 items-center justify-center rounded-3xl bg-success-soft lit-soft text-success inset-shadow-specular-soft"
-          initial={reduced ? false : { scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={POP_SPRING}
+          initial={reduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={FADE}
         >
           <svg
             viewBox="0 0 24 24"
@@ -67,7 +74,7 @@ export function TransferSuccess({
               d="m5 12.5 4.5 4.5L19 7.5"
               initial={reduced ? false : { pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 0.36, delay: 0.14, ease: ENTER_EASE }}
+              transition={DRAW}
             />
           </svg>
         </m.span>

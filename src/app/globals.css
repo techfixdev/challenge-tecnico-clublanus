@@ -183,39 +183,35 @@ body {
 }
 
 /*
- * Motion tokens. Every animation in the app uses these, so timing feels consistent:
- * short (150–300ms), ease-out when something enters, and only `transform`/`opacity`-like
- * properties (`scale`, `translate`), which the browser animates without re-layout.
+ * Motion tokens (mirrored for JavaScript in shared/ui/motion/tokens.ts; tokens.test.ts
+ * keeps both in step). Three durations and one curve, nothing else:
+ * - fast (160ms): feedback and small swaps (press, fades, a skeleton leaving);
+ * - base (280ms): content arriving in place (rows, a reveal, a container morph);
+ * - nav (400ms): a whole screen travelling (push, pop).
+ * The curve is the iOS sheet curve: a quick start that glides into place, never past it.
+ * Only `transform`/`opacity`-like properties move, never `blur()`: the browser
+ * composites them without re-layout or repaint.
  */
 :root {
   /* Direction the key light travels (top-left → bottom-right): every gradient runs along it. */
   --light-angle: 155deg;
 
-  --motion-duration-press: 150ms;
-  --motion-duration-enter: 240ms;
-  --motion-duration-morph: 280ms;
-  /* Delay between consecutive list rows; the list caps the total (see MovementList). */
-  --motion-stagger-step: 40ms;
-  /* Decelerating curve: things arrive fast and settle. */
-  --motion-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
-  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --motion-press-scale: 0.97;
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 280ms;
+  --motion-duration-nav: 400ms;
+  --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /*
-   * Navigation (iOS-like, see shared/ui/motion/navigation.ts). A push or pop is longer
-   * than the micro-interactions above because the whole screen travels; its curve is the
-   * iOS sheet curve: a quick start that glides into place, with no bounce.
-   */
-  --motion-duration-push: 400ms;
-  --motion-duration-crossfade: 220ms;
-  --motion-ease-push: cubic-bezier(0.32, 0.72, 0, 1);
-  /* How far the screen underneath shifts while the new one covers it, and how dim it gets. */
+  /* Offsets and amplitudes, not durations. */
+  /* Delay between consecutive list rows; at most 6 rows stagger (movement-motion.ts). */
+  --motion-stagger-step: 40ms;
+  /* Period of the skeleton's looping highlight (a rhythm, not a transition). */
+  --motion-shimmer-period: 1.4s;
+  --motion-press-scale: 0.97;
+  /* How far the screen underneath shifts while a pushed one covers it, and how dim it gets. */
   --motion-push-parallax: -28%;
   --motion-push-dim: brightness(0.92);
-  /* Skeleton → content: the skeleton leaves fast while the content dissolves in. */
-  --motion-duration-skeleton-out: 150ms;
-  --motion-duration-reveal: 240ms;
-  --motion-reveal-rise: 8px;
+  /* How far content rises as it arrives (rows, a reveal): a hint of direction, no more. */
+  --motion-reveal-rise: 4px;
 
   /* Room the fixed bottom nav takes at the end of every signed-in screen: its height,
      some breathing room and the device's bottom safe area. */
@@ -230,8 +226,8 @@ body {
 @utility pressable {
   transition-property:
     color, background-color, border-color, box-shadow, scale, translate;
-  transition-duration: var(--motion-duration-press);
-  transition-timing-function: var(--motion-ease-standard);
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-ease);
 
   &:active:not(:disabled) {
     scale: var(--motion-press-scale);
@@ -312,7 +308,8 @@ body {
       rgb(255 255 255 / 0.65),
       transparent
     );
-    animation: skeleton-shimmer 1.4s var(--motion-ease-standard) infinite;
+    animation: skeleton-shimmer var(--motion-shimmer-period) var(--motion-ease)
+      infinite;
   }
 
   /* Reduced motion: the static grey still reads as a placeholder. */
@@ -331,13 +328,14 @@ body {
 }
 
 /*
- * Movement rows fade in and rise 8px when inserted, each one `--row-enter-step` steps
- * after the first (set per row, capped in movement-motion.ts), so a list "builds" from
- * the top instead of popping in all at once.
+ * Movement rows fade in and rise a few pixels on the page's first paint, each one
+ * `--row-enter-step` steps after the first (set per row, capped at 6 rows in
+ * movement-motion.ts), so the list "builds" once from the top. Rows inserted later (a
+ * filter, a search, "Cargar más") simply appear: row-entrance.ts sets
+ * `data-rows-entered` on <html> once the first rows have entered.
  */
 @utility row-enter {
-  animation: row-enter var(--motion-duration-enter) var(--motion-ease-enter)
-    both;
+  animation: row-enter var(--motion-duration-base) var(--motion-ease) both;
   animation-delay: calc(var(--row-enter-step, 0) * var(--motion-stagger-step));
 
   @media (prefers-reduced-motion: reduce) {
@@ -345,17 +343,22 @@ body {
   }
 }
 
+/* Unlayered, so it wins over the utility. */
+:root[data-rows-entered] .row-enter {
+  animation: none;
+}
+
 @keyframes row-enter {
   from {
     opacity: 0;
-    translate: 0 8px;
+    translate: 0 var(--motion-reveal-rise);
   }
 }
 
 /*
  * View transitions on navigation (React `<ViewTransition>`, see shared/ui/motion).
  * Each screen is one unit (ScreenTransition) that moves by the navigation's type: push,
- * pop, tab crossfade. The chrome (bottom nav, screen header) stays put above it, and
+ * pop, instant tab switch. The chrome (bottom nav, screen header) stays put above it, and
  * shared elements (a movement's type tile, a quick action's container) morph on top.
  * Without browser support the app simply navigates.
  */
@@ -366,7 +369,7 @@ body {
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: var(--motion-duration-enter);
+  animation-duration: var(--motion-duration-base);
 }
 
 /* Push: the new screen slides in from the right over the old one (with a soft shadow on
@@ -377,28 +380,28 @@ body {
 }
 
 ::view-transition-new(.nav-push-in) {
-  animation: nav-slide-from-edge var(--motion-duration-push)
-    var(--motion-ease-push) both;
+  animation: nav-slide-from-edge var(--motion-duration-nav) var(--motion-ease)
+    both;
   box-shadow: -10px 0 28px -12px rgb(52 24 38 / 0.22);
 }
 
 ::view-transition-old(.nav-push-out) {
-  animation: nav-slide-to-parallax var(--motion-duration-push)
-    var(--motion-ease-push) both;
+  animation: nav-slide-to-parallax var(--motion-duration-nav) var(--motion-ease)
+    both;
 }
 
 /* Pop: the mirror image; the current screen slides back out to the right, uncovering the
    previous one as it returns from the left. Its own keyframes, not `reverse`: a reversed
    animation also reverses its curve, and a pop must glide out as fast as a push glides in. */
 ::view-transition-old(.nav-pop-out) {
-  animation: nav-slide-to-edge var(--motion-duration-push)
-    var(--motion-ease-push) both;
+  animation: nav-slide-to-edge var(--motion-duration-nav) var(--motion-ease)
+    both;
   box-shadow: -10px 0 28px -12px rgb(52 24 38 / 0.22);
 }
 
 ::view-transition-new(.nav-pop-in) {
-  animation: nav-slide-from-parallax var(--motion-duration-push)
-    var(--motion-ease-push) both;
+  animation: nav-slide-from-parallax var(--motion-duration-nav)
+    var(--motion-ease) both;
 }
 
 @keyframes nav-slide-from-edge {
@@ -427,42 +430,31 @@ body {
   }
 }
 
-/* Tab switch: same place, different content. A calm crossfade, the new section settling
-   from a hair smaller; no slide. */
+/* Tab switch: instant, as in a native tab bar. The new section is simply there, and the
+   old one is not drawn at all (it would otherwise linger under it while the header swaps). */
 ::view-transition-old(.nav-tab-out) {
-  animation: vt-fade-out var(--motion-duration-crossfade)
-    var(--motion-ease-standard) both;
+  display: none;
 }
 
 ::view-transition-new(.nav-tab-in) {
-  animation: nav-tab-in var(--motion-duration-crossfade)
-    var(--motion-ease-enter) both;
+  animation: none;
 }
 
-@keyframes nav-tab-in {
-  from {
-    opacity: 0;
-    scale: 0.985;
-  }
-}
-
-/* Skeleton → content: the skeleton leaves fast while the content dissolves in and rises.
+/* Skeleton → content: the skeleton leaves fast while the content fades in and rises 4px.
    The content starts at once (no delay after the skeleton): a reveal must never hold
    back ready content, and on a cold load it is the page's largest paint (LCP). */
 ::view-transition-old(.skeleton-out) {
-  animation: vt-fade-out var(--motion-duration-skeleton-out)
-    var(--motion-ease-standard) both;
+  animation: vt-fade-out var(--motion-duration-fast) var(--motion-ease) both;
 }
 
 ::view-transition-new(.reveal) {
-  animation: reveal var(--motion-duration-reveal) var(--motion-ease-enter) both;
+  animation: reveal var(--motion-duration-base) var(--motion-ease) both;
 }
 
 @keyframes reveal {
   from {
     opacity: 0;
     translate: 0 var(--motion-reveal-rise);
-    filter: blur(2px);
   }
 }
 
@@ -490,18 +482,19 @@ body {
 }
 
 ::view-transition-old(.screen-header) {
-  animation: vt-fade-out 100ms var(--motion-ease-standard) both;
+  animation: vt-fade-out var(--motion-duration-fast) var(--motion-ease) both;
 }
 
 ::view-transition-new(.screen-header) {
-  animation: container-fade-in 160ms var(--motion-ease-enter) 60ms both;
+  animation: container-fade-in var(--motion-duration-fast) var(--motion-ease)
+    both;
 }
 
 /* A movement's type tile morphs from its row to the detail header and back, in step with
    the push/pop around it, above the moving screens. */
 ::view-transition-group(.movement-morph) {
-  animation-duration: var(--motion-duration-push);
-  animation-timing-function: var(--motion-ease-push);
+  animation-duration: var(--motion-duration-nav);
+  animation-timing-function: var(--motion-ease);
   z-index: 2;
 }
 
@@ -514,15 +507,15 @@ body {
  */
 ::view-transition-group(.container-open),
 ::view-transition-group(.container-close) {
-  animation-duration: var(--motion-duration-morph);
-  animation-timing-function: var(--motion-ease-standard);
+  animation-duration: var(--motion-duration-base);
+  animation-timing-function: var(--motion-ease);
 }
 
 ::view-transition-image-pair(.container-open),
 ::view-transition-image-pair(.container-close) {
   overflow: clip;
-  animation: container-surface var(--motion-duration-morph)
-    var(--motion-ease-standard) both;
+  animation: container-surface var(--motion-duration-base) var(--motion-ease)
+    both;
 }
 
 ::view-transition-image-pair(.container-close) {
@@ -549,15 +542,17 @@ body {
   object-fit: none;
 }
 
-/* What leaves goes first and fast; what arrives overlaps it, so the swap reads as one. */
+/* The contents crossfade fast inside the slower container, so the swap reads as one. */
 ::view-transition-old(.container-open),
 ::view-transition-old(.container-close) {
-  animation: container-fade-out 100ms var(--motion-ease-standard) both;
+  animation: container-fade-out var(--motion-duration-fast) var(--motion-ease)
+    both;
 }
 
 ::view-transition-new(.container-open),
 ::view-transition-new(.container-close) {
-  animation: container-fade-in 200ms var(--motion-ease-enter) 60ms both;
+  animation: container-fade-in var(--motion-duration-fast) var(--motion-ease)
+    both;
 }
 
 @keyframes container-surface {
@@ -605,8 +600,8 @@ body {
  * skips it entirely.
  */
 :root {
+  /* How long the shield holds before the overlay dissolves (a hold, not a duration). */
   --brand-intro-dissolve-at: 420ms;
-  --brand-intro-dissolve: 180ms;
 }
 
 .brand-intro {
@@ -617,14 +612,14 @@ body {
   place-items: center;
   background-color: var(--color-background);
   pointer-events: none;
-  animation: brand-intro-dissolve var(--brand-intro-dissolve)
-    var(--motion-ease-standard) var(--brand-intro-dissolve-at) both;
+  animation: brand-intro-dissolve var(--motion-duration-fast) var(--motion-ease)
+    var(--brand-intro-dissolve-at) both;
 }
 
 .brand-intro-mark {
   display: grid;
-  animation: brand-intro-handoff var(--brand-intro-dissolve)
-    var(--motion-ease-standard) var(--brand-intro-dissolve-at) both;
+  animation: brand-intro-handoff var(--motion-duration-fast) var(--motion-ease)
+    var(--brand-intro-dissolve-at) both;
 }
 
 /* The vector is untouched; the light system only adds its granate-tinted shadows. */
@@ -639,13 +634,14 @@ body {
       2px 8px 10px
         color-mix(in srgb, var(--color-primary-dark) 22%, transparent)
     );
-  animation: brand-intro-enter 320ms var(--motion-ease-enter) both;
+  animation: brand-intro-enter var(--motion-duration-base) var(--motion-ease)
+    both;
 }
 
 @keyframes brand-intro-enter {
   from {
     opacity: 0;
-    translate: 0 6px;
+    translate: 0 var(--motion-reveal-rise);
     scale: 0.9;
   }
 }
@@ -712,7 +708,8 @@ body {
     drop-shadow(
       5px 16px 20px color-mix(in srgb, var(--emblem-shade) 55%, transparent)
     );
-  animation: login-emblem-enter 700ms var(--motion-ease-enter) both;
+  animation: login-emblem-enter var(--motion-duration-nav) var(--motion-ease)
+    both;
 
   & > img {
     display: block;
@@ -793,8 +790,8 @@ body {
   background-repeat: no-repeat;
   background-size: 12px;
   transition:
-    background-color var(--motion-duration-press) var(--motion-ease-standard),
-    border-color var(--motion-duration-press) var(--motion-ease-standard);
+    background-color var(--motion-duration-fast) var(--motion-ease),
+    border-color var(--motion-duration-fast) var(--motion-ease);
 
   &:checked {
     border-color: var(--color-gold);

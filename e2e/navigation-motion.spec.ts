@@ -15,7 +15,7 @@ import {
 
 /*
  * iOS-like navigation motion (shared/ui/motion/navigation.ts), on real computed styles:
- * push (forward), pop (in-app "Volver"), tab crossfade, pinned chrome, and the branded
+ * push (forward), pop (in-app "Volver"), instant tab switch, pinned chrome, and the branded
  * cold-load intro. Each case runs with and without `prefers-reduced-motion: reduce`.
  */
 
@@ -205,7 +205,7 @@ test.describe("with motion allowed", () => {
     expectBottomNavPinned(transitions);
   });
 
-  test("switching tabs crossfades the sections, with no slide", async ({
+  test("switching tabs swaps the sections instantly: no fade, no scale, no slide", async ({
     page,
   }) => {
     await login(page);
@@ -216,22 +216,18 @@ test.describe("with motion allowed", () => {
     await expect(movementRows(page).first()).toBeVisible();
     const transitions = await readLog({ className: "nav-tab-in" });
 
-    expect(keyframesOf(transitions, "new", "nav-tab-in")).toEqual(
-      new Set(["nav-tab-in"]),
-    );
-    expect(keyframesOf(transitions, "old", "nav-tab-out")).toEqual(
-      new Set(["vt-fade-out"]),
-    );
+    // The section still takes part in the transition (it stays in sync with the header
+    // swap), but neither its old nor its new image animates: it is simply there.
+    expect(
+      transitions.some(({ newClasses }) =>
+        Object.values(newClasses).some((classes) =>
+          classes.split(" ").includes("nav-tab-in"),
+        ),
+      ),
+    ).toBe(true);
+    expect(animationsOf(transitions, "new", "nav-tab-in")).toEqual([]);
+    expect(animationsOf(transitions, "old", "nav-tab-out")).toEqual([]);
     expect(slideDurations(transitions)).toEqual([]);
-    const crossfade = [
-      ...animationsOf(transitions, "old", "nav-tab-out"),
-      ...animationsOf(transitions, "new", "nav-tab-in"),
-    ];
-    expect(crossfade.length).toBeGreaterThan(0);
-    for (const { durationMs } of crossfade) {
-      expect(durationMs).toBeGreaterThanOrEqual(200);
-      expect(durationMs).toBeLessThanOrEqual(250);
-    }
     expectBottomNavPinned(transitions);
   });
 

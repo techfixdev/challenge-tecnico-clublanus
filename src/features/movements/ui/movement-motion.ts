@@ -3,8 +3,8 @@
  * `--motion-*` tokens); this only decides which row waits how many steps.
  */
 
-/** 7 steps × 40ms = the last row starts at most 280ms after the first one. */
-export const MAX_STAGGER_STEPS = 7;
+/** At most 6 rows stagger (steps 0–5); the rest enter with the sixth. */
+export const MAX_STAGGER_STEPS = 5;
 
 /**
  * Stagger step of the row at `index` in a list whose newest batch starts at `batchStart`

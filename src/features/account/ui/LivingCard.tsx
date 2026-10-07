@@ -16,12 +16,7 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  CROSSFADE,
-  FLIP_SPRING,
-  INSTANT,
-  TILT_SPRING,
-} from "@/shared/ui/motion/springs";
+import { FADE, INSTANT, SPRING_PHYSICS } from "@/shared/ui/motion/springs";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
 import { isFlipTap } from "./tap-guard";
@@ -36,8 +31,8 @@ export const MAX_TILT_Y = 12;
  */
 const SHADOW_TONE = {
   primary:
-    "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-primary-dark)_50%,transparent),color-mix(in_srgb,var(--color-primary-dark)_18%,transparent)_60%,transparent)]",
-  pink: "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-card-pink-glow)_50%,transparent),color-mix(in_srgb,var(--color-card-pink-glow)_16%,transparent)_60%,transparent)]",
+    "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-primary-dark)_40%,transparent),color-mix(in_srgb,var(--color-primary-dark)_14%,transparent)_60%,transparent)]",
+  pink: "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-card-pink-glow)_40%,transparent),color-mix(in_srgb,var(--color-card-pink-glow)_12%,transparent)_60%,transparent)]",
 } as const;
 
 export type CardTone = keyof typeof SHADOW_TONE;
@@ -56,11 +51,12 @@ const FACE =
   "overflow-hidden rounded-3xl shadow-[0_1px_2px_color-mix(in_srgb,var(--color-primary-dark)_18%,transparent),0_10px_20px_-12px_color-mix(in_srgb,var(--color-primary-dark)_45%,transparent)] [backface-visibility:hidden]";
 
 /**
- * A card that reacts like a physical object: pressed and dragged, it tilts towards the
- * finger in 3D, a glossy light slides across its surface and its shadow shifts; on
- * release it springs back. The first card also gets a single light sweep when it mounts.
+ * A card that reacts like a physical object: only while pressed and dragged, it tilts
+ * towards the finger in 3D, a faint gloss follows the light and its shadow shifts; on
+ * release it settles back flat. Every turn uses the one critically damped spring
+ * (springs.ts): it follows the finger closely and never wobbles past its rest.
  *
- * With a `back`, a tap flips it over (rotateY with a spring; it dips slightly while it
+ * With a `back`, a tap flips it over (rotateY with the spring; it dips slightly while it
  * turns so its near edge stays inside the carousel). The whole card is a toggle button
  * (`flipLabel`, `aria-pressed`) that sits under the faces: the faces let pointer events
  * through to it, except their own controls (the eyes). Only a real tap flips: a carousel
@@ -73,13 +69,15 @@ const FACE =
  */
 export function LivingCard({
   tone,
-  sweep = false,
   back,
   flipLabel,
   children,
 }: {
   tone: CardTone;
-  /** Plays the one-time light sweep on mount (the primary card). */
+  /**
+   * @deprecated No effect: the light sweep on mount was removed (T12b). Kept until
+   * CardCarousel stops passing it.
+   */
   sweep?: boolean;
   /** The card's back face; without it the card does not flip. */
   back?: ReactNode;
@@ -100,29 +98,30 @@ export function LivingCard({
   const pointerY = useMotionValue(0);
   const rotateY = useSpring(
     useTransform(pointerX, [-0.5, 0.5], [-MAX_TILT_Y, MAX_TILT_Y]),
-    TILT_SPRING,
+    SPRING_PHYSICS,
   );
   const rotateX = useSpring(
     useTransform(pointerY, [-0.5, 0.5], [MAX_TILT_X, -MAX_TILT_X]),
-    TILT_SPRING,
+    SPRING_PHYSICS,
   );
 
   // The light comes from the top-left: the sheen moves with the tilt and the shadow
-  // moves the opposite way, as if the card lifted off the page.
+  // moves the opposite way, as if the card lifted off the page. Both stay subtle: a
+  // material cue, never a shine that calls attention to itself.
   const sheenX = useTransform(rotateY, [-MAX_TILT_Y, MAX_TILT_Y], [-30, 30]);
   const sheenY = useTransform(rotateX, [-MAX_TILT_X, MAX_TILT_X], [25, -25]);
-  const sheenBackground = useMotionTemplate`radial-gradient(120% 90% at ${useTransform(sheenX, (x) => 30 + x)}% ${useTransform(sheenY, (y) => 20 + y)}%, rgb(255 255 255 / 0.55), transparent 60%)`;
+  const sheenBackground = useMotionTemplate`radial-gradient(120% 90% at ${useTransform(sheenX, (x) => 30 + x)}% ${useTransform(sheenY, (y) => 20 + y)}%, rgb(255 255 255 / 0.4), transparent 60%)`;
   const sheenOpacity = useTransform(
     [rotateX, rotateY],
     ([x, y]: number[]) =>
-      0.35 + 0.45 * Math.min(1, Math.hypot(x / MAX_TILT_X, y / MAX_TILT_Y)),
+      0.25 + 0.25 * Math.min(1, Math.hypot(x / MAX_TILT_X, y / MAX_TILT_Y)),
   );
   const shadowX = useTransform(rotateY, [-MAX_TILT_Y, MAX_TILT_Y], [10, -10]);
   const shadowY = useTransform(rotateX, [-MAX_TILT_X, MAX_TILT_X], [0, 8]);
 
   // The flip adds to the tilt's rotateY. The back face is turned 180° inside the card, so
   // at 180° + tilt it faces the viewer and tilts exactly like the front does.
-  const flipAngle = useSpring(0, FLIP_SPRING);
+  const flipAngle = useSpring(0, SPRING_PHYSICS);
   const surfaceRotateY = useTransform(() => rotateY.get() + flipAngle.get());
   const surfaceScale = useTransform(
     flipAngle,
@@ -132,7 +131,7 @@ export function LivingCard({
     if (reduced) flipAngle.jump(0);
     else flipAngle.set(flipped ? 180 : 0);
   }, [flipped, reduced, flipAngle]);
-  const fade = reduced && flippedOnce ? CROSSFADE : INSTANT;
+  const fade = reduced && flippedOnce ? FADE : INSTANT;
 
   function follow(event: PointerEvent<HTMLDivElement>) {
     const box = event.currentTarget.getBoundingClientRect();
@@ -236,20 +235,6 @@ export function LivingCard({
             className="pointer-events-none absolute inset-0 mix-blend-soft-light"
             style={{ background: sheenBackground, opacity: sheenOpacity }}
           />
-          {sweep && !reduced && (
-            <m.div
-              aria-hidden="true"
-              data-testid="card-sweep"
-              className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-[linear-gradient(105deg,transparent_15%,rgb(255_255_255/0.4)_50%,transparent_85%)] mix-blend-overlay"
-              initial={{ x: "0%" }}
-              animate={{ x: "400%" }}
-              transition={{
-                duration: 1.2,
-                delay: 0.4,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            />
-          )}
         </m.div>
         {back && (
           <m.div

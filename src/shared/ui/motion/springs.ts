@@ -1,15 +1,32 @@
 import type { Transition } from "motion/react";
 
+import { DURATION_S, EASE } from "./tokens";
+
 /*
- * Spring presets. Springs (not fixed durations) are what makes motion feel physical:
- * they keep the finger's velocity and settle naturally, and an interrupted animation
- * continues from where it is instead of restarting.
+ * Springs, for motion a finger drives. A spring keeps the gesture's velocity and an
+ * interrupted animation continues from where it is instead of restarting. There is one,
+ * critically damped (damping ratio ≈ 1): it settles as fast as it can without ever
+ * bouncing past its target. Overshoot reads as a toy, not as a bank card.
  */
 
-/** The card follows the finger closely and wobbles once when released. */
-export const TILT_SPRING = { stiffness: 300, damping: 20 } as const;
+/** Physics of the one spring, for `useSpring` (motion values). */
+export const SPRING_PHYSICS = { stiffness: 300, damping: 35, mass: 1 } as const;
 
-/** Odometer digits: a quick roll that settles without bouncing past the digit. */
+/** The one spring: card tilt and flip, the nav pill, the carousel dot, icon presses. */
+export const SPRING: Transition = { type: "spring", ...SPRING_PHYSICS };
+
+/**
+ * Role names for the one spring, so call sites read as what they move. Not presets:
+ * each is the same object (springs.test.ts checks it).
+ */
+export const INDICATOR_SPRING = SPRING;
+export const PRESS_SPRING = SPRING;
+
+/**
+ * The only other spring, kept on purpose: the odometer digits roll on a softer spring
+ * (damping ratio ≈ 0.97, it lands a few millionths past the digit, invisible) so a long
+ * balance reads as one rolling number rather than a column of snaps.
+ */
 export const ROLL_SPRING: Transition = {
   type: "spring",
   stiffness: 170,
@@ -17,25 +34,8 @@ export const ROLL_SPRING: Transition = {
   mass: 0.9,
 };
 
-/** Indicators (nav pill, carousel dot): snappy, with a hint of overshoot. */
-export const INDICATOR_SPRING: Transition = {
-  type: "spring",
-  stiffness: 520,
-  damping: 34,
-};
+/** Opacity swaps (and the reduced-motion replacement for movement): a short fade. */
+export const FADE: Transition = { duration: DURATION_S.fast, ease: EASE };
 
-/** Tap feedback on icons. */
-export const PRESS_SPRING: Transition = {
-  type: "spring",
-  stiffness: 600,
-  damping: 28,
-};
-
-/** Under reduced motion every change is applied at once. */
+/** Under reduced motion, movement is applied at once. */
 export const INSTANT: Transition = { duration: 0 };
-
-/** Card flip: a physical turn that settles with a slight overshoot. */
-export const FLIP_SPRING = { stiffness: 220, damping: 24 } as const;
-
-/** Reduced-motion replacement for movements: a short crossfade. */
-export const CROSSFADE: Transition = { duration: 0.2, ease: "easeOut" };

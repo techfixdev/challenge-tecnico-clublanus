@@ -33,6 +33,18 @@ afterEach(() => {
 });
 
 describe("BalanceAmount odometer", () => {
+  it("reveals with a fade and a short rise, never a blur", () => {
+    const { container, rerender } = render(
+      <BalanceAmount balance={null} currency="USD" />,
+    );
+    rerender(<BalanceAmount balance="978.85" currency="USD" />);
+
+    const odometer = container.querySelector<HTMLElement>("[data-odometer]")!;
+    expect(odometer.style.filter).toBe("");
+    expect(odometer.style.opacity).toBe("0");
+    expect(odometer.style.transform).toBe("translateY(4px)");
+  });
+
   it("has one rolling column per digit, aiming at the balance's digits", () => {
     const { container } = render(
       <BalanceAmount balance="978.85" currency="USD" />,

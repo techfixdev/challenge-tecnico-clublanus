@@ -6,7 +6,7 @@
  * - `nav-forward` (push): going deeper (list → detail, Home → Movimientos). The new screen
  *   slides in from the right over the old one, which shifts left and dims (iOS parallax).
  * - `nav-back` (pop): an in-app "Volver" up the hierarchy, the reverse of a push.
- * - `nav-tab`: switching sections in the bottom nav; a calm crossfade, no slide.
+ * - `nav-tab`: switching sections in the bottom nav; instant, as in a native tab bar.
  * - `no-morph`: added to a push between sections (Home → Movimientos): the movement
  *   tiles both screens share stay in their screens instead of flying across, so the
  *   screen moves as one; a tab switch never morphs them either. On its own (`IN_PLACE`)

@@ -83,7 +83,7 @@ function TapIcon({
  * the old and new positions and springs the same pill between them with transforms.
  * The nav lives in the layout, so it persists across navigations and can animate.
  *
- * Switching sections is a tab switch (`nav-tab`: the screens crossfade, no slide), and
+ * Switching sections is a tab switch (`nav-tab`: the screens swap instantly, no slide), and
  * the bar has its own view-transition name, so it stays put above the moving screens.
  * A tap on it while a transition runs still reaches its item (see pinned-chrome-taps.ts).
  */

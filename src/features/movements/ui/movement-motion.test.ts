@@ -13,10 +13,10 @@ describe("rowEnterStep", () => {
     ]);
   });
 
-  it("caps the delay so a long list never waits more than ~300ms", () => {
+  it("staggers at most 6 rows: the rest enter with the sixth", () => {
+    expect(MAX_STAGGER_STEPS).toBe(5);
+    expect(rowEnterStep(5)).toBe(5);
     expect(rowEnterStep(50)).toBe(MAX_STAGGER_STEPS);
-    // 40ms per step (globals.css): the last row starts at most 280ms late.
-    expect(MAX_STAGGER_STEPS * 40).toBeLessThanOrEqual(300);
   });
 
   it("restarts at 0 for rows appended by a later batch", () => {

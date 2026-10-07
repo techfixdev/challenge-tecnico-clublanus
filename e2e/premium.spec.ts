@@ -219,28 +219,35 @@ test.describe("with motion allowed", () => {
           (window as unknown as { layoutShifts: { total: number } })
             .layoutShifts.total,
       );
-    const sweepDone = async () => {
+    const entranceDone = async () => {
       // A streamed page arrives in a hidden container before React moves it into
-      // place: wait until there is a single card.
-      await expect(page.getByTestId("card-sweep")).toHaveCount(1);
-      // The intro (light sweep, odometer roll) is over once the sweep reaches its end.
-      await expect
-        .poll(() =>
-          page.getByTestId("card-sweep").evaluate((sweep) => {
-            const { m41 } = new DOMMatrix(getComputedStyle(sweep).transform);
-            return Math.round(m41 / sweep.getBoundingClientRect().width);
-          }),
-        )
-        .toBe(4);
+      // place: wait until there is a single card list.
+      await expect(
+        page.getByRole("list", { name: "Tus tarjetas" }),
+      ).toHaveCount(1);
+      // No light sweep plays on the card any more (it was cut in T12b).
+      await expect(page.getByTestId("card-sweep")).toHaveCount(0);
+      // The entrance is over once every finite animation (rows, reveal) has finished.
+      await page.evaluate(() =>
+        Promise.allSettled(
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.effect?.getComputedTiming().iterations !== Infinity,
+            )
+            .map((animation) => animation.finished),
+        ),
+      );
     };
 
     // Client navigation after login (odometer rolls), then a server-rendered reload.
     await login(page);
-    await sweepDone();
+    await entranceDone();
     expect(await totalShift()).toBeLessThan(0.05);
 
     await page.reload();
-    await sweepDone();
+    await entranceDone();
     expect(await totalShift()).toBeLessThan(0.05);
   });
 

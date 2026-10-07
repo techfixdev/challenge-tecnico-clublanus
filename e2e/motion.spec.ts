@@ -44,6 +44,30 @@ async function rowAnimations(page: Page) {
   );
 }
 
+/**
+ * Counts the rows' entrance animations that start, from the next page load on (an init
+ * script, so it sees the ones that start before React hydrates).
+ */
+async function countRowEntrances(page: Page) {
+  await page.addInitScript(() => {
+    const counter = { count: 0 };
+    Object.assign(window, { rowEntrances: counter });
+    document.addEventListener(
+      "animationstart",
+      (event) => {
+        if (event.animationName === "row-enter") counter.count += 1;
+      },
+      true,
+    );
+  });
+  return () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { rowEntrances: { count: number } }).rowEntrances
+          .count,
+    );
+}
+
 /** Taps a row and returns the view transitions that the navigation started. */
 async function openFirstDetail(page: Page) {
   const readLog = await recordViewTransitions(page);
@@ -201,13 +225,35 @@ test.describe("with motion allowed", () => {
     expect(await pressedScale(page)).toBe("0.97");
   });
 
-  test("rows stagger in, lift on hover, and the tapped tile morphs into the detail", async ({
+  test("rows stagger in on the first paint only: a filter change does not replay it", async ({
+    page,
+  }) => {
+    await login(page);
+    const entrances = await countRowEntrances(page);
+    await page.goto("/movimientos");
+    await expect(movementRows(page).first()).toBeVisible();
+
+    await expect.poll(entrances).toBeGreaterThan(0);
+    // Once the first paint's rows have entered, the window closes for later rows.
+    await expect(page.locator("html[data-rows-entered]")).toHaveCount(1);
+    const firstPaint = await entrances();
+
+    await page
+      .getByRole("navigation", { name: "Filtrar por tipo" })
+      .getByRole("link", { name: "Recibido", exact: true })
+      .click();
+    await expect(page).toHaveURL(/type=recibido/);
+    expect(new Set(await rowAnimations(page))).toEqual(new Set(["none"]));
+    expect(await entrances()).toBe(firstPaint);
+  });
+
+  test("rows lift on hover, and the tapped tile morphs into the detail", async ({
     page,
   }) => {
     await login(page);
     await page.goto("/movimientos");
 
-    expect(new Set(await rowAnimations(page))).toEqual(new Set(["row-enter"]));
+    await expect(movementRows(page).first()).toBeVisible();
     expect(await hoveredRowTranslate(page)).toBe("0px -2px");
 
     await skipWithoutViewTransitions(page);

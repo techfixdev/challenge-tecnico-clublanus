@@ -471,6 +471,35 @@ Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsd
 
 **Resultado:** desaparece la limitación conocida del violeta (no llegaba a AA); ahora todos los pares de texto de los roles están entre 5,2:1 y 17,3:1.
 
+### T12b-B — Un solo lenguaje de movimiento (07/10/2026)
+
+**Pedido:** el movimiento tenía que sentirse de iOS, no de demo: había ~9 duraciones, 3 curvas, 6 resortes (varios con rebote) y efectos decorativos.
+
+**Lenguaje de movimiento** (`globals.css` + `shared/ui/motion/tokens.ts` / `springs.ts`):
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `fast` | 160 ms | presión, fundidos, máscara del saldo, esqueleto que se va |
+| `base` | 280 ms | contenido que llega (filas, reveal, contenedor, trazo del check) |
+| `nav` | 400 ms | pantalla entera (push / pop) |
+| curva | `cubic-bezier(0.32, 0.72, 0, 1)` | la única curva (la de iOS) |
+| `SPRING` | 300 / 35 (ζ ≈ 1,01) | todo lo que mueve el dedo: inclinación, vuelta, píldora, punto del carrusel |
+| `ROLL_SPRING` | 170 / 24 / 0,9 (ζ ≈ 0,97) | excepción: rodillo del saldo (pasa millonésimas, invisible) |
+
+No son duraciones (y se documentan así): el escalonado de filas (40 ms), el período del brillo del esqueleto (1,4 s) y la espera de la intro (420 ms).
+
+**Qué se sacó y por qué:**
+- Barrido de luz de 1,2 s sobre la primera tarjeta: decoración que se repetía en cada carga.
+- `blur` en transiciones (reveal 2 px, saldo 6 px): repinta la capa cada cuadro y se lee "efecto"; ahora opacidad + 4 px.
+- Rebotes: inclinación (ζ 0,58), check de éxito (pop 380/22), píldora; todo pasa al resorte crítico. El check ya no salta: el badge aparece y el trazo se dibuja en ~280 ms.
+- Fundido + escalado al cambiar de pestaña: una tab bar nativa cambia al instante.
+- Filas que volvían a entrar con cada filtro y con "Cargar más": ahora solo la primera lista de la carga, hasta 6 filas escalonadas (`row-entrance.ts` marca `<html data-rows-entered>` cuando terminan).
+- Brillo y sombra de la tarjeta, un poco más tenues.
+
+**Se mantuvo:** push/pop con paralaje (400 ms, pop con sus propios keyframes), rodillo del saldo, píldora, vuelta de tarjeta, presión a 0,97, esqueleto → contenido y todos los modos de movimiento reducido.
+
+**Tests primero:** `tokens.test.ts` (3 duraciones, 1 curva, sin tiempos sueltos en CSS ni en componentes, sin `blur` en keyframes, pestañas sin animación), `springs.test.ts` (ζ ≥ 1 salvo el rodillo), `row-entrance.test.ts` y el saldo sin desenfoque: en rojo antes del cambio, verdes después. Los e2e que fijaban el barrido, el fundido de pestañas y las filas en cada filtro se reescribieron para fijar el comportamiento nuevo. De paso, la intro de marca se desmonta aunque su disolución termine antes de hidratar (antes podía quedar montada).
+
 ---
 
 ## 6. Estructura del proyecto
