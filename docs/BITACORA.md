@@ -561,7 +561,7 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 **Tests primero:** payload del QR, matriz → path SVG, `QrCode` con `role="img"` y etiqueta, y el aviso del login con sus clases: en rojo antes del cambio, verdes después. `brand-palette.test.ts` suma el contraste del aviso compuesto sobre el fondo.
 
-**Pendiente:** "Copiar" al lado del valor y el agrupado del CVU (que hoy termina en un par suelto) necesitan tocar `ReceiveDetailsCard` y dos tests de la API, fuera del alcance autorizado de esta tarea.
+**Pendiente (resuelto en la integración, ver T12b-C):** "Copiar" al lado del valor y el agrupado del CVU (que terminaba en un par suelto) necesitaban tocar `ReceiveDetailsCard` y dos tests de la API, fuera del alcance autorizado de esta tarea.
 
 ---
 
@@ -575,6 +575,22 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 - **Repetir:** solo para transferencias enviadas a una cuenta con alias (el repositorio lee el alias del destinatario solo en el detalle). Lleva a `/transferir?to=alias`; el servidor valida el alias con las reglas del formulario (nada de CVU en URLs) y lo resuelve como la búsqueda del paso 1 antes de saltar al paso del monto.
 
 **Tests primero (rojo → verde):** `NavBar`, `MovementActions` (compartir, cancelar la hoja, copiar como respaldo, error al copiar, repetir solo si corresponde), `movementShareText` / `repeatTransferAlias`, `parseTransferTo` / `resolveTransferPrefill`, el detalle (un solo estado, repetir solo en enviadas con alias) y `TransferFlow` con prefill; 6 tests y 4 módulos en rojo antes del cambio. Integración: `findById` trae el alias solo del lado que envía. E2E (proyecto de solo lectura): detalle de la transferencia del seed → chevron ≥ 44 px, un estado, copiar comprobante, repetir abre el paso del monto; `?to=` con un CVU o el alias propio se ignora.
+
+---
+
+### T12b-C — Integración de C1, C2 y C3 (07/10/2026)
+
+Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → C1. El único conflicto fue esta bitácora (las tres entradas iban al mismo lugar): quedaron las tres, en ese orden.
+
+**Qué se terminó al integrar:**
+- **"Copiar" al lado del valor** en Recibir: el botón va dentro del mismo `<dd>` que el alias o el CVU (el `<dl>` sigue siendo válido) y el valor sigue seleccionable. En pantallas angostas el CVU puede partirse en dos líneas, siempre entre grupos.
+- **CVU agrupado de a cuatro desde el final:** `28 5059 0940 0904 1813 5201` (22 dígitos = un par al principio + cinco grupos de cuatro). Nunca termina en un par suelto y el último grupo son justo los 4 dígitos que deja ver el enmascarado (`•• •••• •••• •••• •••• 5201`). Un solo formateador (`groupForReading`) sirve a los dos; los tests de dominio, de las rutas de la API, de la UI y el e2e de Recibir usan el formato nuevo.
+- **Esqueleto de Recibir** con el marco de la `NavBar` (fila de 44 px, chevron y título) en lugar de la píldora vieja.
+
+**Tests que fallaban bajo carga (no en una máquina tranquila):**
+- `card-flip.spec.ts` ("un toque da vuelta la tarjeta"): con 12 workers fallaba 9 de 10. Causa: la URL cambia a `/` mientras Home todavía muestra el esqueleto; el test medía la tarjeta y tocaba con el mouse "crudo" antes de que las tarjetas llegaran y terminara la transición, y ese toque se perdía. Ahora espera el botón de la tarjeta y que termine la transición: 50 de 50.
+- `navigation-motion.spec.ts` (la intro de marca se desmonta): 1 falla en 95 con 12 workers, con la página ya hidratada. El `animationend` de la disolución puede llegar mientras React todavía hidrata y perderse; ahora la intro también se desmonta con la promesa `finished` de esa animación (test unitario primero, en rojo y después verde).
+- "Toques durante una transición" (`navigation-motion.spec.ts`) falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que CI): los tres toques van separados por 120 ms y, con la CPU saturada, uno cae mientras el navegador todavía no pinta la pantalla nueva. En una máquina tranquila pasa siempre; queda anotado, sin cambios.
 
 ---
 
