@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 
 import { prismaReceiveDetailsRepository } from "@/features/account/data/prisma-receive-details-repository";
 import { getReceiveDetails } from "@/features/account/domain/account-identifiers";
-import { receiveQrPayload } from "@/features/account/domain/receive-qr";
 import { ReceiveDetailsCard } from "@/features/account/ui/ReceiveDetailsCard";
+import { ReceiveQrCard } from "@/features/account/ui/ReceiveQrCard";
 import { requireUser } from "@/features/auth/server/current-user";
 import {
   QUICK_ACTION_MORPH,
@@ -14,7 +14,6 @@ import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 import { NavBar } from "@/shared/ui/NavBar";
 import { ROUTES } from "@/shared/lib/routes";
 import { ReceiveIcon } from "@/shared/ui/icons";
-import { QrCode } from "@/shared/ui/qr/QrCode";
 
 export const metadata: Metadata = {
   title: "Recibir · GranaBank",
@@ -55,26 +54,7 @@ export default async function ReceivePage() {
           </div>
 
           {details ? (
-            <section
-              aria-labelledby="receive-qr"
-              className="mt-6 flex flex-col items-center rounded-3xl bg-surface lit-surface p-5 text-center shadow-card"
-            >
-              <h2
-                id="receive-qr"
-                className="text-sm font-medium text-foreground"
-              >
-                Tu código QR
-              </h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted">
-                Quien lo escanee ve tu alias y tu CVU para transferirte.
-              </p>
-              {/* Plain text, not an interbank payment QR: see receiveQrPayload. */}
-              <QrCode
-                value={receiveQrPayload(details)}
-                label={`Código QR con tu alias ${details.alias} y tu CVU`}
-                className="mt-4 max-w-52 rounded-2xl ring-1 ring-border"
-              />
-            </section>
+            <ReceiveQrCard details={details} className="mt-6" />
           ) : null}
 
           <section

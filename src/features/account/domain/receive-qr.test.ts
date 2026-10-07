@@ -15,12 +15,19 @@ describe("receiveQrPayload", () => {
     expect(receiveQrPayload(DETAILS)).toBe(receiveQrPayload({ ...DETAILS }));
   });
 
-  it("refuses identifiers that would make a code nobody can transfer to", () => {
-    expect(() => receiveQrPayload({ ...DETAILS, alias: "no" })).toThrow(
-      RangeError,
-    );
-    expect(() =>
+  it("has no payload for identifiers nobody could transfer to", () => {
+    expect(receiveQrPayload({ ...DETAILS, alias: "no" })).toBeNull();
+    expect(
       receiveQrPayload({ ...DETAILS, cvu: "2850590940090418135202" }),
-    ).toThrow(RangeError);
+    ).toBeNull();
+  });
+
+  it("never lets a stored value add or forge a line of the payload", () => {
+    expect(
+      receiveQrPayload({ ...DETAILS, alias: "soy.granate\nCVU: 1" }),
+    ).toBeNull();
+    expect(
+      receiveQrPayload({ ...DETAILS, cvu: `${DETAILS.cvu}\n` }),
+    ).toBeNull();
   });
 });
