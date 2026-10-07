@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { stubReducedMotion } from "@/test/reduced-motion";
@@ -12,6 +12,11 @@ class FakeCSSAnimation {
     public currentTime: number,
   ) {}
   effect = { getTiming: () => ({ delay: 420 }) };
+  finish = () => {};
+  /** Never settles unless the test calls `finish`, like a dissolve still running. */
+  finished = new Promise<void>((resolve) => {
+    this.finish = resolve;
+  });
 }
 
 function stubIntroAnimations(...animations: FakeCSSAnimation[]) {
@@ -44,6 +49,22 @@ describe("BrandIntro", () => {
       new FakeCSSAnimation("brand-intro-dissolve", "finished", 580),
     );
     render(<BrandIntro>shield</BrandIntro>);
+
+    expect(screen.queryByTestId("brand-intro")).not.toBeInTheDocument();
+  });
+
+  it("unmounts when its dissolve finishes even if React never sees the animationend", async () => {
+    // The event can fire while React is still hydrating the tree, and then it is lost.
+    const dissolve = new FakeCSSAnimation(
+      "brand-intro-dissolve",
+      "running",
+      500,
+    );
+    stubIntroAnimations(dissolve);
+    render(<BrandIntro>shield</BrandIntro>);
+    expect(screen.getByTestId("brand-intro")).toBeInTheDocument();
+
+    await act(async () => dissolve.finish());
 
     expect(screen.queryByTestId("brand-intro")).not.toBeInTheDocument();
   });
