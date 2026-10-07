@@ -80,7 +80,7 @@
     },
     "card": {
       "cvv-ink": {
-        "$description": "Paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
+        "$description": "Inks printed on the card: the signature (warmed toward granate) and the CVV digits.",
         "$type": "color",
         "$value": "#1b1416"
       },
@@ -100,17 +100,17 @@
         "$value": "#cdb66a"
       },
       "signature": {
-        "$description": "Paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
+        "$description": "Signature-panel paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
         "$type": "color",
         "$value": "#f8f5ed"
       },
       "signature-ink": {
-        "$description": "Paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
+        "$description": "Inks printed on the card: the signature (warmed toward granate) and the CVV digits.",
         "$type": "color",
         "$value": "#3b2a2e"
       },
       "signature-line": {
-        "$description": "Paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
+        "$description": "Signature-panel paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
         "$type": "color",
         "$value": "#e9e5d6"
       },
@@ -366,36 +366,6 @@
           }
         ]
       },
-      "lifted": {
-        "$description": "Elevation 3: a surface lifted toward the light (hovered row).",
-        "$type": "shadow",
-        "$value": [
-          {
-            "blur": "0px",
-            "color": "#34182608",
-            "inset": false,
-            "offsetX": "0px",
-            "offsetY": "0px",
-            "spread": "1px"
-          },
-          {
-            "blur": "4px",
-            "color": "#3418260f",
-            "inset": false,
-            "offsetX": "0.5px",
-            "offsetY": "2px",
-            "spread": "0px"
-          },
-          {
-            "blur": "28px",
-            "color": "#34182638",
-            "inset": false,
-            "offsetX": "3px",
-            "offsetY": "14px",
-            "spread": "-12px"
-          }
-        ]
-      },
       "on-brand": {
         "$description": "A white control resting on the granate backdrop (login button).",
         "$type": "shadow",
@@ -433,7 +403,7 @@
         ]
       },
       "raised": {
-        "$description": "Elevation 3 under a granate fill (primary button, active chip).",
+        "$description": "Elevation 3: a granate fill raised toward the light (primary button, active chip).",
         "$type": "shadow",
         "$value": [
           {
