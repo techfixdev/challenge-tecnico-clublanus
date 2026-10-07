@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 
+import { SPRING_PHYSICS } from "../motion/springs";
 import {
   BACK_COMPLETE_FRACTION,
   dragProgress,
-  estimateVelocity,
   FLICK_VELOCITY,
   lockAxis,
+  projectRelease,
+  releaseVelocity,
   rubberBand,
+  settleVelocity,
   SHEET_DISMISS_FRACTION,
   shouldCompleteBack,
   shouldDismissSheet,
+  snapToStep,
+  withEdgeResistance,
 } from "./drag-physics";
 
 const WIDTH = 390;
@@ -33,7 +38,7 @@ describe("lockAxis", () => {
   });
 });
 
-describe("estimateVelocity", () => {
+describe("releaseVelocity", () => {
   it("is the speed over the last stretch of the gesture, in px/s", () => {
     const samples = [
       { time: 0, position: 0 },
@@ -42,7 +47,7 @@ describe("estimateVelocity", () => {
       { time: 200, position: 70 },
     ];
     // Only the last 100ms count: (70 - 10) / 0.1s.
-    expect(estimateVelocity(samples, 200)).toBeCloseTo(600);
+    expect(releaseVelocity(samples, 200)).toBeCloseTo(600);
   });
 
   it("is zero when the finger rested before lifting", () => {
@@ -50,12 +55,12 @@ describe("estimateVelocity", () => {
       { time: 0, position: 0 },
       { time: 16, position: 30 },
     ];
-    expect(estimateVelocity(samples, 300)).toBe(0);
+    expect(releaseVelocity(samples, 300)).toBe(0);
   });
 
   it("is zero without two samples to compare", () => {
-    expect(estimateVelocity([], 0)).toBe(0);
-    expect(estimateVelocity([{ time: 10, position: 5 }], 10)).toBe(0);
+    expect(releaseVelocity([], 0)).toBe(0);
+    expect(releaseVelocity([{ time: 10, position: 5 }], 10)).toBe(0);
   });
 
   it("is negative when the finger was going back", () => {
@@ -63,7 +68,7 @@ describe("estimateVelocity", () => {
       { time: 0, position: 100 },
       { time: 50, position: 60 },
     ];
-    expect(estimateVelocity(samples, 50)).toBeCloseTo(-800);
+    expect(releaseVelocity(samples, 50)).toBeCloseTo(-800);
   });
 });
 
@@ -136,6 +141,85 @@ describe("rubberBand", () => {
 
   it("never travels past the dimension it is measured against", () => {
     expect(rubberBand(100_000, HEIGHT)).toBeLessThan(HEIGHT);
+  });
+
+  it("stretches the same either way it is pulled", () => {
+    expect(rubberBand(-40, WIDTH)).toBe(-rubberBand(40, WIDTH));
+  });
+});
+
+describe("withEdgeResistance", () => {
+  it("follows the finger 1:1 between the bounds", () => {
+    expect(withEdgeResistance(-150, -300, 0, WIDTH)).toBe(-150);
+    expect(withEdgeResistance(0, -300, 0, WIDTH)).toBe(0);
+  });
+
+  it("resists past either bound", () => {
+    const past = withEdgeResistance(60, -300, 0, WIDTH);
+    expect(past).toBeGreaterThan(0);
+    expect(past).toBeLessThan(60);
+    const before = withEdgeResistance(-360, -300, 0, WIDTH);
+    expect(before).toBeLessThan(-300);
+    expect(before).toBeGreaterThan(-360);
+  });
+});
+
+describe("projectRelease", () => {
+  it("stays where the finger let go when the finger was still", () => {
+    expect(projectRelease(-140, 0)).toBe(-140);
+  });
+
+  it("carries a release forward in the direction of the finger", () => {
+    expect(projectRelease(0, -1000)).toBeLessThan(-50);
+    expect(projectRelease(0, 1000)).toBeGreaterThan(50);
+    // A fast flick of 1000px/s travels about one card, not a whole list.
+    expect(Math.abs(projectRelease(0, 1000))).toBeLessThan(150);
+  });
+});
+
+describe("snapToStep", () => {
+  const STEP = 100;
+
+  it("snaps a still release to the nearest step", () => {
+    expect(snapToStep(0, 0, STEP, 4)).toBe(0);
+    expect(snapToStep(-140, 0, STEP, 4)).toBe(1);
+    expect(snapToStep(-160, 0, STEP, 4)).toBe(2);
+  });
+
+  it("lets a flick carry past the nearest step", () => {
+    // Released 30% of the way to the next step, but moving fast towards it.
+    expect(snapToStep(-30, -1000, STEP, 4)).toBe(1);
+    // The same position flicked back lands on the first step.
+    expect(snapToStep(-130, 1000, STEP, 4)).toBe(0);
+  });
+
+  it("never snaps outside the strip", () => {
+    expect(snapToStep(80, 2000, STEP, 4)).toBe(0);
+    expect(snapToStep(-900, -2000, STEP, 4)).toBe(3);
+    expect(snapToStep(-300, 0, STEP, 1)).toBe(0);
+    expect(snapToStep(-300, 0, STEP, 0)).toBe(0);
+  });
+});
+
+describe("settleVelocity", () => {
+  // The spring's natural frequency: faster than this × distance, it would pass the target.
+  const omega = Math.sqrt(SPRING_PHYSICS.stiffness / SPRING_PHYSICS.mass);
+
+  it("keeps a velocity the spring can absorb before reaching its target", () => {
+    expect(settleVelocity(500, 100)).toBe(500);
+  });
+
+  it("caps a velocity towards the target so the spring lands without passing it", () => {
+    expect(settleVelocity(5000, 100)).toBeCloseTo(omega * 100);
+    expect(settleVelocity(-5000, -100)).toBeCloseTo(-omega * 100);
+  });
+
+  it("keeps a velocity away from the target: the spring turns it around, never past", () => {
+    expect(settleVelocity(-800, 100)).toBe(-800);
+  });
+
+  it("keeps the velocity when already at the target", () => {
+    expect(settleVelocity(300, 0)).toBe(300);
   });
 });
 

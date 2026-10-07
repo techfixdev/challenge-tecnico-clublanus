@@ -81,7 +81,7 @@ function useDragToDismiss(
       settling.current?.stop();
       height.current = dialog.current?.offsetHeight ?? 0;
     },
-    onMove: (dy) => offset.set(dy >= 0 ? dy : -rubberBand(-dy, height.current)),
+    onMove: (dy) => offset.set(dy >= 0 ? dy : rubberBand(dy, height.current)),
     onRelease: (dy, velocity) => {
       if (shouldDismissSheet(dy, velocity, height.current)) {
         onDismiss();

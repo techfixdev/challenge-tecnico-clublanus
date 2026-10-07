@@ -10,7 +10,10 @@ import {
 import * as m from "motion/react-m";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { snapIndex, withEdgeResistance } from "@/shared/ui/motion/drag-snap";
+import {
+  snapToStep,
+  withEdgeResistance,
+} from "@/shared/ui/gestures/drag-physics";
 import { INSTANT, SPRING } from "@/shared/ui/motion/springs";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
@@ -38,7 +41,7 @@ const optionId = (index: number) => `recent-recipient-${index}`;
 /**
  * Recent recipients as a strip of initials tiles the finger drags sideways. The strip
  * follows the finger 1:1 (a motion value, no re-render per frame) and stretches past its
- * ends; on release it snaps to the tile the throw points at (`snapIndex`), settling on the
+ * ends; on release it snaps to the tile the throw points at (`snapToStep`), settling on the
  * one critically damped spring at the finger's velocity. The centered tile is full size,
  * its neighbors peek smaller, and the name under it crossfades while scrubbing, all
  * derived from the strip's position.
@@ -121,7 +124,7 @@ export function RecipientCarousel({
 
   function handlePanEnd(_: PointerEvent, info: PanInfo) {
     settleOn(
-      snapIndex(offset.get(), info.velocity.x, TILE_STEP, recipients.length),
+      snapToStep(offset.get(), info.velocity.x, TILE_STEP, recipients.length),
       info.velocity.x,
     );
   }

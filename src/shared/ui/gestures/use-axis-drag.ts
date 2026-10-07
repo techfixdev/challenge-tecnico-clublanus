@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 
 import {
   AXIS_LOCK_SLOP_PX,
-  estimateVelocity,
+  releaseVelocity,
   lockAxis,
   type Axis,
   type DragSample,
@@ -128,7 +128,7 @@ export function useAxisDrag(
       swallowNextClick = true;
       latest.current.onRelease(
         alongAxis(latest.current.axis, event, current),
-        estimateVelocity(current.samples, event.timeStamp),
+        releaseVelocity(current.samples, event.timeStamp),
       );
     }
 

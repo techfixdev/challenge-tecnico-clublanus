@@ -1,7 +1,16 @@
+import { SPRING_PHYSICS } from "../motion/springs";
+
 /*
- * The math behind the app's drag gestures (the edge swipe back, a sheet dragged down),
- * kept free of the DOM so every decision a release makes can be tested on its own.
- * Offsets are in pixels along the gesture's axis, velocities in pixels per second.
+ * The physics every drag in the app shares (the transfer's recipient carousel, the card
+ * deck, the edge swipe back, a sheet dragged down), kept free of the DOM so each decision
+ * a release makes is unit-tested on its own. Offsets are in pixels along the gesture's
+ * axis, velocities in pixels per second. The feel is one model throughout:
+ * - while dragging, the surface follows the finger 1:1 and, past its limit, stretches
+ *   with iOS's rubber band instead of stopping dead (`rubberBand`, `withEdgeResistance`);
+ * - the release velocity is the finger's over its last moments (`releaseVelocity`);
+ * - a released surface coasts as a scroll view decelerates (`projectRelease`) and lands
+ *   on the one critically damped spring, started at the finger's velocity, capped only so
+ *   it never passes where it rests (`settleVelocity`).
  */
 
 /** How far from the screen's left edge a press can start the swipe back. */
@@ -25,8 +34,18 @@ export const SHEET_DISMISS_FRACTION = 0.3;
  */
 export const FLICK_VELOCITY = 500;
 
-/** iOS's scroll-view resistance: how strongly a drag past its limit is held back. */
+/**
+ * iOS's rubber-band constant: past its limit a surface first moves at 55% of the
+ * finger's speed, and ever less the further it is pulled.
+ */
 const RUBBER_BAND_COEFFICIENT = 0.55;
+
+/**
+ * Deceleration per millisecond of a coasting surface: UIScrollView's "fast" rate (0.99),
+ * used by paging carousels. A flick at 1000px/s coasts ≈ 100px, about one card: a flick
+ * moves to the next card, a hard one may skip one, never the whole list.
+ */
+const DECELERATION_RATE = 0.99;
 
 /** The release velocity is measured over the gesture's last stretch... */
 const VELOCITY_WINDOW_MS = 100;
@@ -44,6 +63,7 @@ export function lockAxis(dx: number, dy: number, slop: number): Axis | null {
   return Math.abs(dx) > Math.abs(dy) ? "x" : "y";
 }
 
+/** One position of the finger along the gesture's axis, at `time` in ms. */
 export type DragSample = { time: number; position: number };
 
 /**
@@ -51,7 +71,7 @@ export type DragSample = { time: number; position: number };
  * `VELOCITY_WINDOW_MS`, so the speed of the release counts, not the gesture's average.
  * A finger that stopped before lifting has no velocity, even if it was fast earlier.
  */
-export function estimateVelocity(samples: DragSample[], now: number): number {
+export function releaseVelocity(samples: DragSample[], now: number): number {
   const last = samples.at(-1);
   if (!last || now - last.time > VELOCITY_STALE_MS) return 0;
   const recent = samples.filter(({ time }) => time >= now - VELOCITY_WINDOW_MS);
@@ -59,6 +79,72 @@ export function estimateVelocity(samples: DragSample[], now: number): number {
   const elapsedMs = last.time - first.time;
   if (recent.length < 2 || elapsedMs <= 0) return 0;
   return ((last.position - first.position) / elapsedMs) * 1000;
+}
+
+/**
+ * Where a surface released at `offset`, moving at `velocity`, would come to rest if it
+ * coasted freely: the geometric series of its per-millisecond deceleration.
+ */
+export function projectRelease(offset: number, velocity: number): number {
+  return (
+    offset + ((velocity / 1000) * DECELERATION_RATE) / (1 - DECELERATION_RATE)
+  );
+}
+
+/**
+ * The step a strip of equal steps settles on. `offset` is the strip's translation (0
+ * centers the first step, `-step` the second), `velocity` the finger's at release.
+ */
+export function snapToStep(
+  offset: number,
+  velocity: number,
+  step: number,
+  count: number,
+): number {
+  if (count <= 1) return 0;
+  const nearest = Math.round(-projectRelease(offset, velocity) / step);
+  return Math.min(Math.max(nearest, 0), count - 1);
+}
+
+/**
+ * How far something pulled `overflow` px past its limit actually moves: almost 1:1 at
+ * first, then less and less, never reaching `dimension` (iOS's rubber band). The sign
+ * says which way it was pulled.
+ */
+export function rubberBand(overflow: number, dimension: number): number {
+  if (overflow === 0) return 0;
+  const distance = Math.abs(overflow);
+  const travel =
+    (1 - 1 / ((distance * RUBBER_BAND_COEFFICIENT) / dimension + 1)) *
+    dimension;
+  return Math.sign(overflow) * travel;
+}
+
+/** The finger's position between `min` and `max`, rubber-banded beyond them. */
+export function withEdgeResistance(
+  value: number,
+  min: number,
+  max: number,
+  dimension: number,
+): number {
+  if (value > max) return max + rubberBand(value - max, dimension);
+  if (value < min) return min + rubberBand(value - min, dimension);
+  return value;
+}
+
+/**
+ * The velocity the settling spring starts with: the finger's own, so the surface keeps
+ * moving as it was thrown. A critically damped spring launched towards its target faster
+ * than its natural frequency × the distance would pass the target and come back (an
+ * overshoot), so that one case is capped; a velocity away from the target is kept, the
+ * spring turns it around without ever passing it.
+ */
+export function settleVelocity(velocity: number, distance: number): number {
+  if (distance === 0 || Math.sign(velocity) !== Math.sign(distance))
+    return velocity;
+  const omega = Math.sqrt(SPRING_PHYSICS.stiffness / SPRING_PHYSICS.mass);
+  const limit = omega * Math.abs(distance);
+  return Math.sign(velocity) * Math.min(Math.abs(velocity), limit);
 }
 
 /**
@@ -90,16 +176,6 @@ export function shouldDismissSheet(
   height: number,
 ): boolean {
   return releaseCompletes(offset, velocity, height * SHEET_DISMISS_FRACTION);
-}
-
-/**
- * How far something follows a finger that pulls it `distance` past its limit: almost 1:1
- * at first, then less and less, never reaching `dimension` (iOS's rubber band).
- */
-export function rubberBand(distance: number, dimension: number): number {
-  return (
-    (1 - 1 / ((distance * RUBBER_BAND_COEFFICIENT) / dimension + 1)) * dimension
-  );
 }
 
 /** The share of `extent` an `offset` has covered, from 0 (at rest) to 1. */
