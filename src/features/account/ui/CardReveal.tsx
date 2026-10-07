@@ -14,6 +14,7 @@ import { EyeIcon, EyeOffIcon } from "@/shared/ui/icons";
 import {
   formatCardNumber,
   formatMaskedCardNumber,
+  isMaskedGroup,
 } from "../domain/card-number";
 import { BalanceAmount } from "./BalanceAmount";
 import {
@@ -192,24 +193,26 @@ export function RevealedCardNumber({ last4 }: { last4: string }) {
   // Masked until revealed, and also when the card has no stored number: the balance
   // and CVV are still revealed, the number keeps showing only its last 4.
   if (!number) {
+    const groups = formatMaskedCardNumber(last4);
     return (
       <p
         aria-hidden="true"
         data-testid="card-number"
         className="flex gap-[0.5em] text-lg tracking-[0.18em]"
       >
-        {formatMaskedCardNumber(last4).map((group, index) =>
-          index < 3 ? (
-            <Fragment key={index}>
-              {/* Bullets set tighter than digits, so each group reads as one block. */}
+        {groups.map((group, index) => (
+          <Fragment key={index}>
+            {isMaskedGroup(group) ? (
+              // Bullets set tighter than digits, so each group reads as one block.
               <span data-masked="" className="tracking-[0.04em]">
                 {group}
-              </span>{" "}
-            </Fragment>
-          ) : (
-            <span key={index}>{group}</span>
-          ),
-        )}
+              </span>
+            ) : (
+              <span>{group}</span>
+            )}
+            {index < groups.length - 1 ? " " : null}
+          </Fragment>
+        ))}
       </p>
     );
   }

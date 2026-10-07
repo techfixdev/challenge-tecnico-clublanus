@@ -5,6 +5,7 @@ import {
   formatCardNumber,
   formatMaskedCardNumber,
   isLuhnValid,
+  isMaskedGroup,
 } from "./card-number";
 
 describe("isLuhnValid", () => {
@@ -94,6 +95,23 @@ describe("formatMaskedCardNumber", () => {
   it("reads as a card number once joined, with no asterisks", () => {
     expect(formatMaskedCardNumber("5678").join(" ")).toBe(
       "•••• •••• •••• 5678",
+    );
+  });
+});
+
+describe("isMaskedGroup", () => {
+  it("tells the bullet groups of a masked number from its visible last 4", () => {
+    expect(formatMaskedCardNumber("1234").map(isMaskedGroup)).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("never treats a group of digits as masked", () => {
+    expect(formatCardNumber("4539578763621486").some(isMaskedGroup)).toBe(
+      false,
     );
   });
 });

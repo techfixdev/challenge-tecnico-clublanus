@@ -72,14 +72,23 @@ export function formatCardNumber(pan: string): string[] {
   return pan.match(/\d{1,4}/g) ?? [];
 }
 
-/** The bullet a masked digit shows, as on printed and on-screen cards. */
-const MASK = "••••";
+/**
+ * One hidden group of four digits. Bullets (U+2022), not asterisks: it is how banks and
+ * wallets print a masked PAN, and a bullet sits on the digits' optical center, so the
+ * masked number keeps the revealed one's line. Four of them, so the masked number keeps
+ * the 4-4-4-4 grouping and revealing it changes only the characters.
+ */
+const MASKED_GROUP = "••••";
 
 /**
- * The number before it is revealed: three groups of bullets and the last 4, grouped
- * 4-4-4-4 like the revealed number, so revealing it changes only the characters.
+ * The number before it is revealed: three masked groups and the last 4.
  * It renders on Home, so it never throws: the stored last 4 is shown as it is.
  */
 export function formatMaskedCardNumber(last4: string): string[] {
-  return [MASK, MASK, MASK, last4];
+  return [MASKED_GROUP, MASKED_GROUP, MASKED_GROUP, last4];
+}
+
+/** Whether a group from `formatMaskedCardNumber` hides its digits (vs. the last 4). */
+export function isMaskedGroup(group: string): boolean {
+  return group === MASKED_GROUP;
 }
