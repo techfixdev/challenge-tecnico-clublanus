@@ -884,15 +884,16 @@ body {
  * Bottom sheet (shared/ui/Sheet.tsx), a modal <dialog>: it rises from the bottom edge
  * while the page dims, and sinks back on close. `display` and `overlay` transition as
  * discrete properties, so the dialog stays rendered (and in the top layer) until it has
- * slid out; browsers without that support simply close it at once. The curve is the
- * navigation's (no bounce); reduced motion opens and closes it without movement.
+ * slid out; browsers without that support simply close it at once. It travels like a
+ * screen (nav duration, the one curve, no bounce) and the page dims at the content pace;
+ * reduced motion opens and closes it without movement.
  */
 .sheet {
   translate: 0 100%;
   transition:
-    translate var(--motion-duration-push) var(--motion-ease-push),
-    display var(--motion-duration-push) allow-discrete,
-    overlay var(--motion-duration-push) allow-discrete;
+    translate var(--motion-duration-nav) var(--motion-ease),
+    display var(--motion-duration-nav) allow-discrete,
+    overlay var(--motion-duration-nav) allow-discrete;
 }
 
 .sheet[open] {
@@ -902,9 +903,9 @@ body {
 .sheet::backdrop {
   background-color: transparent;
   transition:
-    background-color var(--motion-duration-crossfade) ease-out,
-    display var(--motion-duration-push) allow-discrete,
-    overlay var(--motion-duration-push) allow-discrete;
+    background-color var(--motion-duration-base) var(--motion-ease),
+    display var(--motion-duration-nav) allow-discrete,
+    overlay var(--motion-duration-nav) allow-discrete;
 }
 
 .sheet[open]::backdrop {

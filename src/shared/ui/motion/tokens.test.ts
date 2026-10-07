@@ -117,6 +117,22 @@ describe("motion tokens", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("only reads --motion-* properties that globals.css declares", () => {
+    const declared = new Set(motionProperties().keys());
+    const files = ["app/globals.css", ...sourceFiles()];
+    const dangling = files.flatMap((file) =>
+      Array.from(
+        readFileSync(join(SRC, file), "utf8").matchAll(
+          /var\((--motion-[\w-]+)/g,
+        ),
+        (match) => match[1]!,
+      )
+        .filter((name) => !declared.has(name))
+        .map((name) => `${file}: ${name}`),
+    );
+    expect(dangling).toEqual([]);
+  });
+
   it("never blurs inside an animation (opacity and a short translate only)", () => {
     for (const [name, body] of keyframes()) {
       expect(body, `@keyframes ${name}`).not.toMatch(/blur\(/);
