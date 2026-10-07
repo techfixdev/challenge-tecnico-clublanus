@@ -70,7 +70,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Tarjeta que gira al tocarla (reverso con banda, firma y CVV); un ojito por tarjeta revela saldo, número y CVV, ocultos por defecto y pedidos al servidor recién al tocar (`5f4b3cc` a `1acf3f1`).
 - [x] Ver el build de producción en el celular por la red local, con una opción explícita que se niega a correr en Vercel (`e815a7f`).
 - [x] Transiciones tipo iOS entre pantallas (push/pop con parallax, fundido entre pestañas, header y barra fijos), revelado de contenido y entrada de marca, sin empeorar el LCP (`20c027c`, `92f6f75`).
-- [ ] Colores oficiales del club, escudo y login rediseñado.
+- [x] Colores oficiales del club, escudo y login rediseñado: la app usa solo la paleta del manual (granate, oro y Cool Gray 7C), con el rojo de error como excepción documentada (`afd20d9`, `ee169df`, `80d077c` y el cambio de roles de color).
 - [ ] Tokens de diseño exportables a Figma (`pnpm tokens:figma` → JSON DTCG).
 - [ ] Lista de pantallas y estados para capturar en Figma (requiere conectar tu cuenta de Figma).
 - [ ] Revisar todo juntos y commitear (local).

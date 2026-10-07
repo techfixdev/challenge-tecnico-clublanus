@@ -457,6 +457,20 @@ Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsd
 
 **Checklist del enunciado:** `docs/CHECKLIST.md`, con el estado de cada requerimiento y su evidencia.
 
+### T12a — Solo colores del manual de marca (07/10/2026)
+
+**Pedido:** la app tiene que usar únicamente la paleta del manual del club (pág. 10: granate Pantone 188 C, oro Pantone 618 C y Cool Gray 7C), sin el violeta, el naranja, el verde ni el ámbar del Figma, y sin desequilibrar el diseño.
+
+**Qué se hizo:**
+- Todos los colores ya eran tokens en `globals.css`, así que se cambiaron los **valores**, no los nombres: los componentes y sus tests (`text-subscription`, `bg-sent-soft`…) no se tocaron.
+- Suscripción y pendiente → oro oscurecido (`#6F5C14`); enviado → Cool Gray oscurecido (`#5E5D61`); completado → granate; recibido sigue granate. Los azulejos son 25 % del color oficial sobre blanco, como `primary-soft`.
+- Texto principal y fondo pasaron a neutros sobre el tono del Cool Gray (`#1B1A1D`, `#F9F9FA`), sin el tinte azul del Figma. `APP_BACKGROUND_COLOR` (barra del navegador y manifest) se actualizó con el CSS.
+- **Excepción:** el error sigue rojo (se lee como error en cualquier contexto y el granate ya es "dinero recibido"), corrido hacia el tono del granate (`#B32D32`) y bien separado de él en claridad.
+
+**Tests primero:** `src/app/brand-palette.test.ts` lee `globals.css`, resuelve los `var()` y verifica (1) que cada token tenga su valor de la lista permitida, (2) que todo token que no sea neutro esté en el tono del granate o del oro (salvo la familia `danger`) y (3) que cada par texto/fondo nuevo llegue a 4,5:1. Falló (9 tests en rojo) antes de cambiar el CSS y pasó después.
+
+**Resultado:** desaparece la limitación conocida del violeta (no llegaba a AA); ahora todos los pares de texto de los roles están entre 5,2:1 y 17,3:1.
+
 ---
 
 ## 6. Estructura del proyecto

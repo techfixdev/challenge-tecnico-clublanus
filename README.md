@@ -212,9 +212,26 @@ El Figma usaba un granate aproximado (`#7A1D2D`) y un logo genérico. La app se 
 | `--color-gold`      | `#B4982F` | Oro, Pantone 618 C     | Chip de moneda (USD/ARS), casilla "Recordarme" y foco sobre granate                                      |
 | `--color-cool-gray` | `#9A999D` | Cool Gray 7C           | Base de los grises: `--color-border` (20 % sobre blanco) y `--color-muted` (mismo tono, oscurecido a AA) |
 
+La app usa **solo** esos tres colores y tintes o sombras de ellos (un test, `src/app/brand-palette.test.ts`, lista cada token con su valor y falla si aparece un tono fuera del granate, el oro o el gris neutro). El violeta, el naranja, el verde, el ámbar y los grises azulados del Figma se reemplazaron por roles de marca:
+
+| Rol                          | Antes (Figma)                     | Ahora                                          | Contraste                              |
+| ---------------------------- | --------------------------------- | ---------------------------------------------- | -------------------------------------- |
+| Suscripción                  | violeta `#C76DFF` sobre `#F3E3FF` | oro oscurecido `#6F5C14` sobre `#ECE5CB`       | 5,2:1 (azulejo), 6,5:1 (blanco)        |
+| Recibido                     | granate sobre `#DBC6CA`           | sin cambios                                    | 6,9:1 (azulejo), 11,3:1 (blanco)       |
+| Enviado                      | naranja `#EF9C55` sobre `#FDEBDB` | Cool Gray oscurecido `#5E5D61` sobre `#E6E6E7` | 5,2:1 (azulejo), 6,5:1 (blanco)        |
+| Completado (y "Copiado")     | verde `#1D7A50` sobre `#E2F4EA`   | granate sobre `#DBC6CA`                        | 6,9:1                                  |
+| Pendiente                    | ámbar `#9A5B00` sobre `#FFF0D4`   | oro oscurecido `#6F5C14` sobre `#FAE7B3`       | 5,3:1                                  |
+| Texto principal              | azul noche `#1E2235`              | casi negro neutro `#1B1A1D` (tono Cool Gray)   | 17,3:1 (blanco)                        |
+| Fondo de página              | gris azulado `#F9FAFC`            | blanco roto neutro `#F9F9FA` (tono Cool Gray)  | `muted` sobre él: 4,6:1                |
+| Error (excepción, ver abajo) | rojo `#C0362C` sobre `#FDECEA`    | rojo granatizado `#B32D32` sobre `#F7EAEB`     | 5,4:1 (fondo de error), 6,3:1 (blanco) |
+
+Los azulejos claros siguen la misma receta que `primary-soft`: 25 % del color oficial sobre blanco. Los tres tipos de movimiento siguen distinguiéndose por color (oro, gris, granate) y por ícono (flechas cruzadas, arriba, abajo). El papel de la firma del reverso de la tarjeta pasó a un crema sobre el tono del oro.
+
+**Excepción de accesibilidad: el rojo de error.** El manual no tiene rojo, pero los errores siguen en rojo: es el color que todo el mundo lee como "error", y el granate ya significa marca y dinero recibido, así que un error granate se confundiría con un monto. Para que conviva con la marca, el rojo se corrió hacia el tono del granate (24° en OKLCH; el granate está en 12°), pero es mucho más claro y saturado que él (contraste 1,8:1 entre ambos), así que no se confunden. Sobre el login granate, los errores usan `#FFB4AB` (7,1:1).
+
 Todo lo demás deriva de esos valores: `primary-soft` (25 % de granate sobre blanco), `primary-dark` y `primary-deep` (mismo tono, más oscuros: sombras teñidas y la base del login), el rosa de la tarjeta Visa (mismo tono en OKLCH, con la claridad del diseño) y los brillos del chip dorado (el mismo oro iluminado; el oro oficial es su sombra). Las sombras y degradés usan `color-mix()` sobre esos tokens, sin colores sueltos. Únicos colores literales que quedan: los de Mastercard y Visa (marcas de terceros) y `APP_BACKGROUND_COLOR`, el espejo del fondo para el navegador (un test lo compara con el CSS).
 
-**Contrastes medidos** (WCAG 2.x; en el login, sobre los colores reales del fondo tomados de capturas): texto blanco sobre granate 11,3:1; granate sobre blanco 11,3:1 y sobre el fondo 10,8:1; `muted` 4,6:1 (fondo) y 4,9:1 (blanco); tinta del chip sobre el oro oficial 5,2:1 (su punto más oscuro). Login: etiquetas 12,1:1, eslogan (blanco 80 %) 7,0:1 en su zona más clara, texto escrito 10,3:1, _placeholder_ (blanco 70 %) 5,9:1, borde de los campos (blanco 50 %) 4,1:1 contra el fondo y 3,8:1 contra el campo, errores (`#FFB4AB`) 7,1:1, anillo de foco dorado 9,9:1, borde de la casilla 5,9:1, botón "Ingresar" (granate sobre blanco) 11,3:1.
+**Contrastes medidos** (WCAG 2.x; en el login, sobre los colores reales del fondo tomados de capturas): texto blanco sobre granate 11,3:1; granate sobre blanco 11,3:1 y sobre el fondo 10,7:1; `muted` 4,6:1 (fondo) y 4,9:1 (blanco); tinta del chip sobre el oro oficial 5,2:1 (su punto más oscuro). Login: etiquetas 12,1:1, eslogan (blanco 80 %) 7,0:1 en su zona más clara, texto escrito 10,3:1, _placeholder_ (blanco 70 %) 5,9:1, borde de los campos (blanco 50 %) 4,1:1 contra el fondo y 3,8:1 contra el campo, errores (`#FFB4AB`) 7,1:1, anillo de foco dorado 9,9:1, borde de la casilla 5,9:1, botón "Ingresar" (granate sobre blanco) 11,3:1.
 
 **El escudo** (`public/brand/`) se extrajo como vector del propio PDF (`pdftocairo -svg`), sin redibujarlo: mismos trazados, sin transformaciones, solo recortado (`viewBox` ajustado al escudo) y con los colores escritos en hexadecimal (`rgb(112, 25, 45)` = `#70192D`). Se verificó renderizando cada SVG junto a la página del PDF: la diferencia es solo el antialias de los bordes.
 
@@ -234,8 +251,7 @@ Reglas del manual que se respetan: nunca se cambian los colores ni la cantidad d
 - Estados de carga (esqueletos), error con "Reintentar" y dos estados vacíos (sin movimientos / sin resultados).
 - Mobile-first; en desktop, columna centrada como un teléfono.
 - En el celular: inputs de 16px (iOS no hace zoom al enfocarlos), zoom del usuario habilitado, márgenes para el notch y la barra inferior (`viewport-fit=cover` + `env(safe-area-inset-*)`), ícono propio (el escudo) y color de la barra del navegador (granate en el login, el fondo claro en el resto).
-- **Texto secundario más oscuro que el diseño (desvío justificado por accesibilidad):** el gris `#8A8D9B` del Figma da 3,3:1 sobre blanco y 3,2:1 sobre el fondo `#F9FAFC`, debajo del mínimo AA (4,5:1) para texto chico. `--color-muted` es `#727174`: el tono del Cool Gray 7C del manual de marca, oscurecido hasta el gris más claro que llega a AA (4,6:1 sobre el fondo de página y el degradé de las superficies, 4,9:1 sobre blanco). Los _placeholders_ usan el mismo token (y nunca son la única etiqueta: cada campo tiene su `label`); los botones deshabilitados bajan a 70 % de opacidad, y WCAG no exige contraste en controles inactivos.
-- Limitación conocida (diseño): el violeta de suscripción del diseño (`#C76DFF`) no llega a contraste AA en texto chico; se respetó el diseño.
+- **Texto secundario más oscuro que el diseño (desvío justificado por accesibilidad):** el gris `#8A8D9B` del Figma da 3,3:1 sobre blanco y 3,2:1 sobre el fondo del diseño (`#F9FAFC`), debajo del mínimo AA (4,5:1) para texto chico. `--color-muted` es `#727174`: el tono del Cool Gray 7C del manual de marca, oscurecido hasta el gris más claro que llega a AA (4,6:1 sobre el fondo de página y el degradé de las superficies, 4,9:1 sobre blanco). Los _placeholders_ usan el mismo token (y nunca son la única etiqueta: cada campo tiene su `label`); los botones deshabilitados bajan a 70 % de opacidad, y WCAG no exige contraste en controles inactivos.
 
 ## Movimiento y accesibilidad
 
@@ -282,7 +298,7 @@ Con la app corriendo e iniciada la sesión:
 - **Índice trigram** (GIN sobre `unaccent`) para que la búsqueda escale con muchos datos.
 - **Monitoreo** con Sentry o similar, usando el `digest` de los errores.
 - **Deploy previews** por PR y e2e contra el preview.
-- Contraste del violeta (consensuado con diseño), modo oscuro, i18n y soporte offline/PWA.
+- Modo oscuro, i18n y soporte offline/PWA.
 
 ## Proceso de trabajo
 

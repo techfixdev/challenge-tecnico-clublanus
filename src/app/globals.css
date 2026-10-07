@@ -28,9 +28,18 @@
   --color-gold-light: #fae7b3;
   --color-gold-bright: #e6bf5d;
   --color-gold-ink: #352602;
+  /* 25% gold over white (the same recipe as `primary-soft`): the subscription tile. */
+  --color-gold-soft: #ece5cb;
+  /* Gold's hue darkened (OKLCH L 0.48, C 0.09) into an ink: 6.5:1 on white, 5.2:1 on
+     `gold-soft`, 5.3:1 on `gold-light`. Subscriptions and pending statuses. */
+  --color-gold-dark: #6f5c14;
 
   /* Cool Gray 7C (brand manual). Decorative only: 2.8:1 on white is below AA for text. */
   --color-cool-gray: #9a999d;
+  /* 25% Cool Gray 7C over white: the sent-movement tile. */
+  --color-cool-gray-soft: #e6e6e7;
+  /* Cool Gray 7C darkened (OKLCH L 0.48): 6.5:1 on white, 5.2:1 on `cool-gray-soft`. */
+  --color-cool-gray-dark: #5e5d61;
 
   /* Second card in the Home carousel (the pink card peeking in the design), on the
      granate hue: the design's pink lightness and chroma (OKLCH 0.86 / 0.057). */
@@ -42,15 +51,18 @@
   --color-card-stripe: #120a0c;
   --color-card-stripe-edge: #2c1b1f;
   --color-card-stripe-low: #1d1215;
-  --color-card-signature: #fbf4ee;
-  --color-card-signature-line: #efe2d8;
+  /* Paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted). */
+  --color-card-signature: #f8f5ed;
+  --color-card-signature-line: #e9e5d6;
   --color-card-signature-ink: #3b2a2e;
   --color-card-cvv-ink: #1b1416;
 
-  --color-background: #f9fafc;
+  /* Neutral off-white on Cool Gray 7C's hue (OKLCH L 0.982): no blue tint. */
+  --color-background: #f9f9fa;
   --color-surface: #ffffff;
 
-  --color-foreground: #1e2235;
+  /* Near-black ink on Cool Gray 7C's hue (OKLCH L 0.22): 17.3:1 on white. */
+  --color-foreground: #1b1a1d;
   /* Cool Gray 7C's hue, darkened to the lightest grey with AA 4.5:1 on every background
      it sits on (4.6 on the page and lit surfaces, 4.9 on white). The design's #8a8d9b
      was 3.2:1. */
@@ -58,25 +70,38 @@
   /* Cool Gray 7C at 20% over white: hairlines and placeholders. */
   --color-border: #ebebed;
 
-  --color-subscription: #c76dff;
-  --color-subscription-soft: #f3e3ff;
+  /*
+   * Roles, all on the brand palette: each movement type keeps its own brand color
+   * (subscription gold, received granate, sent Cool Gray), and statuses reuse them.
+   */
+  --color-subscription: var(--color-gold-dark);
+  --color-subscription-soft: var(--color-gold-soft);
 
   --color-received: var(--color-primary);
   --color-received-soft: var(--color-primary-soft);
 
-  --color-sent: #ef9c55;
-  --color-sent-soft: #fdebdb;
+  --color-sent: var(--color-cool-gray-dark);
+  --color-sent-soft: var(--color-cool-gray-soft);
 
-  --color-danger: #c0362c;
-  --color-danger-soft: #fdecea;
+  /* Granate on its soft tint: 6.9:1. */
+  --color-success: var(--color-primary);
+  --color-success-soft: var(--color-primary-soft);
+
+  /* Pending: gold ink on the light gold, 5.3:1. */
+  --color-warning: var(--color-gold-dark);
+  --color-warning-soft: var(--color-gold-light);
+
+  /*
+   * Accessibility exception (README → Brand): errors stay red, because red is what
+   * reads as "error" for everyone and granate already means the brand and money in.
+   * It is pulled toward granate's hue (OKLCH 0.51 / 0.17 / 24°, granate is 12°) but
+   * stays much lighter and more saturated than it. 6.3:1 on white, 5.4:1 on its tint.
+   */
+  --color-danger: #b32d32;
+  /* 10% danger over white. */
+  --color-danger-soft: #f7eaeb;
   /* Errors on the granate login backdrop: 5.8:1 at its lightest, 4.8:1 inside a field. */
   --color-danger-on-brand: #ffb4ab;
-
-  --color-success: #1d7a50;
-  --color-success-soft: #e2f4ea;
-
-  --color-warning: #9a5b00;
-  --color-warning-soft: #fff0d4;
 
   --color-skeleton: #ebebed;
 
