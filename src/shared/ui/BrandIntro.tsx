@@ -42,6 +42,15 @@ export function BrandIntro({ children }: { children: ReactNode }) {
     for (const animation of intro.getAnimations({ subtree: true })) {
       if (!(animation instanceof CSSAnimation)) continue;
       if (!DISSOLVE_ANIMATIONS.has(animation.animationName)) continue;
+      // Already dissolved before React listened (a slow hydration): its animationend is
+      // gone for good, so unmount now instead of waiting for it.
+      if (
+        animation.animationName === "brand-intro-dissolve" &&
+        animation.playState === "finished"
+      ) {
+        setDone(true);
+        return;
+      }
       const delay = Number(animation.effect?.getTiming().delay ?? 0);
       if (Number(animation.currentTime ?? 0) < delay) {
         animation.currentTime = delay;
