@@ -234,6 +234,8 @@ export function TransferFlow({
           : false
       }
       data-entrance={entrance ?? undefined}
+      // Fills the screen, so each step can pin its action to the bottom (StepActions).
+      className="flex flex-1 flex-col"
       animate={ENTER.animate}
       transition={ENTER.transition}
     >

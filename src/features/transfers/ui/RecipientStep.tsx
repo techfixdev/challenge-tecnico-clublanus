@@ -11,6 +11,7 @@ import {
   recipientInputHint,
   type ConfirmedRecipient,
 } from "../domain/transfer-form";
+import { PRIMARY_DISABLED_CLASSES, StepActions } from "./StepActions";
 import {
   FIELD_CLASSES,
   FieldMessage,
@@ -20,6 +21,7 @@ import {
   StepHeader,
 } from "./TransferParts";
 
+const FORM_ID = "recipient-form";
 const FIELD_ID = "recipient";
 const MESSAGE_ID = "recipient-message";
 
@@ -59,7 +61,7 @@ export function RecipientStep({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 flex-col">
       <StepHeader
         step={1}
         title="¿A quién le enviás?"
@@ -68,7 +70,12 @@ export function RecipientStep({
         back={{ href: ROUTES.home }}
       />
 
-      <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col">
+      <form
+        id={FORM_ID}
+        onSubmit={handleSubmit}
+        noValidate
+        className="mt-8 flex flex-col"
+      >
         <label
           htmlFor={FIELD_ID}
           className="text-sm font-medium text-foreground"
@@ -104,15 +111,6 @@ export function RecipientStep({
             <FormAlert>{error}</FormAlert>
           </div>
         ) : null}
-
-        <Button
-          type="submit"
-          className="mt-6"
-          disabled={pending || value.trim() === ""}
-          aria-busy={pending}
-        >
-          {pending ? "Buscando cuenta…" : "Continuar"}
-        </Button>
       </form>
 
       {recentRecipients.length > 0 ? (
@@ -144,6 +142,19 @@ export function RecipientStep({
           </ul>
         </section>
       ) : null}
+
+      {/* Pinned under the recent recipients, the button still submits the form above. */}
+      <StepActions>
+        <Button
+          type="submit"
+          form={FORM_ID}
+          className={PRIMARY_DISABLED_CLASSES}
+          disabled={pending || value.trim() === ""}
+          aria-busy={pending}
+        >
+          {pending ? "Buscando cuenta…" : "Continuar"}
+        </Button>
+      </StepActions>
     </div>
   );
 }

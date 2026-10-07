@@ -8,6 +8,7 @@ import { Button } from "@/shared/ui/Button";
 
 import type { ConfirmedRecipient } from "../domain/transfer-form";
 import type { SourceCard } from "./AmountStep";
+import { PRIMARY_DISABLED_CLASSES, StepActions } from "./StepActions";
 import { FormAlert, MaskedCvu, StepHeader } from "./TransferParts";
 
 function SummaryRow({ term, children }: { term: string; children: ReactNode }) {
@@ -52,7 +53,7 @@ export function ReviewStep({
   onBack: () => void;
 }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 flex-col">
       <StepHeader
         step={3}
         title="Revisá la transferencia"
@@ -95,7 +96,7 @@ export function ReviewStep({
         ) : null}
       </dl>
 
-      <form action={formAction} className="mt-8 flex flex-col gap-4">
+      <StepActions action={formAction}>
         <input type="hidden" name="recipient" value={recipient.query} />
         <input type="hidden" name="amount" value={amount} />
         <input type="hidden" name="cardId" value={card.id} />
@@ -104,13 +105,18 @@ export function ReviewStep({
 
         {error ? <FormAlert>{error}</FormAlert> : null}
 
-        <Button type="submit" disabled={pending} aria-busy={pending}>
+        <Button
+          type="submit"
+          className={PRIMARY_DISABLED_CLASSES}
+          disabled={pending}
+          aria-busy={pending}
+        >
           {pending ? "Enviando…" : "Confirmar y enviar"}
         </Button>
         <p className="text-center text-xs text-muted">
           Entre cuentas GranaBank el dinero llega al instante.
         </p>
-      </form>
+      </StepActions>
     </div>
   );
 }

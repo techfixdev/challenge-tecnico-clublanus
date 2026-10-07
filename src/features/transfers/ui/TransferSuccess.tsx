@@ -15,6 +15,7 @@ import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
 import type { TransferReceipt } from "../domain/transfer-model";
 import { MotionLink } from "@/shared/ui/motion/MotionLink";
+import { StepActions } from "./StepActions";
 
 /** The check is traced like a pen once the badge is in (≈300ms, no bounce). */
 const DRAW = {
@@ -51,7 +52,7 @@ export function TransferSuccess({
   const { sourceCard } = receipt;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 flex-col">
       <div className="mt-6 flex flex-col items-center text-center">
         <m.span
           aria-hidden="true"
@@ -132,7 +133,7 @@ export function TransferSuccess({
         ) : null}
       </dl>
 
-      <div className="mt-8 flex flex-col gap-3">
+      <StepActions>
         {receipt.movementId ? (
           <MotionLink
             href={ROUTES.movement(receipt.movementId)}
@@ -149,7 +150,7 @@ export function TransferSuccess({
         >
           Volver al inicio
         </MotionLink>
-      </div>
+      </StepActions>
     </div>
   );
 }

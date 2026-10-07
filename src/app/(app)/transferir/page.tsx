@@ -59,7 +59,7 @@ export default async function TransferPage() {
   return (
     <ScreenTransition>
       <QuickActionMorph name={QUICK_ACTION_MORPH.transfer}>
-        <main className="flex flex-col px-6 pt-8">
+        <main className="flex flex-1 flex-col px-6 pt-8">
           <TransferFlow
             cards={cards}
             recentRecipients={recentRecipients}

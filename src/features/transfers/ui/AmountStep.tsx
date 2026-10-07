@@ -31,6 +31,7 @@ import {
   RecipientIdentity,
   StepHeader,
 } from "./TransferParts";
+import { PRIMARY_DISABLED_CLASSES, StepActions } from "./StepActions";
 
 export type SourceCard = Pick<
   Card,
@@ -123,7 +124,7 @@ export function AmountStep({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-1 flex-col">
       <StepHeader
         step={2}
         title="¿Cuánto le enviás?"
@@ -145,7 +146,11 @@ export function AmountStep({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col">
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="mt-8 flex flex-1 flex-col"
+      >
         <label htmlFor={AMOUNT_ID} className="sr-only">
           Monto en {currency}
         </label>
@@ -298,13 +303,15 @@ export function AmountStep({
           </div>
         ) : null}
 
-        <Button
-          type="submit"
-          className="mt-8"
-          disabled={Boolean(amountError) || !card}
-        >
-          Continuar
-        </Button>
+        <StepActions>
+          <Button
+            type="submit"
+            className={PRIMARY_DISABLED_CLASSES}
+            disabled={Boolean(amountError) || !card}
+          >
+            Continuar
+          </Button>
+        </StepActions>
       </form>
     </div>
   );
