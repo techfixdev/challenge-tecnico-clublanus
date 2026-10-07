@@ -1,11 +1,13 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { DURATION, DURATION_S, EASE, EASE_CSS } from "./tokens";
 
-const SRC = join(process.cwd(), "src");
+/** src/, resolved from this file so the test passes from any working directory. */
+const SRC = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const css = readFileSync(join(SRC, "app/globals.css"), "utf8");
 
 /** Source files (no tests), relative to src/. */
