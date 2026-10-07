@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { chromium, expect, type Page } from "@playwright/test";
 
+import { movementRows, primaryCard } from "../e2e/fixtures/screens";
+import { DEMO_USER, login } from "../e2e/fixtures/session";
 import { waitForScreenToSettle } from "../e2e/fixtures/view-transitions";
 
 /*
@@ -12,18 +14,25 @@ import { waitForScreenToSettle } from "../e2e/fixtures/view-transitions";
  *   pnpm db:test next start -p 3150                       # the test database, never dev
  *   BASE_URL=http://localhost:3150 pnpm screens:capture
  *
- * Read-only by default. The transfer success screen sends real money between the demo
- * users, so it is only captured with CAPTURE_ALLOW_MUTATION=1, meant for a server on the
- * test database (`pnpm db:test` re-seeds it); if DATABASE_URL is also set in this
- * process, it must name a `_test` database.
+ * Read-only by default: every capture only navigates and fills forms, except one. The
+ * transfer success screen sends real money between the demo users, so that step runs only
+ * with CAPTURE_ALLOW_MUTATION=1 (see `main`), meant for a server on the test database
+ * (`pnpm db:test` re-seeds it); if DATABASE_URL is also set in this process, it must name
+ * a `_test` database.
  */
 
 const OUTPUT = path.join(process.cwd(), "design/screens");
-const DEMO_USER = { email: "soygranate@clublanus.com", password: "GRANATE1@" };
 const RECIPIENT_ALIAS = "hincha.granate";
 const MASTERCARD = "Mastercard terminada en 1234";
 
-/** Whether the run may submit a transfer. Throws if asked to on a non-test database. */
+/** Frames the inline styles must hold still to count as settled, and how long to wait. */
+const STILL_FRAMES = 5;
+const SETTLE_TIMEOUT_MS = 5_000;
+
+/**
+ * Whether the run may write data (submit a transfer): the one gate for every mutating
+ * step. Throws if asked to on a non-test database.
+ */
 export function mutationAllowed(
   env: Partial<Record<string, string>> = process.env,
 ): boolean {
@@ -43,16 +52,25 @@ export function mutationAllowed(
 
 let captured = 0;
 
-/** Waits for fonts, images and any running view transition, then takes the shot. */
-async function shoot(page: Page, name: string) {
-  // Not "networkidle": signed-in screens keep a connection open.
-  await page.waitForLoadState("load");
-  await page.evaluate(() => document.fonts.ready);
-  await page.waitForFunction(() =>
-    [...document.images].every((image) => image.complete),
-  );
-  await waitForScreenToSettle(page);
-  // CSS and Web Animations that end (a crossfade, a reveal), not the looping shimmer.
+/**
+ * Waits until every image on screen is loaded and decoded, ready to paint: `decode()`
+ * promises both, `complete` does not (an image can be complete and still undecoded). A
+ * broken image rejects and is shot as it is.
+ */
+async function waitForImagesOnScreen(page: Page) {
+  await page.evaluate(async () => {
+    const onScreen = [...document.images].filter((image) => {
+      const box = image.getBoundingClientRect();
+      return box.width > 0 && box.bottom > 0 && box.top < window.innerHeight;
+    });
+    await Promise.all(
+      onScreen.map((image) => image.decode().catch(() => undefined)),
+    );
+  });
+}
+
+/** Waits for the CSS and Web Animations that end (a crossfade, a reveal), not the shimmer. */
+async function waitForFiniteAnimations(page: Page) {
   await page.evaluate(() =>
     Promise.all(
       document
@@ -64,8 +82,49 @@ async function shoot(page: Page, name: string) {
         .map((animation) => animation.finished.catch(() => undefined)),
     ),
   );
-  // Motion's JavaScript-driven frames (the card flip) are not Web Animations.
-  await page.waitForTimeout(500);
+}
+
+/**
+ * Waits until the inline styles hold still for a few frames. Motion drives some motion
+ * (the card flip, springs) from JavaScript, writing inline styles every frame, and those
+ * are not Web Animations: `getAnimations()` never sees them.
+ */
+async function waitForInlineStylesToSettle(page: Page) {
+  const settled = await page.evaluate(
+    async ({ stillFrames, timeoutMs }) => {
+      const frame = () =>
+        new Promise((resolve) => requestAnimationFrame(resolve));
+      const inlineStyles = () =>
+        [...document.querySelectorAll<HTMLElement>("[style]")]
+          .map((element) => element.style.cssText)
+          .join("\n");
+      const deadline = performance.now() + timeoutMs;
+      let previous = inlineStyles();
+      for (let still = 0; still < stillFrames;) {
+        if (performance.now() > deadline) return false;
+        await frame();
+        const current = inlineStyles();
+        still = current === previous ? still + 1 : 0;
+        previous = current;
+      }
+      return true;
+    },
+    { stillFrames: STILL_FRAMES, timeoutMs: SETTLE_TIMEOUT_MS },
+  );
+  if (!settled) {
+    console.warn("  (inline styles kept changing: shooting anyway)");
+  }
+}
+
+/** Waits for fonts, images and every animation to finish, then takes the shot. */
+async function shoot(page: Page, name: string) {
+  // Not "networkidle": signed-in screens keep a connection open.
+  await page.waitForLoadState("load");
+  await page.evaluate(() => document.fonts.ready);
+  await waitForImagesOnScreen(page);
+  await waitForScreenToSettle(page);
+  await waitForFiniteAnimations(page);
+  await waitForInlineStylesToSettle(page);
   const file = path.join(
     OUTPUT,
     `${String(++captured).padStart(2, "0")}-${name}.png`,
@@ -74,16 +133,10 @@ async function shoot(page: Page, name: string) {
   console.log(`  ${path.relative(process.cwd(), file)}`);
 }
 
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(DEMO_USER.email);
-  await page.getByLabel("Contraseña", { exact: true }).fill(DEMO_USER.password);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-  // Home streams its cards in after the URL changes.
-  await expect(
-    page.getByRole("region", { name: `Tarjeta ${MASTERCARD}`, exact: true }),
-  ).toBeVisible();
+/** Signs in as the demo user and waits for Home's cards, which stream in after the URL. */
+async function loginUntilCardsShow(page: Page) {
+  await login(page);
+  await expect(primaryCard(page)).toBeVisible();
 }
 
 async function captureLogin(page: Page) {
@@ -107,18 +160,16 @@ async function captureLogin(page: Page) {
 }
 
 async function captureHome(page: Page) {
-  await login(page);
+  await loginUntilCardsShow(page);
   await shoot(page, "home");
 
   await page
     .getByRole("button", { name: `Mostrar datos de la tarjeta ${MASTERCARD}` })
     .first()
     .click();
-  await expect(
-    page
-      .getByRole("region", { name: `Tarjeta ${MASTERCARD}`, exact: true })
-      .getByTestId("card-number"),
-  ).not.toContainText("•");
+  await expect(primaryCard(page).getByTestId("card-number")).not.toContainText(
+    "•",
+  );
   await shoot(page, "home-card-revealed");
 
   await page
@@ -131,9 +182,7 @@ async function captureHome(page: Page) {
 }
 
 async function captureMovements(page: Page) {
-  const rows = page
-    .getByRole("region", { name: "Lista de movimientos" })
-    .getByRole("listitem");
+  const rows = movementRows(page);
 
   await page.goto("/movimientos");
   await expect(rows.first()).toBeVisible();
@@ -161,7 +210,8 @@ async function captureMovements(page: Page) {
   await shoot(page, "movement-detail");
 }
 
-async function captureTransfer(page: Page, allowMutation: boolean) {
+/** The send flow up to its review screen; nothing is sent. */
+async function captureTransferSteps(page: Page) {
   const proceed = page.getByRole("button", { name: "Continuar" });
 
   await page.goto("/transferir");
@@ -191,13 +241,10 @@ async function captureTransfer(page: Page, allowMutation: boolean) {
     page.getByRole("heading", { name: "Revisá la transferencia" }),
   ).toBeVisible();
   await shoot(page, "transfer-3-review");
+}
 
-  if (!allowMutation) {
-    console.log(
-      "  (skipped transfer-success: set CAPTURE_ALLOW_MUTATION=1 against the test database)",
-    );
-    return;
-  }
+/** MUTATES: confirms the reviewed transfer, moving real money between the demo users. */
+async function captureTransferSent(page: Page) {
   await page.getByRole("button", { name: "Confirmar y enviar" }).click();
   await expect(
     page.getByRole("heading", { name: "¡Transferencia enviada!" }),
@@ -248,7 +295,15 @@ async function main() {
     await captureLogin(page);
     await captureHome(page);
     await captureMovements(page);
-    await captureTransfer(page, allowMutation);
+    await captureTransferSteps(page);
+    // The only step that writes data, behind the one gate (`mutationAllowed`).
+    if (allowMutation) {
+      await captureTransferSent(page);
+    } else {
+      console.log(
+        "  (skipped transfer-success: set CAPTURE_ALLOW_MUTATION=1 against the test database)",
+      );
+    }
     await captureReceive(page);
     await captureProfile(page);
     console.log(`${captured} screens captured.`);

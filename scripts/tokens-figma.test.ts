@@ -33,6 +33,10 @@ describe("pnpm tokens:figma", () => {
       "--color-primary: #70192d",
       "--color-primary: #70192e",
     );
+    // Precondition: the edit took. Were the token renamed or recolored, `replace` would
+    // silently change nothing, and the failure would blame the staleness check instead
+    // of this outdated fixture.
+    expect(edited).not.toBe(css);
     expect(await isStale(fresh, css)).toBe(false);
     expect(await isStale(fresh, edited)).toBe(true);
     expect(await isStale("", css)).toBe(true);
