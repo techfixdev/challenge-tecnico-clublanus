@@ -18,7 +18,7 @@ Deploy: _pendiente_
 
 - **Next.js 16** (App Router, Server Components, Server Actions) + **TypeScript** estricto
 - **PostgreSQL 17** + **Prisma 7** (driver adapter `@prisma/adapter-pg`)
-- **Tailwind CSS v4**, tipografía Poppins
+- **Tailwind CSS v4**, tipografía Poppins (UI) y Arvo (solo el logotipo "GranaBank"; ver [Marca](#marca-club-atlético-lanús))
 - **Motion** (motion.dev, sucesor de Framer Motion) para resortes, valores ligados al scroll y animaciones de layout
 - **zod** (validación en el servidor; `zod/mini` para la respuesta de "Cargar más"), **jose** (JWT), **bcryptjs**
 - **Vitest** + Testing Library, **Playwright**, GitHub Actions
@@ -200,21 +200,48 @@ Hay un segundo usuario demo para probar transferencias en los dos sentidos: `hin
 
 La URL de prueba es `TEST_DATABASE_URL` si está definida y, si no, `DATABASE_URL` con `_test` agregado al nombre de la base; por seguridad, el nombre tiene que terminar en `_test`. Next no pisa una variable que ya está en el entorno con la de `.env`, así que el servidor de los e2e (`pnpm start`/`pnpm dev` lanzado por Playwright con `DATABASE_URL` de prueba) no toca la base de desarrollo. Playwright nunca reutiliza un servidor que ya escucha en el puerto (no sabría a qué base apunta): si está ocupado, falla. Como Next no permite un segundo `next dev` en la misma carpeta, localmente los e2e se corren sobre el build: `pnpm build && CI=1 E2E_PORT=3110 pnpm test:e2e`. La lógica se escribió mayormente con TDD (test que falla → código → refactor). CI (`.github/workflows/ci.yml`) corre lint, tipos, formato y unitarios, y en otro job, con un PostgreSQL de servicio: migraciones, seed, integración, build y e2e contra el build de producción.
 
+## Marca (Club Atlético Lanús)
+
+El Figma usaba un granate aproximado (`#7A1D2D`) y un logo genérico. La app se normalizó al **Manual de Marca del Club Atlético Lanús** (PDF que no se versiona).
+
+**Colores oficiales** (tokens en `src/app/globals.css`):
+
+| Token               | Valor     | Referencia             | Uso                                                                                                      |
+| ------------------- | --------- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| `--color-primary`   | `#70192D` | Granate, Pantone 188 C | Botones, tarjeta principal, montos recibidos, fondo del login                                            |
+| `--color-gold`      | `#B4982F` | Oro, Pantone 618 C     | Chip de moneda (USD/ARS), casilla "Recordarme" y foco sobre granate                                      |
+| `--color-cool-gray` | `#9A999D` | Cool Gray 7C           | Base de los grises: `--color-border` (20 % sobre blanco) y `--color-muted` (mismo tono, oscurecido a AA) |
+
+Todo lo demás deriva de esos valores: `primary-soft` (25 % de granate sobre blanco), `primary-dark` y `primary-deep` (mismo tono, más oscuros: sombras teñidas y la base del login), el rosa de la tarjeta Visa (mismo tono en OKLCH, con la claridad del diseño) y los brillos del chip dorado (el mismo oro iluminado; el oro oficial es su sombra). Las sombras y degradés usan `color-mix()` sobre esos tokens, sin colores sueltos. Únicos colores literales que quedan: los de Mastercard y Visa (marcas de terceros) y `APP_BACKGROUND_COLOR`, el espejo del fondo para el navegador (un test lo compara con el CSS).
+
+**Contrastes medidos** (WCAG 2.x; en el login, sobre los colores reales del fondo tomados de capturas): texto blanco sobre granate 11,3:1; granate sobre blanco 11,3:1 y sobre el fondo 10,8:1; `muted` 4,6:1 (fondo) y 4,9:1 (blanco); tinta del chip sobre el oro oficial 5,2:1 (su punto más oscuro). Login: etiquetas 12,1:1, eslogan (blanco 80 %) 7,0:1 en su zona más clara, texto escrito 10,3:1, _placeholder_ (blanco 70 %) 5,9:1, borde de los campos (blanco 50 %) 4,1:1 contra el fondo y 3,8:1 contra el campo, errores (`#FFB4AB`) 7,1:1, anillo de foco dorado 9,9:1, borde de la casilla 5,9:1, botón "Ingresar" (granate sobre blanco) 11,3:1.
+
+**El escudo** (`public/brand/`) se extrajo como vector del propio PDF (`pdftocairo -svg`), sin redibujarlo: mismos trazados, sin transformaciones, solo recortado (`viewBox` ajustado al escudo) y con los colores escritos en hexadecimal (`rgb(112, 25, 45)` = `#70192D`). Se verificó renderizando cada SVG junto a la página del PDF: la diferencia es solo el antialias de los bordes.
+
+- `escudo.svg` (pág. 2): granate con iniciales blancas, para fondos claros; también es el favicon, el ícono de iOS y el de la intro de la app.
+- `escudo-estrellas-doradas.svg` y `escudo-estrellas-blancas.svg` (pág. 6): con estrellas, para fondos granate. El login usa el de estrellas doradas. Las estrellas del PDF son `#B4923A` (la conversión del Pantone que hace el propio PDF); se dejaron así porque el escudo no se recolorea.
+
+Reglas del manual que se respetan: nunca se cambian los colores ni la cantidad de círculos, las iniciales "C.A.L." quedan blancas sobre granate, el escudo nunca se estira ni se deforma (tamaños con su proporción), y sobre granate se usa la versión con contorno blanco. La profundidad del escudo en el login es solo CSS por fuera del vector: sombras en capas teñidas de granate (la luz viene de arriba a la izquierda, como en toda la app) y un brillo especular recortado con la silueta del propio escudo.
+
+**Tipografía:** el manual usa Geometric Slabserif 712, una fuente comercial que no se puede distribuir con la app. Se eligió **Arvo** (Google Fonts, licencia OFL), una slab serif geométrica muy cercana, cargada con `next/font` solo en la ruta del login y solo para el logotipo "GranaBank" (no hay otros títulos grandes). La UI sigue en Poppins, como el Figma.
+
+**Propiedad:** el escudo, sus colores y el manual son propiedad del Club Atlético Lanús. Se usan únicamente para este challenge técnico, hecho para el club.
+
 ## Accesibilidad y UX
 
 - Navegable con teclado; foco visible; labels, `aria-invalid` y foco en el primer error del formulario.
 - Regiones `role="status"` para resultados y carga; errores con `role="alert"`.
 - Estados de carga (esqueletos), error con "Reintentar" y dos estados vacíos (sin movimientos / sin resultados).
 - Mobile-first; en desktop, columna centrada como un teléfono.
-- En el celular: inputs de 16px (iOS no hace zoom al enfocarlos), zoom del usuario habilitado, márgenes para el notch y la barra inferior (`viewport-fit=cover` + `env(safe-area-inset-*)`), ícono propio y color de la barra del navegador.
-- **Texto secundario más oscuro que el diseño (desvío justificado por accesibilidad):** el gris `#8A8D9B` del Figma da 3,3:1 sobre blanco y 3,2:1 sobre el fondo `#F9FAFC`, debajo del mínimo AA (4,5:1) para texto chico. `--color-muted` pasó a `#707382`, el gris más claro del mismo tono que llega a 4,5:1 sobre el fondo de página y el degradé de las superficies (`lit-surface`, su punto más oscuro) y 4,7:1 sobre blanco. Los _placeholders_ usan el mismo token (y nunca son la única etiqueta: cada campo tiene su `label`); los botones deshabilitados bajan a 70 % de opacidad, y WCAG no exige contraste en controles inactivos.
+- En el celular: inputs de 16px (iOS no hace zoom al enfocarlos), zoom del usuario habilitado, márgenes para el notch y la barra inferior (`viewport-fit=cover` + `env(safe-area-inset-*)`), ícono propio (el escudo) y color de la barra del navegador (granate en el login, el fondo claro en el resto).
+- **Texto secundario más oscuro que el diseño (desvío justificado por accesibilidad):** el gris `#8A8D9B` del Figma da 3,3:1 sobre blanco y 3,2:1 sobre el fondo `#F9FAFC`, debajo del mínimo AA (4,5:1) para texto chico. `--color-muted` es `#727174`: el tono del Cool Gray 7C del manual de marca, oscurecido hasta el gris más claro que llega a AA (4,6:1 sobre el fondo de página y el degradé de las superficies, 4,9:1 sobre blanco). Los _placeholders_ usan el mismo token (y nunca son la única etiqueta: cada campo tiene su `label`); los botones deshabilitados bajan a 70 % de opacidad, y WCAG no exige contraste en controles inactivos.
 - Limitación conocida (diseño): el violeta de suscripción del diseño (`#C76DFF`) no llega a contraste AA en texto chico; se respetó el diseño.
 
 ## Movimiento y accesibilidad
 
 La sensación "premium" sale de física, profundidad y continuidad, no de cambiar el diseño: se respetan el layout, los colores y la tipografía del Figma. Las interacciones físicas usan **Motion** (`motion/react`) con resortes; las transiciones simples siguen en CSS con los tokens `--motion-*` de `globals.css`. Solo se animan `transform`, `opacity` y `filter`, y lo que sigue al dedo o al scroll corre sobre _motion values_ (ningún `setState` por cuadro).
 
-- **Tarjeta viva (Home):** al presionarla y arrastrar se inclina en 3D hacia el dedo (hasta 10°/12°, perspectiva 800px) y vuelve con un resorte al soltar. Un brillo suave se mueve con la inclinación y la sombra se desplaza al revés; la tarjeta principal recibe un barrido de luz una sola vez al montarse. La superficie tiene un degradé sutil para leerse como material (el granate `#7A1D2D` y el rosa de Visa siguen siendo los del diseño).
+- **Tarjeta viva (Home):** al presionarla y arrastrar se inclina en 3D hacia el dedo (hasta 10°/12°, perspectiva 800px) y vuelve con un resorte al soltar. Un brillo suave se mueve con la inclinación y la sombra se desplaza al revés; la tarjeta principal recibe un barrido de luz una sola vez al montarse. La superficie tiene un degradé sutil para leerse como material (el granate oficial `#70192D` y el rosa de Visa, derivado del mismo tono).
 - **Carrusel:** el scroll sigue siendo nativo (scroll-snap: inercia, teclado, lectores de pantalla). Motion solo lee la posición del scroll y, cuadro a cuadro, achica (0,92) y atenúa la tarjeta no activa. Los puntos debajo son botones ("Tarjeta 1 de 2") que llevan a cada tarjeta; el activo se estira con un resorte.
 - **Saldo tipo odómetro:** cada dígito es una tira 0–9 que rueda con resorte, de derecha a izquierda (40 ms entre dígitos), con celdas fijas: el ancho no cambia mientras rueda. Al revelar la tarjeta los dígitos aparecen y ruedan desde 0; al ocultarla se desenfocan y vuelven los puntos (250 ms). Oculto, el HTML solo tiene la máscara: ni los dígitos ni el ancho delatan el monto. Los lectores de pantalla escuchan solo el valor final.
 - **Vuelta de tarjeta:** un toque la gira en 3D (`rotateY` con resorte; se achica un poco a mitad de giro para no salirse del carrusel) y otro la devuelve. La tarjeta entera es un botón de alternancia ("Ver reverso de la tarjeta Visa terminada en 5678", `aria-pressed`) que queda **debajo** de las caras: las caras dejan pasar el toque, salvo sus propios controles (los ojos). La cara que no se ve queda `inert` y `aria-hidden`. **Toque vs. deslizamiento:** solo gira un toque real (menos de 10 px de recorrido, menos de 500 ms, sin que el carrusel se haya movido y sin `pointercancel`); deslizar el carrusel, arrastrar para inclinar o mantener presionado no la giran. Enter y Espacio siempre la giran. En reposo, el frente se ve igual que antes de agregar la vuelta (comparado píxel a píxel).
@@ -226,7 +253,7 @@ La sensación "premium" sale de física, profundidad y continuidad, no de cambia
   - **Cromo fijo:** la barra inferior y el header no se mueven (tienen su propio `view-transition-name` sin animación); si las dos pantallas tienen header, solo se funde su contenido. Un toque sobre ellos durante la transición igual llega a su botón (el navegador no hace hit-testing de elementos con nombre mientras animan).
   - **Composición:** el ícono del movimiento tocado se transforma en el del detalle sobre el push y vuelve a su fila con el pop; entre secciones y al filtrar, los íconos no "vuelan". Enviar y Recibir siguen siendo una transformación de contenedor (las pantallas quedan quietas).
   - **Esqueleto → contenido:** el esqueleto se va con un fundido corto y el contenido aparece con un fundido + 8 px de subida. Solo después de hidratar: en la carga inicial el servidor muestra el contenido sin animar (animarlo retrasaba el LCP ~80 ms con CPU y red limitadas).
-  - **Intro de marca:** en una carga en frío del área logueada (o al entrar) el isotipo se arma desde sus cuatro esquinas y se disuelve hacia la pantalla. Nunca demora el contenido: deja pasar los toques, se disuelve apenas hidrata y, solo con CSS, a más tardar a los 600 ms; no se repite en navegaciones internas ni con movimiento reducido. LCP igual que antes (medido con y sin la intro).
+  - **Intro de marca:** en una carga en frío del área logueada (o al entrar) el escudo del club sube a su lugar (dibujado inline en el HTML, sin pedir la imagen) y se disuelve hacia la pantalla. Nunca demora el contenido: deja pasar los toques, se disuelve apenas hidrata y, solo con CSS, a más tardar a los 600 ms; no se repite en navegaciones internas ni con movimiento reducido. LCP igual que antes (medido con y sin la intro).
   - React guarda los `transitionTypes` en la raíz y se los lleva el próximo _commit_ de transición: si algo se commitea entre el toque y la navegación (una sección que termina de llegar por streaming), la navegación llega sin tipo. Por eso los links también "anuncian" su tipo (`MotionLink`) y las pantallas lo leen al commitear.
 - **Lista → detalle:** las filas entran escalonadas en una carga en frío y con "Cargar más"; cuando llegan con una pantalla entera o un _reveal_, ya llegan quietas (la transición las mueve). Los esqueletos tienen brillo, como antes.
   - La vuelta solo se anima si la lista aparece en el mismo _commit_ que la navegación: "Volver" la precarga (`prefetch`), y Next precarga **solo en producción**. En `next dev` la lista pasa primero por su esqueleto y no hay morph (el e2e de la vuelta corre con `CI=1`, sobre `next start`).

@@ -118,9 +118,11 @@ test("declares a safe-area viewport, theme color and branded icons", async ({
     "content",
     /user-scalable=no|maximum-scale=1\b/,
   );
+  // The login sits on the club's granate backdrop, so its browser chrome is granate;
+  // the signed-in screens keep the light app background (checked in the manifest test).
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
     "content",
-    "#f9fafc",
+    "#70192d",
   );
   await expect(
     page.locator('link[rel="icon"][type="image/svg+xml"]'),

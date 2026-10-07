@@ -61,14 +61,15 @@ export function LoginForm({ action }: LoginFormProps) {
   const password = fieldIds("password");
 
   return (
-    <div className="flex flex-1 flex-col px-6 pt-16 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+    // Above the fixed backdrop the login page draws behind it.
+    <div className="relative flex flex-1 flex-col px-6 pt-14 pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <LoginHeader />
 
       <form
         action={formAction}
         onSubmit={handleSubmit}
         noValidate
-        className="mt-14 flex flex-1 flex-col"
+        className="mt-12 flex flex-1 flex-col"
       >
         <div className="flex flex-col gap-5">
           <FormField name="email" label="Email" error={fieldErrors.email}>
@@ -103,12 +104,12 @@ export function LoginForm({ action }: LoginFormProps) {
             />
           </FormField>
 
-          <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-white/85">
             <input
               type="checkbox"
               name="remember"
               defaultChecked={state.values?.remember}
-              className="size-4 cursor-pointer rounded accent-primary"
+              className="login-checkbox"
             />
             Recordarme
           </label>
@@ -124,7 +125,12 @@ export function LoginForm({ action }: LoginFormProps) {
         </div>
 
         <div className="mt-auto pt-10">
-          <Button type="submit" disabled={isPending} aria-busy={isPending}>
+          <Button
+            type="submit"
+            variant="inverse"
+            disabled={isPending}
+            aria-busy={isPending}
+          >
             {isPending ? "Ingresando…" : "Ingresar"}
           </Button>
         </div>

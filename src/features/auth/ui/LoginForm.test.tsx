@@ -32,6 +32,13 @@ describe("LoginForm", () => {
     expect(
       screen.getByText("Con cada compra, sumás orgullo granate"),
     ).toBeInTheDocument();
+    // The club's official shield (brand manual), not a drawn mark.
+    expect(
+      screen.getByRole("img", { name: "Escudo del Club Atlético Lanús" }),
+    ).toHaveAttribute(
+      "src",
+      expect.stringContaining("/brand/escudo-estrellas-doradas.svg"),
+    );
     expect(email).toHaveAttribute("placeholder", "Ingresá tu email");
     expect(email).toHaveAttribute("type", "email");
     expect(email).toHaveAttribute("autocomplete", "email");
