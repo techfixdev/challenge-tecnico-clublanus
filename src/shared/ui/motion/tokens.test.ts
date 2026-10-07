@@ -26,8 +26,6 @@ function sourceFiles(dir = SRC): string[] {
 const OWN_TIMING = new Set([
   "shared/ui/motion/tokens.ts",
   "shared/ui/motion/springs.ts",
-  // The transfer steps' slide: owned by the transfer-flow work, outside this pass.
-  "features/transfers/ui/TransferFlow.tsx",
 ]);
 
 /** Every `--motion-*` custom property declared in globals.css, name → value. */

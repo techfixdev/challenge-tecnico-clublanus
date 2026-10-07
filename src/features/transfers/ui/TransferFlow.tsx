@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { parseAmount } from "@/shared/lib/money";
+import { DURATION_S, EASE } from "@/shared/ui/motion/tokens";
 
 import {
   defaultSourceCardId,
@@ -27,15 +28,15 @@ import { TransferSuccess } from "./TransferSuccess";
 /**
  * A step slides in from the side it comes from, like a pushed (or popped) screen: the
  * next step from the right, the previous one from the left. The fade is shorter than the
- * slide, so the step is fully readable early; under reduced motion the slide jumps and
- * only the quick fade stays.
+ * slide (fast vs base, on the one curve), so the step is fully readable early; under
+ * reduced motion the slide jumps and only the quick fade stays.
  */
 const ENTER = {
   offset: 16,
   animate: { opacity: 1, x: 0 },
   transition: {
-    x: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-    opacity: { duration: 0.12, ease: "easeOut" },
+    x: { duration: DURATION_S.base, ease: EASE },
+    opacity: { duration: DURATION_S.fast, ease: EASE },
   },
 } as const;
 
