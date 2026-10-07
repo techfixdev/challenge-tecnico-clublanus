@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type ReactNode,
 } from "react";
 
 import { parseAmount } from "@/shared/lib/money";
@@ -18,6 +19,7 @@ import {
   type ConfirmedRecipient,
   type LookupRecipientAction,
   type SendTransferAction,
+  type SendTransferState,
   type TransferStep,
 } from "../domain/transfer-form";
 import type { TransferPrefill } from "../domain/transfer-prefill";
@@ -25,6 +27,22 @@ import { AmountStep, type SourceCard } from "./AmountStep";
 import { RecipientStep } from "./RecipientStep";
 import { ReviewStep } from "./ReviewStep";
 import { TransferSuccess } from "./TransferSuccess";
+
+/** What the screen shows: one of the three steps, or the receipt once the money moved. */
+type View = TransferStep | "done";
+
+/** Order of the views, to tell a step forward from a step back. */
+const VIEW_ORDER: Record<View, number> = {
+  recipient: 0,
+  amount: 1,
+  review: 2,
+  done: 3,
+};
+
+type Entrance = "forward" | "back";
+
+/** A failure the user must fix, shown on the step that can fix it. */
+type StepError = { step: TransferStep; message: string };
 
 /**
  * A step slides in from the side it comes from, like a pushed (or popped) screen: the
@@ -40,18 +58,6 @@ const ENTER = {
     opacity: { duration: DURATION_S.fast, ease: EASE },
   },
 } as const;
-
-type StepError = { step: TransferStep; message: string };
-
-type View = TransferStep | "done";
-
-/** Order of the views, to tell a step forward from a step back. */
-const VIEW_ORDER: Record<View, number> = {
-  recipient: 0,
-  amount: 1,
-  review: 2,
-  done: 3,
-};
 
 /**
  * The send flow: recipient → amount → review → done, on one URL. Every value lives here,
@@ -81,75 +87,91 @@ export function TransferFlow({
   sendAction: SendTransferAction;
   prefill?: TransferPrefill | null;
 }) {
-  const confirmed = prefill?.kind === "confirmed" ? prefill.recipient : null;
+  const prefilledRecipient =
+    prefill?.kind === "confirmed" ? prefill.recipient : null;
+
+  // What the user has entered, kept across steps.
   const [step, setStep] = useState<TransferStep>(
-    confirmed ? "amount" : "recipient",
+    prefilledRecipient ? "amount" : "recipient",
   );
   const [recipientText, setRecipientText] = useState(
-    confirmed?.query ?? (prefill?.kind === "typed" ? prefill.text : ""),
+    prefilledRecipient?.query ??
+      (prefill?.kind === "typed" ? prefill.text : ""),
   );
   const [recipient, setRecipient] = useState<ConfirmedRecipient | null>(
-    confirmed,
+    prefilledRecipient,
   );
   const [amount, setAmount] = useState("");
   const [cardId, setCardId] = useState(() => defaultSourceCardId(cards));
   const [description, setDescription] = useState("");
+
+  // What the server has answered.
   const [idempotencyKey, setIdempotencyKey] = useState(initialKey);
   const [stepError, setStepError] = useState<StepError | null>(null);
   const [lookupPending, startLookup] = useTransition();
-
-  const [sendState, formAction, sendPending] = useActionState(
+  const [sendResult, formAction, sendPending] = useActionState(
     sendAction,
     INITIAL_SEND_TRANSFER_STATE,
   );
 
   // React to a new result of the Server Action while rendering (no effect, no extra
-  // paint): an error sends the user to the step that can fix it.
-  const [handledState, setHandledState] = useState(sendState);
-  if (sendState !== handledState) {
-    setHandledState(sendState);
-    if (sendState.status === "error") {
-      setStep(sendState.step);
-      // Refused for the recipient (gone, or the user's own): what was
-      // confirmed no longer holds, so it must be looked up and confirmed again.
-      if (sendState.step === "recipient") setRecipient(null);
-      setStepError({ step: sendState.step, message: sendState.message });
-      if (sendState.nextIdempotencyKey) {
-        setIdempotencyKey(sendState.nextIdempotencyKey);
-      }
-    }
-    if (sendState.status === "success") {
-      setIdempotencyKey(sendState.nextIdempotencyKey);
-    }
+  // paint), so the step that can fix an error is the very next thing painted.
+  const [handledSendResult, setHandledSendResult] = useState(sendResult);
+  if (sendResult !== handledSendResult) {
+    setHandledSendResult(sendResult);
+    applySendResult(sendResult);
   }
 
-  const done = sendState.status === "success";
-  const view = done ? "done" : step;
+  const view: View = sendResult.status === "success" ? "done" : step;
+  const entrance = useViewEntrance(view);
+  const headingRef = useFocusHeadingOnViewChange(view);
 
-  // The first view arrives with the page (server-rendered): it shows at once instead of
-  // waiting for hydration and Motion's lazy features to fade it in. Only later views
-  // (a step change, the receipt) animate in.
-  const [shownView, setShownView] = useState<View>(view);
-  const [entrance, setEntrance] = useState<"forward" | "back" | null>(null);
-  if (view !== shownView) {
-    setShownView(view);
-    setEntrance(VIEW_ORDER[view] < VIEW_ORDER[shownView] ? "back" : "forward");
-  }
+  const card = cards.find((option) => option.id === cardId) ?? cards[0];
+  const normalizedAmount = parseAmount(amount)?.amount ?? "";
 
-  // Move the focus to the new step's title (not on the first render: the page just loaded).
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const firstView = useRef(true);
-  useEffect(() => {
-    if (firstView.current) {
-      firstView.current = false;
+  function applySendResult(result: SendTransferState) {
+    if (result.status === "success") {
+      // This key is spent: the next transfer needs a fresh one.
+      setIdempotencyKey(result.nextIdempotencyKey);
       return;
     }
-    headingRef.current?.focus();
-  }, [view]);
+    if (result.status !== "error") return;
+    setStep(result.step);
+    // Refused for the recipient (gone, or the user's own): what was confirmed no longer
+    // holds, so it must be looked up and confirmed again.
+    if (result.step === "recipient") setRecipient(null);
+    setStepError({ step: result.step, message: result.message });
+    // Only a conflict replaces the key; any other error keeps it, so a retry replays.
+    if (result.nextIdempotencyKey) setIdempotencyKey(result.nextIdempotencyKey);
+  }
 
   function goTo(next: TransferStep) {
     setStepError(null);
     setStep(next);
+  }
+
+  /** Editing a step's input clears that step's error: the user is fixing it. */
+  function clearErrorOn(target: TransferStep) {
+    if (stepError?.step === target) setStepError(null);
+  }
+
+  function errorOn(target: TransferStep): string | null {
+    return stepError?.step === target ? stepError.message : null;
+  }
+
+  function changeRecipientText(value: string) {
+    setRecipientText(value);
+    clearErrorOn("recipient");
+  }
+
+  function changeAmount(value: string) {
+    setAmount(value);
+    clearErrorOn("amount");
+  }
+
+  function changeCard(value: string) {
+    setCardId(value);
+    clearErrorOn("amount");
   }
 
   function resolveRecipient(query: string) {
@@ -171,90 +193,123 @@ export function TransferFlow({
     });
   }
 
-  const errorFor = (target: TransferStep) =>
-    stepError?.step === target ? stepError.message : null;
-  const card = cards.find((option) => option.id === cardId) ?? cards[0];
-  const normalizedAmount = parseAmount(amount)?.amount ?? "";
-
-  let content;
-  if (view === "done" && sendState.status === "success") {
-    content = (
-      <TransferSuccess receipt={sendState.receipt} headingRef={headingRef} />
-    );
-  } else if (view === "review" && recipient && card) {
-    content = (
-      <ReviewStep
-        headingRef={headingRef}
-        recipient={recipient}
-        amount={normalizedAmount}
-        card={card}
-        description={description}
-        idempotencyKey={idempotencyKey}
-        formAction={formAction}
-        pending={sendPending}
-        error={errorFor("review")}
-        onBack={() => goTo("amount")}
-      />
-    );
-  } else if ((view === "amount" || view === "review") && recipient) {
-    content = (
-      <AmountStep
-        headingRef={headingRef}
-        recipient={recipient}
-        onChangeRecipient={() => goTo("recipient")}
-        cards={cards}
-        amount={amount}
-        onAmountChange={(value) => {
-          setAmount(value);
-          if (stepError?.step === "amount") setStepError(null);
-        }}
-        cardId={card?.id ?? ""}
-        onCardChange={(value) => {
-          setCardId(value);
-          if (stepError?.step === "amount") setStepError(null);
-        }}
-        description={description}
-        onDescriptionChange={setDescription}
-        onContinue={() => goTo("review")}
-        onBack={() => goTo("recipient")}
-        error={errorFor("amount")}
-      />
-    );
-  } else {
-    content = (
+  function renderView(): ReactNode {
+    if (view === "done" && sendResult.status === "success") {
+      return (
+        <TransferSuccess receipt={sendResult.receipt} headingRef={headingRef} />
+      );
+    }
+    if (view === "review" && recipient && card) {
+      return (
+        <ReviewStep
+          headingRef={headingRef}
+          recipient={recipient}
+          amount={normalizedAmount}
+          card={card}
+          description={description}
+          idempotencyKey={idempotencyKey}
+          formAction={formAction}
+          pending={sendPending}
+          error={errorOn("review")}
+          onBack={() => goTo("amount")}
+        />
+      );
+    }
+    // The amount and review steps both need a confirmed recipient; without one, the
+    // flow falls back to the step that confirms it.
+    if ((view === "amount" || view === "review") && recipient) {
+      return (
+        <AmountStep
+          headingRef={headingRef}
+          recipient={recipient}
+          onChangeRecipient={() => goTo("recipient")}
+          cards={cards}
+          amount={amount}
+          onAmountChange={changeAmount}
+          cardId={card?.id ?? ""}
+          onCardChange={changeCard}
+          description={description}
+          onDescriptionChange={setDescription}
+          onContinue={() => goTo("review")}
+          onBack={() => goTo("recipient")}
+          error={errorOn("amount")}
+        />
+      );
+    }
+    return (
       <RecipientStep
         headingRef={headingRef}
         value={recipientText}
-        onChange={(value) => {
-          setRecipientText(value);
-          if (stepError?.step === "recipient") setStepError(null);
-        }}
+        onChange={changeRecipientText}
         recentRecipients={recentRecipients}
         onResolve={resolveRecipient}
         pending={lookupPending}
-        error={errorFor("recipient")}
+        error={errorOn("recipient")}
       />
     );
   }
 
   return (
+    <ViewTransitionFrame view={view} entrance={entrance}>
+      {renderView()}
+    </ViewTransitionFrame>
+  );
+}
+
+/**
+ * The direction the current view slides in from, or null for the first view. The first
+ * view arrives with the page (server-rendered): it shows at once instead of waiting for
+ * hydration and Motion's lazy features to fade it in. Only later views animate in.
+ */
+function useViewEntrance(view: View): Entrance | null {
+  const [shownView, setShownView] = useState(view);
+  const [entrance, setEntrance] = useState<Entrance | null>(null);
+  if (view !== shownView) {
+    setShownView(view);
+    setEntrance(VIEW_ORDER[view] < VIEW_ORDER[shownView] ? "back" : "forward");
+  }
+  return entrance;
+}
+
+/**
+ * Moves the focus to the new view's title, so a screen reader announces it and keyboard
+ * users continue from there. Not on the first render: the page just loaded.
+ */
+function useFocusHeadingOnViewChange(view: View) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const isFirstView = useRef(true);
+  useEffect(() => {
+    if (isFirstView.current) {
+      isFirstView.current = false;
+      return;
+    }
+    headingRef.current?.focus();
+  }, [view]);
+  return headingRef;
+}
+
+/** Remounts on every view change (`key`), so each view plays its own entrance. */
+function ViewTransitionFrame({
+  view,
+  entrance,
+  children,
+}: {
+  view: View;
+  entrance: Entrance | null;
+  children: ReactNode;
+}) {
+  const offset = entrance === "back" ? -ENTER.offset : ENTER.offset;
+  return (
     <m.div
       key={view}
-      initial={
-        entrance
-          ? {
-              opacity: 0,
-              x: entrance === "back" ? -ENTER.offset : ENTER.offset,
-            }
-          : false
-      }
+      initial={entrance ? { opacity: 0, x: offset } : false}
       data-entrance={entrance ?? undefined}
       // Fills the screen, so each step can pin its action to the bottom (StepActions).
       className="flex flex-1 flex-col"
       animate={ENTER.animate}
       transition={ENTER.transition}
     >
-      {content}
+      {children}
     </m.div>
   );
 }
