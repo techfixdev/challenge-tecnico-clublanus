@@ -10,6 +10,7 @@ import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import {
   dragProgress,
   rubberBand,
+  settleVelocity,
   shouldDismissSheet,
 } from "./gestures/drag-physics";
 import { useAxisDrag } from "./gestures/use-axis-drag";
@@ -90,7 +91,9 @@ function useDragToDismiss(
       settling.current = animate(
         offset,
         0,
-        reduced ? INSTANT : { ...SPRING, velocity },
+        reduced
+          ? INSTANT
+          : { ...SPRING, velocity: settleVelocity(velocity, -offset.get()) },
       );
     },
     onCancel: () => {

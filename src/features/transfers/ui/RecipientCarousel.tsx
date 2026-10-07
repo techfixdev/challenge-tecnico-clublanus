@@ -11,6 +11,7 @@ import * as m from "motion/react-m";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import {
+  settleVelocity,
   snapToStep,
   withEdgeResistance,
 } from "@/shared/ui/gestures/drag-physics";
@@ -98,10 +99,16 @@ export function RecipientCarousel({
   function settleOn(index: number, velocity = 0) {
     setCentered(index);
     onSelect(recipients[index]);
+    const target = -index * TILE_STEP;
     animate(
       offset,
-      -index * TILE_STEP,
-      reduced ? INSTANT : { ...SPRING, velocity },
+      target,
+      reduced
+        ? INSTANT
+        : {
+            ...SPRING,
+            velocity: settleVelocity(velocity, target - offset.get()),
+          },
     );
   }
 

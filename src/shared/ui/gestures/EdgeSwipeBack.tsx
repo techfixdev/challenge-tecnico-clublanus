@@ -12,7 +12,12 @@ import { announceNavigation, POP } from "../motion/navigation";
 import { INSTANT, SPRING } from "../motion/springs";
 import { useBoundStyle } from "../motion/use-bound-style";
 import { useReducedMotionPreference } from "../reduced-motion";
-import { dragProgress, EDGE_ZONE_PX, shouldCompleteBack } from "./drag-physics";
+import {
+  dragProgress,
+  EDGE_ZONE_PX,
+  settleVelocity,
+  shouldCompleteBack,
+} from "./drag-physics";
 import { useAxisDrag } from "./use-axis-drag";
 
 /**
@@ -90,7 +95,8 @@ export function EdgeSwipeBack({
   }
 
   function settle(velocity: number) {
-    springTo(0, velocity, () => {
+    // Thrown back towards the edge, the screen lands on it without passing it.
+    springTo(0, settleVelocity(velocity, -offset.get()), () => {
       delete frame.current?.dataset.swiping;
     });
   }
