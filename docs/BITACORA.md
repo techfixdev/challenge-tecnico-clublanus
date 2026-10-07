@@ -519,6 +519,25 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 ---
 
+### T12b-A — UX bloqueante: transferir enfocado y cerrar sesión fuera de la barra (07/10/2026)
+
+**Pedido (auditoría de UX):** en un iPhone (390×844) el "Continuar" del paso del monto y medio "Motivo" quedaban debajo de la barra inferior translúcida; "Cerrar sesión" era la tercera pestaña, en plena zona del pulgar; el monto no agrupaba miles al tipear y la transferencia arrancaba desde la tarjeta en dólares.
+
+**Qué se hizo y por qué:**
+- **Transferir es una tarea enfocada:** la barra inferior se oculta en `/transferir` (pasos, comprobante, error) y `--nav-clearance` baja a 0 sin ella (`:root:not(:has([data-bottom-nav]))`). La única salida es terminar o "Volver", como en las apps de bancos; por eso la pantalla de error de `/transferir` ganó su propio "Volver".
+- **Botón fijo abajo (`StepActions`):** cada paso llena la pantalla y su acción principal es `sticky` al fondo con `mt-auto`: en un paso corto queda abajo, en uno largo no se va de la pantalla. Se eligió `sticky` y no `fixed` para que el botón siga en el flujo del documento (orden de foco y lectura naturales, sin calcular alturas). Sube por encima del teclado con `visualViewport` (iOS y Chrome solo achican el viewport visual). En "Destinatario" el botón queda debajo de "Recientes" y envía el formulario con el atributo `form`.
+- **Deshabilitado claro:** gris plano con texto apagado, sin el brillo ni la sombra; antes era el granate al 70 % y parecía tocable.
+- **Barra inferior = secciones:** quedó Inicio · Movimientos. No se agregó "Transferir" como pestaña: abriría una pantalla sin barra (la pestaña nunca se vería activa) y Enviar/Recibir ya están a un toque en Home.
+- **Perfil:** las iniciales en el header de Home abren una hoja inferior (`<dialog>` modal nativo: foco atrapado, Escape, devuelve el foco) con nombre, email y "Cerrar sesión", que pide confirmación ("¿Cerrar sesión?", el foco va a "Cancelar"). Se reutiliza la misma Server Action `logout`.
+- **Monto con miles al tipear:** `editAmount` reescribe el texto en cada tecla y calcula dónde va el cursor contando dígitos y separador decimal. Solo cambia la vista: lo que muestra se parsea igual con `parseAmount` (sin tocar el servidor). Un punto tipeado queda "abierto" hasta que los dígitos siguientes deciden si es decimal o de miles, igual que el parser.
+- **Tarjeta por defecto:** la de pesos. La app no registra la última tarjeta usada, así que no hay nada mejor que preferir.
+
+**Tests primero (rojo → verde):** `defaultSourceCardId` (2 tests en rojo), `editAmount` (43 casos: agrupar, decimal, borrar sobre un punto, cursor en el medio, pegar), el monto en `TransferFlow` (agrupa y mantiene el cursor), `BottomNav` (sin botón de salir, oculta en `/transferir`), `ProfileMenu` (confirmación, cancelar, foco) y `keyboardInset`. E2E nuevo `focused-flows.spec.ts`: sin barra en el flujo, cada botón visible y sin nada encima (`elementFromPoint`) a 390×844, la barra vuelve al salir y cerrar sesión desde la hoja; falló (3 de 4) antes del cambio.
+
+**Pendiente (no se hizo):** "saldo visible por defecto". Choca con la decisión de T13 (el ojo revela saldo, número y CVV, todo oculto por defecto, y el saldo no viaja en el HTML) y no existe una cookie de "ocultar saldo" que conservar. Queda para que se decida explícitamente.
+
+---
+
 ## 6. Estructura del proyecto
 
 Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.
