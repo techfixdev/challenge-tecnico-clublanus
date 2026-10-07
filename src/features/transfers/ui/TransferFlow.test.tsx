@@ -263,6 +263,30 @@ describe("TransferFlow", () => {
     expect(amount).toHaveAttribute("aria-invalid", "false");
   });
 
+  it("groups thousands while typing, on a decimal keypad, without moving the caret", async () => {
+    const { user } = renderFlow();
+    await toAmountStep(user);
+    const pesos = screen.getByLabelText("Monto en ARS");
+    expect(pesos).toHaveAttribute("inputmode", "decimal");
+
+    await user.type(pesos, "12500");
+    expect(pesos).toHaveValue("12.500");
+    // A dot typed after the digits is the decimal comma.
+    await user.type(pesos, ".5");
+    expect(pesos).toHaveValue("12.500,5");
+
+    // A digit typed mid-number lands next to the caret, dots regrouped around it.
+    await user.clear(pesos);
+    await user.type(pesos, "1234");
+    expect(pesos).toHaveValue("1.234");
+    await user.type(pesos, "9", {
+      initialSelectionStart: 1,
+      initialSelectionEnd: 1,
+    });
+    expect(pesos).toHaveValue("19.234");
+    expect((pesos as HTMLInputElement).selectionStart).toBe(2);
+  });
+
   it("writes a decimal comma amount the app's way once the field is left", async () => {
     const { user } = renderFlow();
     await toDollarAmountStep(user);

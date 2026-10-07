@@ -119,13 +119,17 @@ export function defaultSourceCardId(
   );
 }
 
+/** A whole amount with thousands dots: "1.234", "312.400". */
+const WHOLE_GROUPED = /^[1-9]\d{0,2}(?:\.\d{3})+$/;
+
 /**
  * The amount as the app writes it, once the field is left: "1234,5" → "1.234,50", like
- * the review and the receipt show it. A whole amount stays as typed ("12"), and so does
- * text the field flags as invalid, so the user can still see and fix what they wrote.
+ * the review and the receipt show it. A whole amount stays as typed ("12", and "1.234"
+ * as the field groups it while typing), and so does text the field flags as invalid, so
+ * the user can still see and fix what they wrote.
  */
 export function normalizeAmountInput(raw: string): string {
-  if (!/[.,]/.test(raw)) return raw;
+  if (!/[.,]/.test(raw) || WHOLE_GROUPED.test(raw)) return raw;
   const parsed = parseAmount(raw);
   return parsed ? formatAmount(parsed.amount, { fractionDigits: 2 }) : raw;
 }

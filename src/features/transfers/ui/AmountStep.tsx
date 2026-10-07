@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, type FormEvent, type Ref } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type Ref,
+} from "react";
 
 import { CARD_BRAND_LABEL, type Card } from "@/features/account/domain/card";
 import { CardBrandLogo } from "@/features/account/ui/CardBrandLogo";
@@ -9,6 +16,7 @@ import { parseAmount } from "@/shared/lib/money";
 import { Button } from "@/shared/ui/Button";
 import { Money } from "@/shared/ui/Money";
 
+import { editAmount } from "../domain/amount-editing";
 import {
   amountInputError,
   normalizeAmountInput,
@@ -34,17 +42,13 @@ const AMOUNT_MESSAGE_ID = "amount-message";
 const DESCRIPTION_ID = "description";
 const DESCRIPTION_COUNT_ID = "description-count";
 
-/** Typing stays forgiving: digits and one kind of separator, nothing else. */
-function sanitizeAmount(raw: string): string {
-  return raw.replace(/[^\d.,]/g, "");
-}
-
 /**
  * Step 2: how much, from which card, and an optional reason. The amount is in the chosen
  * card's currency (its symbol leads the field) and accepts the Argentine "1.234,56" as
  * well as "12,30" and "12.30" (see `checkTypedAmount`); it is checked against that card's
  * balance and currency cap while typing, so "Continuar" is only enabled for a transfer
- * that can go through.
+ * that can go through. Thousands are grouped while typing ("12.500,5", see
+ * `editAmount`), with the caret kept next to the digit just typed.
  */
 export function AmountStep({
   headingRef,
@@ -84,6 +88,33 @@ export function AmountStep({
   const complete = parseAmount(amount) !== null;
   const visibleError =
     (showErrors || complete) && amount !== "" ? amountError : null;
+
+  // The caret the formatted text needs, restored once React has written that text
+  // (a controlled input would otherwise leave it at the end on every regrouping).
+  const amountInput = useRef<HTMLInputElement>(null);
+  const pendingCaret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const input = amountInput.current;
+    const caret = pendingCaret.current;
+    pendingCaret.current = null;
+    if (input && caret !== null && document.activeElement === input) {
+      input.setSelectionRange(caret, caret);
+    }
+  }, [amount]);
+
+  function handleAmountChange(event: ChangeEvent<HTMLInputElement>) {
+    const { value, selectionStart } = event.target;
+    const edited = editAmount(amount, value, selectionStart ?? value.length);
+    if (edited.value === amount) {
+      // An ignored keystroke (a second comma): no re-render, so put the text and the
+      // caret back here.
+      event.target.value = amount;
+      event.target.setSelectionRange(edited.caret, edited.caret);
+      return;
+    }
+    pendingCaret.current = edited.caret;
+    onAmountChange(edited.value);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,12 +167,11 @@ export function AmountStep({
               {amount || "0"}
             </span>
             <input
+              ref={amountInput}
               id={AMOUNT_ID}
               name="amount"
               value={amount}
-              onChange={(event) =>
-                onAmountChange(sanitizeAmount(event.target.value))
-              }
+              onChange={handleAmountChange}
               onBlur={() => {
                 setShowErrors(true);
                 // "1234,5" → "1.234,50", as the review and the receipt write it.

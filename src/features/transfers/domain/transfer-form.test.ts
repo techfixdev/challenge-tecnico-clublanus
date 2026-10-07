@@ -117,7 +117,6 @@ describe("normalizeAmountInput", () => {
     ["0,5", "0,50"],
     ["  7,05 ", "7,05"],
     ["1234,5", "1.234,50"],
-    ["1.234", "1.234,00"],
     ["312400.5", "312.400,50"],
   ])(
     "writes %j in the Argentine format with two decimals: %j",
@@ -126,8 +125,18 @@ describe("normalizeAmountInput", () => {
     },
   );
 
-  it.each(["12", "", "abc", "12,", "1,234", "12,345", "1.2.3"])(
-    "leaves %j as typed (a whole amount, or one the field flags as invalid)",
+  it.each([
+    "12",
+    "1.234",
+    "312.400",
+    "",
+    "abc",
+    "12,",
+    "1,234",
+    "12,345",
+    "1.2.3",
+  ])(
+    "leaves %j as typed (a whole amount, grouped too, or one the field flags as invalid)",
     (raw) => {
       expect(normalizeAmountInput(raw)).toBe(raw);
     },
