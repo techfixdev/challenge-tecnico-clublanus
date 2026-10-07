@@ -5,6 +5,7 @@ import {
   login,
   loginUntilHomeSettles,
 } from "./fixtures/session";
+import { flick } from "./fixtures/pointer";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /*
@@ -67,41 +68,13 @@ async function pressAndDragDeck(page: Page, dx: number, steps = 10) {
   return { x: x + dx, y: y + 2 };
 }
 
-/**
- * Flicks the primary card sideways by `dx`: pressed, moved in three steps and lifted,
- * 16ms apart (one frame each). The events carry those times themselves (CDP's
- * `timestamp`), so the throw's velocity is the same however long the browser or the test
- * runner takes to deliver them; with `page.mouse`, a loaded machine stretches a flick
- * into a slow drag.
- */
+/** Flicks the primary card sideways by `dx`, in three moves one frame apart. */
 async function flickDeck(page: Page, dx: number) {
   const box = await page.getByTestId("living-card").first().boundingBox();
   if (!box) throw new Error("The primary card is not visible");
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
-  const cdp = await page.context().newCDPSession(page);
-  const start = Date.now() / 1000;
-  const frames: Array<
-    ["mousePressed" | "mouseMoved" | "mouseReleased", number]
-  > = [
-    ["mousePressed", 0],
-    ["mouseMoved", dx / 3],
-    ["mouseMoved", (2 * dx) / 3],
-    ["mouseMoved", dx],
-    ["mouseReleased", dx],
-  ];
-  for (const [index, [type, offset]] of frames.entries()) {
-    await cdp.send("Input.dispatchMouseEvent", {
-      type,
-      x: x + offset,
-      y: y + 2,
-      button: "left",
-      buttons: type === "mouseReleased" ? 0 : 1,
-      clickCount: 1,
-      timestamp: start + index * 0.016,
-    });
-  }
-  await cdp.detach();
+  await flick(page, { x, y }, { x: x + dx, y: y + 2 });
 }
 
 function currentDot(page: Page) {

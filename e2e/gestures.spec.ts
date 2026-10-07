@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { flick } from "./fixtures/pointer";
 import { movementRows } from "./fixtures/screens";
 import { login } from "./fixtures/session";
 import { settle } from "./fixtures/view-transitions";
@@ -89,10 +90,7 @@ test.describe("edge swipe back", () => {
 
   test("a quick flick goes back, however short", async ({ page }) => {
     await openFirstDetail(page);
-    await page.mouse.move(4, ROW_Y);
-    await page.mouse.down();
-    await page.mouse.move(80, ROW_Y, { steps: 4 });
-    await page.mouse.up();
+    await flick(page, { x: 4, y: ROW_Y }, { x: 80, y: ROW_Y }, 4);
 
     await expect(page).toHaveURL(/\/movimientos$/);
   });
