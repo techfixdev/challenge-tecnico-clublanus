@@ -2,7 +2,7 @@ import type { CardBrand } from "../domain/card";
 
 /**
  * Brand marks drawn inline. Both viewBoxes are cropped to the ink, so the mark's right
- * edge is the card's right content edge (the same line as "Exp. Date"); a 24px slot
+ * edge is the card's right content edge (the same line as "Vence"); a 24px slot
  * centers either mark on the same horizontal line. Decorative: the card region names
  * the brand.
  */
