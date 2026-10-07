@@ -1,6 +1,7 @@
 import { prismaCardRepository } from "@/features/account/data/prisma-card-repository";
 import { getAccountCards, toCardFace } from "@/features/account/domain/card";
 import { CardCarousel } from "@/features/account/ui/CardCarousel";
+import { HomeEntrance } from "@/features/account/ui/HomeEntrance";
 import { HomeHeader } from "@/features/account/ui/HomeHeader";
 import { logout } from "@/features/auth/server/actions";
 import { requireUser } from "@/features/auth/server/current-user";
@@ -33,16 +34,18 @@ export default async function HomePage() {
             />
           }
         />
+        {/* The `home-enter-*` classes build Home once when the app opens (HomeEntrance). */}
+        <HomeEntrance />
         {/* 24px from the title, as in the design: the header's own 12px bottom padding
           (its compact bar needs it) plus 12px here. */}
-        <div className="mt-3">
+        <div className="home-enter-card mt-3">
           {/* Faces only: balances, numbers and CVVs never reach the page until revealed. */}
           <CardCarousel cards={cards.map(toCardFace)} />
         </div>
-        <div className="mt-5">
+        <div className="home-enter-actions mt-5">
           <TransferShortcuts />
         </div>
-        <div className="mt-6">
+        <div className="home-enter-rows mt-6">
           <LatestMovements movements={latestMovements} />
         </div>
       </main>

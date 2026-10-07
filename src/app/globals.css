@@ -225,6 +225,9 @@
   --motion-push-dim: brightness(0.92);
   /* How far content rises as it arrives (rows, a reveal): a hint of direction, no more. */
   --motion-reveal-rise: 4px;
+  /* Where Home's card deck rises from when the app opens, and the scale it settles from. */
+  --motion-home-rise: 24px;
+  --motion-home-scale: 0.96;
 }
 
 /* ==========================================================================
@@ -845,6 +848,69 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .brand-intro {
     display: none;
+  }
+}
+
+/*
+ * Home builds itself once, when the app opens (HomeEntrance.tsx, home-entrance.ts): the
+ * card deck rises from below and settles into place, the quick actions follow, and the
+ * latest movements cascade in (the first-paint row stagger, capped at 6 rows), all done
+ * in under 700ms. It starts at the intro's hand-off (`--home-entrance-at`), so the two
+ * never stack. Only `opacity`, `translate` and `scale` move: nothing shifts the layout.
+ * The rows run their own copy of the rise, so a screen transition that settles the
+ * app's row entrances (ScreenTransition.tsx) leaves Home's cascade alone. Once Home has
+ * entered, `data-home-entered` turns it off; reduced motion skips it.
+ */
+:root {
+  --home-entrance-at: 0s;
+}
+
+:root:is(:has(.brand-intro), [data-home-entering]) {
+  --home-entrance-at: var(--brand-intro-dissolve-at);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-enter-card {
+    animation: home-enter-card var(--motion-duration-nav) var(--motion-ease)
+      both;
+    animation-delay: var(--home-entrance-at);
+  }
+
+  .home-enter-actions {
+    --home-enter-rise: calc(var(--motion-home-rise) / 3);
+    animation: home-enter-rise var(--motion-duration-base) var(--motion-ease)
+      both;
+    animation-delay: calc(
+      var(--home-entrance-at) + 3 * var(--motion-stagger-step)
+    );
+  }
+
+  .home-enter-rows .row-enter {
+    animation-name: home-enter-rise;
+    animation-delay: calc(
+      var(--home-entrance-at) + (5 + var(--row-enter-step, 0)) *
+        var(--motion-stagger-step)
+    );
+  }
+
+  :root[data-home-entered]
+    :is(.home-enter-card, .home-enter-actions, .home-enter-rows .row-enter) {
+    animation: none;
+  }
+}
+
+@keyframes home-enter-card {
+  from {
+    opacity: 0;
+    translate: 0 var(--motion-home-rise);
+    scale: var(--motion-home-scale);
+  }
+}
+
+@keyframes home-enter-rise {
+  from {
+    opacity: 0;
+    translate: 0 var(--home-enter-rise, var(--motion-reveal-rise));
   }
 }
 
