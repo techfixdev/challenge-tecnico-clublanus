@@ -122,8 +122,15 @@ function CopyRow({
   const spokenTerm = numeric ? term : term.toLowerCase();
   return (
     <div className="py-4 last:pb-0">
-      <div className="flex h-9 items-center justify-between gap-4">
-        <dt className="text-xs text-muted">{term}</dt>
+      <dt className="text-xs text-muted">{term}</dt>
+      {/* The button sits beside the value it copies. A grouped CVU may wrap at a group
+          boundary on narrow phones; the text stays selectable as a last resort. */}
+      <dd className="mt-1 flex items-center justify-between gap-3">
+        <span
+          className={`min-w-0 text-[15px] font-medium break-words text-foreground select-all ${numeric ? "tabular-nums" : ""}`}
+        >
+          {value}
+        </span>
         <button
           type="button"
           onClick={onCopy}
@@ -138,12 +145,6 @@ function CopyRow({
           )}
           <span aria-hidden="true">{copied ? "Copiado" : "Copiar"}</span>
         </button>
-      </div>
-      {/* Full width (a CVU in groups fits one line at 360px); selectable as a last resort. */}
-      <dd
-        className={`mt-1 text-[15px] font-medium break-words text-foreground select-all ${numeric ? "tabular-nums" : ""}`}
-      >
-        {value}
       </dd>
     </div>
   );

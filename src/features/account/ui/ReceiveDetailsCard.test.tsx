@@ -41,6 +41,20 @@ describe("ReceiveDetailsCard", () => {
     expect(screen.getByText(DETAILS.cvuFormatted)).toBeInTheDocument();
   });
 
+  it("puts each “Copiar” right next to the value it copies", () => {
+    render(<ReceiveDetailsCard details={DETAILS} />);
+
+    const alias = screen.getByText(DETAILS.alias).closest("dd");
+    const cvu = screen.getByText(DETAILS.cvuFormatted).closest("dd");
+
+    expect(alias).toContainElement(
+      screen.getByRole("button", { name: "Copiar alias" }),
+    );
+    expect(cvu).toContainElement(
+      screen.getByRole("button", { name: "Copiar CVU" }),
+    );
+  });
+
   it("copies the alias and the raw CVU, confirming with “Copiado”", async () => {
     const user = userEvent.setup();
     render(<ReceiveDetailsCard details={DETAILS} />);
