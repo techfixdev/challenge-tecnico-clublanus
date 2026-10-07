@@ -11,7 +11,7 @@ import { MOVEMENT_STATUSES, MOVEMENT_TYPES, type Movement } from "./movement";
  * decimal strings ("125.00"), so no precision is lost to floats on the way.
  * The same schema validates responses on the client ("Cargar más").
  */
-export const movementDtoSchema = z.object({
+const movementDtoSchema = z.object({
   id: z.string(),
   counterparty: z.string(),
   description: z.string(),

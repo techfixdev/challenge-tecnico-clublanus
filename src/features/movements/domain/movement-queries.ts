@@ -28,8 +28,8 @@ export interface MovementRepository {
   findById(userId: string, id: string): Promise<Movement | null>;
 }
 
-export const MOVEMENTS_PAGE_SIZE = 20;
-export const LATEST_MOVEMENTS_LIMIT = 5;
+const MOVEMENTS_PAGE_SIZE = 20;
+const LATEST_MOVEMENTS_LIMIT = 5;
 
 export type MovementPage = {
   items: Movement[];

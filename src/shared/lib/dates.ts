@@ -6,7 +6,7 @@
  * show up on the next day.
  */
 
-export const APP_TIME_ZONE = "America/Argentina/Buenos_Aires";
+const APP_TIME_ZONE = "America/Argentina/Buenos_Aires";
 const LOCALE = "es-AR";
 
 const longDateFormat = new Intl.DateTimeFormat(LOCALE, {

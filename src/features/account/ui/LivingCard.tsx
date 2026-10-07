@@ -22,8 +22,8 @@ import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 import { isFlipTap } from "./tap-guard";
 
 /** Max rotation in degrees when the finger is on an edge of the card. */
-export const MAX_TILT_X = 10;
-export const MAX_TILT_Y = 12;
+const MAX_TILT_X = 10;
+const MAX_TILT_Y = 12;
 
 /**
  * Ambient shadow under each card tone (granate card, gold Visa card): a soft gradient

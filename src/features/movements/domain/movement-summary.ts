@@ -25,7 +25,7 @@ import type { MovementStatus, MovementType } from "./movement";
  */
 
 /** What an account with no card and no movement yet shows: its default currency. */
-export const DEFAULT_SUMMARY_CURRENCY: string = CURRENCIES[0];
+const DEFAULT_SUMMARY_CURRENCY: string = CURRENCIES[0];
 
 const COUNTED_STATUS: MovementStatus = "COMPLETED";
 const INCOME_TYPES: readonly MovementType[] = ["RECEIVED"];

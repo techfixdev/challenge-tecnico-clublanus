@@ -20,12 +20,12 @@
  * view transition), so it swaps instantly, as the platform does.
  */
 
-export const NAV_FORWARD = "nav-forward";
-export const NAV_BACK = "nav-back";
+const NAV_FORWARD = "nav-forward";
+const NAV_BACK = "nav-back";
 export const NAV_TAB = "nav-tab";
 export const NO_MORPH = "no-morph";
 export const QUICK_ACTION_OPEN = "quick-action-open";
-export const QUICK_ACTION_CLOSE = "quick-action-close";
+const QUICK_ACTION_CLOSE = "quick-action-close";
 
 /** Ready-made `transitionTypes` values (stable arrays, so links never re-render for them). */
 export const PUSH: string[] = [NAV_FORWARD];

@@ -1,7 +1,7 @@
 import { Skeleton } from "@/shared/ui/Skeleton";
 
 /** Same footprint as `MovementRow`, so content does not jump when it arrives. */
-export function MovementRowSkeleton() {
+function MovementRowSkeleton() {
   return (
     <div className="flex min-h-16 items-center gap-3.5 px-4 py-3">
       <Skeleton className="size-10 rounded-xl" />
