@@ -3,6 +3,12 @@
  * serialized) and are only ever combined as integer cents, never as floating-point money.
  */
 
+/** An amount split as written: its integer digits and its decimals ("" when none). */
+type AmountParts = { units: string; fraction: string };
+
+/** An exact amount: canonical text ("1234.56") and the same value in integer cents. */
+type ExactAmount = { amount: string; cents: number };
+
 /**
  * "123.45" → 12345. Parsed from the digits, never via `parseFloat` × 100. Any
  * `Decimal(12,2)` value (and sums of a few of them) stays far below 2^53 cents.
@@ -14,6 +20,7 @@ export function toCents(amount: string): number {
   return negative ? -cents : cents;
 }
 
+/** 12345 → "123.45": the canonical 2-decimal string, the inverse of `toCents`. */
 export function fromCents(cents: number): string {
   if (!Number.isSafeInteger(cents)) {
     throw new RangeError(`Amount out of exact range: ${cents} cents`);
@@ -40,7 +47,7 @@ function integerDigits(text: string): string | null {
 }
 
 /** Splits an amount as typed into integer digits and decimals, or null if malformed. */
-function splitAmount(text: string): { units: string; fraction: string } | null {
+function splitAmount(text: string): AmountParts | null {
   if (text.includes(",")) {
     // One comma: the decimal separator; any dots before it group thousands.
     const [integer, fraction, ...rest] = text.split(",");
@@ -73,9 +80,7 @@ function splitAmount(text: string): { units: string; fraction: string } | null {
  *   as a plain decimal, never with thousands; a value that needs more than 2 decimals is
  *   rejected rather than silently rounded.
  */
-export function parseAmount(
-  input: string | number,
-): { amount: string; cents: number } | null {
+export function parseAmount(input: string | number): ExactAmount | null {
   const parts =
     typeof input === "number"
       ? splitPlainNumber(input)
@@ -84,18 +89,15 @@ export function parseAmount(
 }
 
 /** Integer digits and decimals → canonical amount and cents, within `Decimal(12,2)`. */
-function exactAmount(
-  parts: { units: string; fraction: string } | null,
-): { amount: string; cents: number } | null {
+function exactAmount(parts: AmountParts | null): ExactAmount | null {
   if (!parts || parts.units.length > MAX_INTEGER_DIGITS) return null;
   const cents =
     Number(parts.units) * 100 + Number(parts.fraction.padEnd(2, "0"));
   return { amount: fromCents(cents), cents };
 }
 
-function splitPlainNumber(
-  input: number,
-): { units: string; fraction: string } | null {
+/** A JSON number through its shortest decimal form: plain digits or one dot, no exponent. */
+function splitPlainNumber(input: number): AmountParts | null {
   const text = String(input);
   if (PLAIN.test(text)) return { units: text, fraction: "" };
   const decimal = DOT_DECIMAL.exec(text);
@@ -113,8 +115,8 @@ const CANONICAL = /^(\d{1,10})(?:\.(\d{1,2}))?$/;
  */
 export function parseCanonicalAmount(
   input: string | number,
-): { amount: string; cents: number } | null {
-  let parts: { units: string; fraction: string } | null;
+): ExactAmount | null {
+  let parts: AmountParts | null;
   if (typeof input === "number") {
     parts = splitPlainNumber(input);
   } else {

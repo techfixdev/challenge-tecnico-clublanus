@@ -51,26 +51,30 @@ function groupThousands(units: number): string {
   return String(units).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+/**
+ * The unsigned Argentine text of `cents` ("312.400,50"), and whether it needs a minus.
+ * Without `fractionDigits`, whole amounts drop their ",00"; forced to 0, the cents round
+ * half up into the units.
+ */
 function formatCents(
   cents: number,
   fractionDigits: 0 | 2 | undefined,
-): { negative: boolean; text: string } {
+): { isNegative: boolean; text: string } {
   const absolute = Math.abs(cents);
-  const digits = fractionDigits ?? (absolute % 100 === 0 ? 0 : 2);
-  const text =
-    digits === 0
-      ? groupThousands(
-          Math.floor(absolute / 100) + (absolute % 100 >= 50 ? 1 : 0),
-        )
-      : `${groupThousands(Math.floor(absolute / 100))},${String(absolute % 100).padStart(2, "0")}`;
+  const units = Math.floor(absolute / 100);
+  const remainder = absolute % 100;
+  const showsDecimals = (fractionDigits ?? (remainder === 0 ? 0 : 2)) === 2;
+  const text = showsDecimals
+    ? `${groupThousands(units)},${String(remainder).padStart(2, "0")}`
+    : groupThousands(units + (remainder >= 50 ? 1 : 0));
   // An amount that rounds to zero is just "0", never "-0".
-  return { negative: cents < 0 && /[1-9]/.test(text), text };
+  return { isNegative: cents < 0 && /[1-9]/.test(text), text };
 }
 
 /** "US$ 978,85", "$ 312.400,50", "US$ 125", "-US$ 95". */
 export function formatMoney(value: MoneyInput, currency: string): string {
-  const { negative, text } = formatCents(toRoundedCents(value), undefined);
-  return `${negative ? "-" : ""}${currencySymbol(currency)}${NO_BREAK_SPACE}${text}`;
+  const { isNegative, text } = formatCents(toRoundedCents(value), undefined);
+  return `${isNegative ? "-" : ""}${currencySymbol(currency)}${NO_BREAK_SPACE}${text}`;
 }
 
 /**
@@ -81,11 +85,11 @@ export function formatAmount(
   value: MoneyInput,
   options: { fractionDigits?: 0 | 2 } = {},
 ): string {
-  const { negative, text } = formatCents(
+  const { isNegative, text } = formatCents(
     toRoundedCents(value),
     options.fractionDigits,
   );
-  return `${negative ? "-" : ""}${text}`;
+  return `${isNegative ? "-" : ""}${text}`;
 }
 
 /**
@@ -97,9 +101,9 @@ export function formatMoneyForSpeech(
   currency: string,
 ): string {
   const cents = toRoundedCents(value);
-  const { negative, text } = formatCents(cents, undefined);
+  const { isNegative, text } = formatCents(cents, undefined);
   const name = currencyName(currency, Math.abs(cents) !== 100);
-  return `${negative ? "menos " : ""}${text} ${name}`;
+  return `${isNegative ? "menos " : ""}${text} ${name}`;
 }
 
 // U+2212 MINUS SIGN: typographically correct and read as "menos" by screen readers.

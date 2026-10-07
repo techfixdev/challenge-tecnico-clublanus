@@ -33,6 +33,13 @@ export function formatTime(date: Date): string {
   return timeFormat.format(date);
 }
 
+/** `date` as `format` writes it, read field by field ("year", "month", "day"). */
+function dateFields(format: Intl.DateTimeFormat, date: Date) {
+  const parts = format.formatToParts(date);
+  return (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value;
+}
+
 /* ---------------------------------------------------------------------------------------
  * Calendar days in the app's time zone ("YYYY-MM-DD"), for lists grouped by day.
  * ------------------------------------------------------------------------------------ */
@@ -60,9 +67,8 @@ const dayMonthYearFormat = new Intl.DateTimeFormat(LOCALE, {
 
 /** "2026-10-05": the calendar day of `date` in Buenos Aires. */
 export function dayOf(date: Date): string {
-  const parts = dayFormat.formatToParts(date);
-  const part = (type: string) => parts.find((p) => p.type === type)?.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
+  const field = dateFields(dayFormat, date);
+  return `${field("year")}-${field("month")}-${field("day")}`;
 }
 
 function parseDay(day: string): { year: number; month: number; day: number } {
@@ -117,9 +123,8 @@ const monthNameFormat = new Intl.DateTimeFormat(LOCALE, {
 
 /** "2026-10": the calendar month of `date` in Buenos Aires. */
 export function monthOf(date: Date): string {
-  const parts = yearMonthFormat.formatToParts(date);
-  const part = (type: string) => parts.find((p) => p.type === type)?.value;
-  return `${part("year")}-${part("month")}`;
+  const field = dateFields(yearMonthFormat, date);
+  return `${field("year")}-${field("month")}`;
 }
 
 /** Offset of the app's zone from UTC at `instant`, in ms ("GMT-03:00" → -10_800_000). */
@@ -138,7 +143,8 @@ function zoneOffsetMs(instant: number): number {
 function startOfMonth(year: number, month: number): Date {
   const utcMidnight = Date.UTC(year, month - 1, 1);
   // Measure the offset at the guess, then again at the corrected instant, in case a
-  // daylight-saving change sits between them (Argentina has none today; this stays right if it does).
+  // daylight-saving change sits between them (Argentina has none today; this stays
+  // right if it ever does).
   const firstGuess = utcMidnight - zoneOffsetMs(utcMidnight);
   return new Date(utcMidnight - zoneOffsetMs(firstGuess));
 }
