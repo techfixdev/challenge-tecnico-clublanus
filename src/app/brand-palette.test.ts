@@ -121,9 +121,25 @@ const ALLOWLIST: Record<string, string> = {
 /** The accessibility exception: errors stay red so they read as errors. */
 const isDangerException = (name: string) => name.startsWith("danger");
 
+/** Names of the `--color-*` tokens declared more than once in `css`. */
+function duplicatedColorTokens(css: string): string[] {
+  const declared = [...css.matchAll(/^\s*(--color-[a-z0-9-]+)\s*:/gm)].map(
+    ([, name]) => name,
+  );
+  return [
+    ...new Set(declared.filter((name, i) => declared.indexOf(name) !== i)),
+  ];
+}
+
 describe("brand palette (globals.css)", () => {
   // Every `--color-*` token, `var()` references resolved (shared with `pnpm tokens:figma`).
   const tokens = colorTokens(css);
+
+  // A second declaration would silently win in the browser and in `colorTokens` alike,
+  // so the allowlist below would vouch for whichever came last: each name is declared once.
+  it("declares every color token exactly once", () => {
+    expect(duplicatedColorTokens(css)).toEqual([]);
+  });
 
   it("declares exactly the allowlisted color tokens, with their brand-derived values", () => {
     expect(Object.fromEntries(tokens)).toEqual(ALLOWLIST);
