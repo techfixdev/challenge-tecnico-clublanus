@@ -58,3 +58,6 @@ next-env.d.ts
 /AGENTS.md
 /CLAUDE.md
 /docs/ENTREVISTA.md
+
+# Figma screen captures (pnpm screens:capture regenerates them)
+/design/screens/
