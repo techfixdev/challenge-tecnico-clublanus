@@ -1,10 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import {
-  fillLoginForm,
-  login,
-  loginUntilHomeSettles,
-} from "./fixtures/session";
+import { fillLoginForm, loginUntilHomeSettles } from "./fixtures/session";
 import { flick } from "./fixtures/pointer";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
@@ -57,14 +53,14 @@ function secondCardRest(page: Page) {
 }
 
 /** Presses the primary card and drags it sideways by `dx`, holding the press. */
-async function pressAndDragDeck(page: Page, dx: number, steps = 10) {
+async function pressAndDragDeck(page: Page, dx: number) {
   const box = await page.getByTestId("living-card").first().boundingBox();
   if (!box) throw new Error("The primary card is not visible");
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x + dx, y + 2, { steps });
+  await page.mouse.move(x + dx, y + 2, { steps: 10 });
   return { x: x + dx, y: y + 2 };
 }
 
