@@ -13,7 +13,7 @@
   --color-primary: #70192d;
   /* 25% granate over white. */
   --color-primary-soft: #dbc6ca;
-  /* Same hue, darker (OKLCH L 0.27): text on the pink card, granate-tinted shadows. */
+  /* Same hue, darker (OKLCH L 0.27): granate-tinted shadows. */
   --color-primary-dark: #470f1b;
   /* The deepest granate: the bottom of the login backdrop, the shade side of lit fills. */
   --color-primary-deep: #3a0d18;
@@ -41,11 +41,14 @@
   /* Cool Gray 7C darkened (OKLCH L 0.48): 6.5:1 on white, 5.2:1 on `cool-gray-soft`. */
   --color-cool-gray-dark: #5e5d61;
 
-  /* Second card in the Home carousel (the pink card peeking in the design), on the
-     granate hue: the design's pink lightness and chroma (OKLCH 0.86 / 0.057). */
-  --color-card-pink: #f5c3c7;
-  /* Its ambient shadow: between the pink and granate. */
-  --color-card-pink-glow: #c86e78;
+  /* Second card in the Home carousel: satin gold on Pantone 618 C's hue, beside the
+     granate card (the club's two colors). Light (OKLCH L 0.84 / C 0.08) because Visa's
+     blue wordmark stays untouched: 8.7:1 on it, 7.1:1 on the shade. `card-gold-shade`
+     (L 0.78 / C 0.10) is its darkest stop, toward the official gold. Text is `gold-ink`
+     (9.0:1 / 7.3:1); labels are `card-gold-label`, gold's hue at L 0.38 (6.1:1 / 5.0:1). */
+  --color-card-gold: #dcca8e;
+  --color-card-gold-shade: #cdb66a;
+  --color-card-gold-label: #4d4219;
 
   /* Payment card materials (PaymentCardBack): magnetic stripe and signature panel. */
   --color-card-stripe: #120a0c;

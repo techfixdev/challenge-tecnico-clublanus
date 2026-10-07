@@ -22,7 +22,7 @@ function MastercardLogo() {
   );
 }
 
-/** The Visa wordmark in Visa blue, without a box: it sits directly on the pink card. */
+/** The Visa wordmark in Visa blue, without a box: it sits directly on the gold card (AA on every stop). */
 function VisaLogo() {
   return (
     <svg

@@ -11,7 +11,10 @@ import {
 
 import { EyeIcon, EyeOffIcon } from "@/shared/ui/icons";
 
-import { formatCardNumber } from "../domain/card-number";
+import {
+  formatCardNumber,
+  formatMaskedCardNumber,
+} from "../domain/card-number";
 import { BalanceAmount } from "./BalanceAmount";
 import {
   INITIAL_REVEAL_STATE,
@@ -177,16 +180,12 @@ export function RevealedBalance({ currency }: { currency: string }) {
   );
 }
 
-const MASKED_GROUPS = ["****", "****", "****"] as const;
-
 /**
- * The card number as four evenly spaced groups: masked, or the full number once
- * revealed. Poppins draws "*" as a superscript: its 0.35em of ink hangs from the
- * digits' cap line (the digits are 0.7em tall), so the masked groups drop 0.175em to sit
- * centered on the digits. A transform keeps that offset sub-pixel instead of snapping it
- * to whole pixels. The spaces between groups keep the text "**** **** **** 1234" while
- * the flex gap does the spacing. Masked, it is decorative (the region name carries the
- * last 4); revealed, screen readers get the whole number from a visually hidden text.
+ * The card number as four evenly spaced groups: masked with bullets, or the full number
+ * once revealed. A bullet sits on the digits' optical center, so the masked groups need
+ * no offset. The spaces between groups keep the text "•••• •••• •••• 1234" while the
+ * flex gap does the spacing. Masked, it is decorative (the region name carries the last
+ * 4); revealed, screen readers get the whole number from a visually hidden text.
  */
 export function RevealedCardNumber({ last4 }: { last4: string }) {
   const number = useSecrets()?.number;
@@ -199,19 +198,23 @@ export function RevealedCardNumber({ last4 }: { last4: string }) {
         data-testid="card-number"
         className="flex gap-[0.5em] text-lg tracking-[0.18em]"
       >
-        {MASKED_GROUPS.map((group, index) => (
-          <Fragment key={index}>
-            <span data-masked="" className="translate-y-[0.175em]">
-              {group}
-            </span>{" "}
-          </Fragment>
-        ))}
-        <span>{last4}</span>
+        {formatMaskedCardNumber(last4).map((group, index) =>
+          index < 3 ? (
+            <Fragment key={index}>
+              {/* Bullets set tighter than digits, so each group reads as one block. */}
+              <span data-masked="" className="tracking-[0.04em]">
+                {group}
+              </span>{" "}
+            </Fragment>
+          ) : (
+            <span key={index}>{group}</span>
+          ),
+        )}
       </p>
     );
   }
   const groups = formatCardNumber(number);
-  // Sixteen digits are wider than twelve asterisks and four digits: tighter tracking
+  // Sixteen digits are wider than twelve bullets and four digits: tighter tracking
   // and gaps keep the full number inside the card at every width.
   return (
     <p

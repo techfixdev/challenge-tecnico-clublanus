@@ -92,7 +92,7 @@ describe("card reveal", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(within(mastercard()).getByTestId("card-number")).toHaveTextContent(
-      "**** **** **** 1234",
+      "•••• •••• •••• 1234",
     );
     expect(within(mastercard()).getByTestId("card-cvv")).toHaveTextContent(
       "•••",
@@ -151,7 +151,7 @@ describe("card reveal", () => {
     const card = mastercard();
     expect(await within(card).findByText("978,85 dólares")).toBeInTheDocument();
     expect(within(card).getByTestId("card-number")).toHaveTextContent(
-      "**** **** **** 1234",
+      "•••• •••• •••• 1234",
     );
     expect(within(card).getByTestId("card-cvv")).toHaveTextContent("042");
     expect(eye(card)).toHaveAttribute("aria-pressed", "true");
@@ -166,7 +166,7 @@ describe("card reveal", () => {
     await user.click(eye(mastercard()));
 
     expect(within(mastercard()).getByTestId("card-number")).toHaveTextContent(
-      "**** **** **** 1234",
+      "•••• •••• •••• 1234",
     );
     expect(within(mastercard()).getByTestId("card-cvv")).toHaveTextContent(
       "•••",

@@ -26,13 +26,13 @@ export const MAX_TILT_X = 10;
 export const MAX_TILT_Y = 12;
 
 /**
- * Ambient shadow under each card tone (granate card, pink Visa card): a soft gradient
+ * Ambient shadow under each card tone (granate card, gold Visa card): a soft gradient
  * instead of a `blur()` filter, which would repaint a large layer while it moves.
  */
 const SHADOW_TONE = {
   primary:
     "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-primary-dark)_40%,transparent),color-mix(in_srgb,var(--color-primary-dark)_14%,transparent)_60%,transparent)]",
-  pink: "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-card-pink-glow)_40%,transparent),color-mix(in_srgb,var(--color-card-pink-glow)_12%,transparent)_60%,transparent)]",
+  gold: "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-gold-dark)_40%,transparent),color-mix(in_srgb,var(--color-gold-dark)_12%,transparent)_60%,transparent)]",
 } as const;
 
 export type CardTone = keyof typeof SHADOW_TONE;

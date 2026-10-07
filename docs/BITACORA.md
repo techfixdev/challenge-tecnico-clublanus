@@ -536,6 +536,18 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 **Pendiente (no se hizo):** "saldo visible por defecto". Choca con la decisión de T13 (el ojo revela saldo, número y CVV, todo oculto por defecto, y el saldo no viaja en el HTML) y no existe una cookie de "ocultar saldo" que conservar. Queda para que se decida explícitamente.
 
+### T12b-C2 — Tarjetas en español y segunda tarjeta en oro (07/10/2026)
+
+**Pedido:** las tarjetas de Home decían "Balance" y "Exp. Date", el número oculto usaba asteriscos y la segunda tarjeta era rosa, fuera del manual del club.
+
+**Qué se hizo y por qué:**
+- **Etiquetas en español:** "Saldo" y "Vence" (el reverso ya decía "Firma autorizada", "CVV" y "Tocá para volver").
+- **Número oculto con viñetas:** `•••• •••• •••• 1234`, agrupado 4-4-4-4 como el número revelado (`formatMaskedCardNumber`, función pura). La viñeta queda en el centro óptico de los dígitos, así que se quitó el corrimiento que necesitaba el asterisco. Sin clipping de 240 a 390 px.
+- **Segunda tarjeta en oro satinado** (`card-gold` `#DCCA8E`, sombra `card-gold-shade` `#CDB66A`, etiquetas `card-gold-label` `#4D4219`, todo en el tono del oro Pantone 618 C). Se descartó una tarjeta grafito: la marca de Visa va en su azul oficial, sin tocar, y sobre un fondo oscuro no se leería. Con el oro las dos tarjetas son los dos colores del club, como el escudo. El chip de moneda toma el otro color: oro sobre granate, granate sobre oro.
+- Contraste: texto 9,0:1 / 7,3:1 (claro / sombra), etiquetas 6,1:1 / 5,0:1, marca de Visa 8,7:1 / 7,1:1.
+
+**Tests primero (rojo → verde):** `formatMaskedCardNumber` (2 en rojo), etiquetas y viñetas en `PaymentCard` y `CardReveal` (5 en rojo), y `brand-palette.test.ts` con los tokens nuevos en la lista permitida, sus pares de contraste y el azul de Visa sobre cada parada (7 en rojo). Los e2e de `card-reveal.spec.ts` esperan las viñetas.
+
 ---
 
 ## 6. Estructura del proyecto

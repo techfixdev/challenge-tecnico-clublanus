@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDemoPan, formatCardNumber, isLuhnValid } from "./card-number";
+import {
+  buildDemoPan,
+  formatCardNumber,
+  formatMaskedCardNumber,
+  isLuhnValid,
+} from "./card-number";
 
 describe("isLuhnValid", () => {
   it.each([
@@ -73,5 +78,22 @@ describe("formatCardNumber", () => {
       "3456",
       "1234",
     ]);
+  });
+});
+
+describe("formatMaskedCardNumber", () => {
+  it("masks the first twelve digits with bullets, grouped 4-4-4-4 like a printed card", () => {
+    expect(formatMaskedCardNumber("1234")).toEqual([
+      "••••",
+      "••••",
+      "••••",
+      "1234",
+    ]);
+  });
+
+  it("reads as a card number once joined, with no asterisks", () => {
+    expect(formatMaskedCardNumber("5678").join(" ")).toBe(
+      "•••• •••• •••• 5678",
+    );
   });
 });

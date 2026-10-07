@@ -68,6 +68,8 @@ const hueDistance = (x: number, y: number) => {
 const GRANATE = "#70192d";
 const GOLD = "#b4982f";
 const COOL_GRAY = "#9a999d";
+/** Visa's official wordmark blue (CardBrandLogo): not a token, the mark is untouched. */
+const VISA_BLUE = "#1a1f71";
 
 /**
  * Allowlist: every color token and its only accepted value. Each one is an official
@@ -89,8 +91,9 @@ const ALLOWLIST: Record<string, string> = {
   "cool-gray": COOL_GRAY,
   "cool-gray-soft": "#e6e6e7",
   "cool-gray-dark": "#5e5d61",
-  "card-pink": "#f5c3c7",
-  "card-pink-glow": "#c86e78",
+  "card-gold": "#dcca8e",
+  "card-gold-shade": "#cdb66a",
+  "card-gold-label": "#4d4219",
   "card-stripe": "#120a0c",
   "card-stripe-edge": "#2c1b1f",
   "card-stripe-low": "#1d1215",
@@ -177,9 +180,25 @@ describe("brand palette (globals.css)", () => {
     ["foreground", "surface"],
     ["muted", "background"],
     ["muted", "surface"],
+    // The gold card: its text and labels on its lightest and its darkest stop.
+    ["gold-ink", "card-gold"],
+    ["gold-ink", "card-gold-shade"],
+    ["card-gold-label", "card-gold"],
+    ["card-gold-label", "card-gold-shade"],
   ])("%s text on %s reaches WCAG AA (4.5:1)", (text, surface) => {
     expect(
       contrast(tokens.get(text)!, tokens.get(surface)!),
     ).toBeGreaterThanOrEqual(4.5);
   });
+
+  // Visa's wordmark keeps its official blue (the mark is never recolored), so the card
+  // under it must be light enough for it: AA on every stop of the gold card.
+  it.each(["card-gold", "card-gold-shade"])(
+    "keeps the Visa blue wordmark legible on %s (4.5:1)",
+    (surface) => {
+      expect(contrast(VISA_BLUE, tokens.get(surface)!)).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    },
+  );
 });

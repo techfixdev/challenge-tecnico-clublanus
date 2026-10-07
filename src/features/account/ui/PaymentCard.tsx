@@ -27,18 +27,16 @@ export function PaymentCard({ card }: { card: CardFace }) {
           <div>
             {/* Every card has its own eye; it reveals only this card's data. */}
             <div className="flex items-center gap-2">
-              <p className={`text-xs ${theme.label}`}>Balance</p>
+              <p className={`text-xs ${theme.label}`}>Saldo</p>
               <CardRevealToggle className={theme.eye} />
             </div>
             {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
               the chip follows the ink, so it sits centered on the figures. */}
             <p className="mt-2 flex items-center gap-3">
-              {/* Decorative for screen readers: the balance says its currency in words.
-                The club's gold (Pantone 618 C), lit from the top-left like every fill; its
-                ink keeps 5.2:1 on the darkest stop (the official gold itself). */}
+              {/* Decorative for screen readers: the balance says its currency in words. */}
               <span
                 aria-hidden="true"
-                className="-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md bg-linear-155 from-gold-light via-gold-bright via-45% to-gold px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide text-gold-ink shadow-sm inset-shadow-specular-gold"
+                className={`-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide shadow-sm ${theme.chip}`}
               >
                 {card.currency}
               </span>
@@ -56,7 +54,7 @@ export function PaymentCard({ card }: { card: CardFace }) {
             <span
               className={`block text-[length:calc(var(--card-px,1px)*9)] ${theme.label}`}
             >
-              Exp. Date
+              Vence
             </span>
             <span className="block text-xs">
               {formatCardExpiry(card.expMonth, card.expYear)}

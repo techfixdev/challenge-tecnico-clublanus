@@ -30,16 +30,16 @@ describe("PaymentCard", () => {
   it("shows the masked balance, currency, masked number, holder and expiry from the design", () => {
     const { container } = render(<PaymentCard card={makeCard()} />);
 
-    expect(screen.getByText("Balance")).toBeInTheDocument();
+    expect(screen.getByText("Saldo")).toBeInTheDocument();
     expect(screen.getByText("USD")).toBeInTheDocument();
     // Hidden by default; the balance is not even in the props (it comes with a reveal).
     expect(screen.getByText("Saldo oculto")).toBeInTheDocument();
     expect(container).not.toHaveTextContent("978");
     expect(screen.getByTestId("card-number")).toHaveTextContent(
-      "**** **** **** 1234",
+      "•••• •••• •••• 1234",
     );
     expect(screen.getByText("Soy Granate")).toBeInTheDocument();
-    expect(screen.getByText("Exp. Date")).toBeInTheDocument();
+    expect(screen.getByText("Vence")).toBeInTheDocument();
     expect(screen.getByText("02/30")).toBeInTheDocument();
   });
 
@@ -65,9 +65,9 @@ describe("PaymentCard", () => {
     expect(number).toHaveAttribute("aria-hidden", "true");
     const groups = Array.from(number.children);
     expect(groups.map((group) => group.textContent)).toEqual([
-      "****",
-      "****",
-      "****",
+      "••••",
+      "••••",
+      "••••",
       "5678",
     ]);
     expect(groups.map((group) => group.hasAttribute("data-masked"))).toEqual([

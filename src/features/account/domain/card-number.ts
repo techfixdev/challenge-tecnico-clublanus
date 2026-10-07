@@ -71,3 +71,15 @@ export function buildDemoPan(
 export function formatCardNumber(pan: string): string[] {
   return pan.match(/\d{1,4}/g) ?? [];
 }
+
+/** The bullet a masked digit shows, as on printed and on-screen cards. */
+const MASK = "••••";
+
+/**
+ * The number before it is revealed: three groups of bullets and the last 4, grouped
+ * 4-4-4-4 like the revealed number, so revealing it changes only the characters.
+ * It renders on Home, so it never throws: the stored last 4 is shown as it is.
+ */
+export function formatMaskedCardNumber(last4: string): string[] {
+  return [MASK, MASK, MASK, last4];
+}

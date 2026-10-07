@@ -72,7 +72,7 @@ test("every card starts masked, and the page carries no balance, full number or 
   for (const card of [primaryCard(page), visaCard(page)]) {
     await expect(card).toContainText("Saldo oculto");
     await expect(card.getByTestId("card-number")).toHaveText(
-      /^\*{4} \*{4} \*{4} \d{4}$/,
+      /^•{4} •{4} •{4} \d{4}$/,
     );
   }
 
@@ -154,7 +154,7 @@ test("revealed data masks itself again after 30 seconds", async ({ page }) => {
   await page.clock.fastForward(2_000);
   await expect(primaryCard(page)).toContainText("Saldo oculto");
   await expect(primaryCard(page).getByTestId("card-number")).toHaveText(
-    "**** **** **** 1234",
+    "•••• •••• •••• 1234",
   );
 });
 
