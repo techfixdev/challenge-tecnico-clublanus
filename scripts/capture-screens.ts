@@ -90,20 +90,18 @@ async function waitForFiniteAnimations(page: Page) {
  * are not Web Animations: `getAnimations()` never sees them.
  */
 async function waitForInlineStylesToSettle(page: Page) {
+  // No named helpers inside the page function: tsx compiles them with a `__name` wrapper
+  // that only exists in Node, and the function runs in the page.
   const settled = await page.evaluate(
     async ({ stillFrames, timeoutMs }) => {
-      const frame = () =>
-        new Promise((resolve) => requestAnimationFrame(resolve));
-      const inlineStyles = () =>
-        [...document.querySelectorAll<HTMLElement>("[style]")]
-          .map((element) => element.style.cssText)
-          .join("\n");
       const deadline = performance.now() + timeoutMs;
-      let previous = inlineStyles();
+      let previous = "";
       for (let still = 0; still < stillFrames;) {
         if (performance.now() > deadline) return false;
-        await frame();
-        const current = inlineStyles();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const current = [...document.querySelectorAll<HTMLElement>("[style]")]
+          .map((element) => element.style.cssText)
+          .join("\n");
         still = current === previous ? still + 1 : 0;
         previous = current;
       }
