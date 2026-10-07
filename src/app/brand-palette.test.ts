@@ -46,6 +46,20 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** `fg` at `alpha` opacity composited over an opaque `bg` (sRGB, like the browser). */
+function over(fg: string, alpha: number, bg: string): string {
+  const mixed = channels(fg).map(
+    (c, i) => c * alpha + channels(bg)[i] * (1 - alpha),
+  );
+  return `#${mixed
+    .map((c) =>
+      Math.round(c * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
 /** OKLCH chroma and hue (degrees) of an sRGB hex color. */
 function chromaHue(hex: string): { chroma: number; hue: number } {
   const [r, g, b] = channels(hex).map(linear);
@@ -158,6 +172,19 @@ describe("brand palette (globals.css)", () => {
     expect(
       hueDistance(chromaHue(danger).hue, chromaHue(GRANATE).hue),
     ).toBeLessThanOrEqual(15);
+  });
+
+  it("keeps the login error banner legible: light red on its dark well over the lightest backdrop", () => {
+    // LoginForm's banner: `bg-primary-deep/60` composited over the backdrop's lightest
+    // granate (`primary-glow`, around the shield), the worst case for the text.
+    const well = over(
+      tokens.get("primary-deep")!,
+      0.6,
+      tokens.get("primary-glow")!,
+    );
+    expect(
+      contrast(tokens.get("danger-on-brand")!, well),
+    ).toBeGreaterThanOrEqual(4.5);
   });
 
   it.each([

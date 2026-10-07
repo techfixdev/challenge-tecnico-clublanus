@@ -14,7 +14,7 @@ import {
   INITIAL_LOGIN_FORM_STATE,
   type LoginAction,
 } from "../domain/login-form-state";
-import { FormField, INPUT_CLASSES, fieldIds } from "./FormField";
+import { ErrorGlyph, FormField, INPUT_CLASSES, fieldIds } from "./FormField";
 import { LoginHeader } from "./LoginHeader";
 import { PasswordInput } from "./PasswordInput";
 
@@ -115,10 +115,13 @@ export function LoginForm({ action }: LoginFormProps) {
           </label>
 
           {formError ? (
+            // A dark garnet well on the backdrop (not the light screens' pink box):
+            // light-red text and icon at 4.5:1 or more, the same red as field errors.
             <p
               role="alert"
-              className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger"
+              className="flex items-start gap-2.5 rounded-xl bg-primary-deep/60 px-4 py-3 text-sm text-danger-on-brand ring-1 inset-shadow-recessed-on-brand ring-danger-on-brand/35"
             >
+              <ErrorGlyph className="mt-0.5 size-4" />
               {formError}
             </p>
           ) : null}

@@ -114,6 +114,35 @@ describe("LoginForm", () => {
     );
   });
 
+  it("speaks one error language on the granate backdrop: banner and field errors share the light red", async () => {
+    const action = vi.fn<LoginAction>(async () => ({
+      formError: LOGIN_MESSAGES.invalidCredentials,
+      values: { email: "soygranate@clublanus.com", remember: false },
+    }));
+    const { user, email, password, submit } = renderForm(action);
+
+    await user.type(email, "soygranate@clublanus.com");
+    await user.type(password, "wrong");
+    await user.click(submit);
+
+    const alert = await screen.findByRole("alert");
+    // A dark, translucent garnet well with a light-red text and icon; never the
+    // pale pink box the light screens use (it glared on the backdrop).
+    expect(alert).toHaveClass("bg-primary-deep/60", "text-danger-on-brand");
+    expect(alert).not.toHaveClass("bg-danger-soft");
+    expect(alert).not.toHaveClass("text-danger");
+    expect(alert.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+
+    await user.clear(email);
+    await user.click(submit);
+    const fieldError = await screen.findByText(LOGIN_MESSAGES.emailRequired);
+    expect(fieldError).toHaveClass("text-danger-on-brand");
+    expect(fieldError.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+
   it("toggles password visibility with an accessible button", async () => {
     const { user, password } = renderForm();
     const toggle = screen.getByRole("button", { name: "Mostrar contraseña" });
