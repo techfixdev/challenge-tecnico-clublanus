@@ -1073,3 +1073,31 @@ body {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/*
+ * Edge swipe back (shared/ui/gestures/EdgeSwipeBack.tsx): the screen moves right over a
+ * shade standing in for the previous screen, with the push's leading-edge shadow. The
+ * screen keeps vertical pans for the page scroll and gives horizontal ones to the swipe.
+ * While it is swiped, the screen's column (its ScreenTransition) turns see-through, so
+ * the snapshot the pop animates from holds only the screen, not an opaque band of page
+ * beside it sliding over the incoming one.
+ */
+.edge-swipe {
+  overflow-x: clip;
+}
+
+.edge-swipe-screen {
+  touch-action: pan-y pinch-zoom;
+}
+
+.edge-swipe-shade {
+  background-color: rgb(0 0 0);
+}
+
+.edge-swipe[data-swiping] > .edge-swipe-screen {
+  box-shadow: -10px 0 28px -12px rgb(52 24 38 / 0.22);
+}
+
+:has(> .edge-swipe[data-swiping]) {
+  background-color: transparent;
+}

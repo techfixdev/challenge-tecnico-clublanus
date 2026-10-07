@@ -6,6 +6,7 @@ import { prismaMovementRepository } from "@/features/movements/data/prisma-movem
 import { detailBackHref } from "@/features/movements/domain/movement-filters";
 import { getMovement } from "@/features/movements/domain/movement-queries";
 import { MovementDetail } from "@/features/movements/ui/MovementDetail";
+import { EdgeSwipeBack } from "@/shared/ui/gestures/EdgeSwipeBack";
 import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 
 export const metadata: Metadata = {
@@ -25,12 +26,13 @@ export default async function MovementDetailPage({
   const movement = await getMovement(prismaMovementRepository, user.id, id);
   if (!movement) notFound();
 
+  // The edge swipe goes back to the same list (and filters) as the NavBar's "Volver".
+  const backHref = detailBackHref(await searchParams);
   return (
     <ScreenTransition>
-      <MovementDetail
-        movement={movement}
-        backHref={detailBackHref(await searchParams)}
-      />
+      <EdgeSwipeBack back={{ href: backHref }}>
+        <MovementDetail movement={movement} backHref={backHref} />
+      </EdgeSwipeBack>
     </ScreenTransition>
   );
 }
