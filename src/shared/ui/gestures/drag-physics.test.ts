@@ -58,6 +58,15 @@ describe("releaseVelocity", () => {
     expect(releaseVelocity(samples, 300)).toBe(0);
   });
 
+  it("counts a pause before lifting: a finger that slows to a stop throws less", () => {
+    const samples = [
+      { time: 0, position: 0 },
+      { time: 20, position: 50 },
+    ];
+    // Lifted 40ms after its last move: 50px over the 60ms up to the release.
+    expect(releaseVelocity(samples, 60)).toBeCloseTo(833.33, 1);
+  });
+
   it("is zero without two samples to compare", () => {
     expect(releaseVelocity([], 0)).toBe(0);
     expect(releaseVelocity([{ time: 10, position: 5 }], 10)).toBe(0);

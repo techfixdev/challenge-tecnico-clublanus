@@ -47,10 +47,8 @@ const RUBBER_BAND_COEFFICIENT = 0.55;
  */
 const DECELERATION_RATE = 0.99;
 
-/** The release velocity is measured over the gesture's last stretch... */
+/** The release velocity is measured over the gesture's last stretch only. */
 const VELOCITY_WINDOW_MS = 100;
-/** ...and is zero if the finger rested longer than this before lifting. */
-const VELOCITY_STALE_MS = 50;
 
 export type Axis = "x" | "y";
 
@@ -69,16 +67,18 @@ export type DragSample = { time: number; position: number };
 /**
  * The finger's velocity when it lifts (`now`): the distance covered over the last
  * `VELOCITY_WINDOW_MS`, so the speed of the release counts, not the gesture's average.
- * A finger that stopped before lifting has no velocity, even if it was fast earlier.
+ * Measured up to the release itself, so a pause before lifting slows the throw down, and
+ * a finger that rested for the whole window throws nothing, however fast it was earlier.
  */
 export function releaseVelocity(samples: DragSample[], now: number): number {
-  const last = samples.at(-1);
-  if (!last || now - last.time > VELOCITY_STALE_MS) return 0;
-  const recent = samples.filter(({ time }) => time >= now - VELOCITY_WINDOW_MS);
-  const first = recent[0];
-  const elapsedMs = last.time - first.time;
-  if (recent.length < 2 || elapsedMs <= 0) return 0;
-  return ((last.position - first.position) / elapsedMs) * 1000;
+  const recent = samples.filter(({ time }) => now - time <= VELOCITY_WINDOW_MS);
+  if (recent.length < 2) return 0;
+  const first = recent[0]!;
+  const last = recent.at(-1)!;
+  const elapsedMs = now - first.time;
+  return elapsedMs > 0
+    ? ((last.position - first.position) / elapsedMs) * 1000
+    : 0;
 }
 
 /**
