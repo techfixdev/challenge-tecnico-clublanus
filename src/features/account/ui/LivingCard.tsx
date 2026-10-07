@@ -74,11 +74,6 @@ export function LivingCard({
   children,
 }: {
   tone: CardTone;
-  /**
-   * @deprecated No effect: the light sweep on mount was removed (T12b). Kept until
-   * CardCarousel stops passing it.
-   */
-  sweep?: boolean;
   /** The card's back face; without it the card does not flip. */
   back?: ReactNode;
   /** Accessible name of the flip button, e.g. "Ver reverso de la tarjeta …". */

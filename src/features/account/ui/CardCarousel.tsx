@@ -29,7 +29,6 @@ export function CardCarousel({ cards }: { cards: CardFace[] }) {
           <CardRevealProvider cardId={card.id} phrase={cardPhrase(card)}>
             <LivingCard
               tone={card.brand === "VISA" ? "pink" : "primary"}
-              sweep={card.isPrimary}
               flipLabel={`Ver reverso de la ${cardPhrase(card)}`}
               back={<PaymentCardBack card={card} />}
             >
