@@ -10,9 +10,9 @@ import {
   scaleAt,
 } from "./card-deck";
 
-describe("card deck scroll math", () => {
-  it("measures snaps from the first card and clamps them to the maximum scroll", () => {
-    // Two 287px cards with a 16px gap in a 390px phone: the last card rests at 248px.
+describe("card deck position math", () => {
+  it("measures snaps from the first card and clamps them to the maximum offset", () => {
+    // Two 287px cards with a 16px gap in a 390px phone: the last card rests 248px along.
     expect(measureSnaps([24, 327], 248)).toEqual([0, 248]);
     expect(measureSnaps([24, 327, 630], 551)).toEqual([0, 303, 551]);
   });
@@ -31,7 +31,7 @@ describe("card deck scroll math", () => {
     expect(cardDistance(0, [], 1)).toBe(1);
   });
 
-  it("picks the card closest to the scroll position", () => {
+  it("picks the card closest to the deck's offset", () => {
     expect(nearestCard(0, [0, 248])).toBe(0);
     expect(nearestCard(130, [0, 248])).toBe(1);
     expect(nearestCard(0, [])).toBe(0);

@@ -10,23 +10,73 @@ import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 async function loginUntilHomeSettles(page: Page) {
   await login(page);
-  // Home dissolves in after login; it takes drags once it has arrived.
+  // Home dissolves in after login; it takes drags once it has arrived, and the card deck
+  // once it has hydrated and measured its cards.
   await waitForScreenToSettle(page);
+  await expect(
+    page.getByRole("list", { name: "Tus tarjetas" }),
+  ).toHaveAttribute("data-measured");
+  // Home has built itself (HomeEntrance): the cards rest where they will stay.
+  await expect(page.locator("html")).toHaveAttribute("data-home-entered");
 }
 
 function primaryCardSurface(page: Page) {
   return page.getByTestId("living-card-surface").first();
 }
 
-/** Presses the primary card in its center and drags towards its top-right corner. */
+/**
+ * Presses the primary card in its center and drags towards its top edge. Mostly
+ * vertical on purpose: a sideways drag belongs to the carousel, which flattens the card.
+ */
 async function dragPrimaryCard(page: Page) {
   const box = await page.getByTestId("living-card").first().boundingBox();
   if (!box) throw new Error("The primary card is not visible");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.95, box.y + box.height * 0.1, {
+  await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.05, {
     steps: 8,
   });
+}
+
+function cardList(page: Page) {
+  return page.getByRole("list", { name: "Tus tarjetas" });
+}
+
+/**
+ * How far the deck has travelled towards the later cards, in px (0 with the first card in
+ * front): the row's scroll position, minus the cards' own shift past either end.
+ */
+function deckOffset(page: Page) {
+  return cardList(page).evaluate((list) => {
+    const first = list.firstElementChild!;
+    const shift = new DOMMatrix(getComputedStyle(first).transform).m41;
+    return Math.round(list.scrollLeft - shift);
+  });
+}
+
+/** Where the deck rests with the second card in front. */
+function secondCardRest(page: Page) {
+  return cardList(page).evaluate((list) => {
+    const [first, second] = list.children as HTMLCollectionOf<HTMLElement>;
+    const max = list.scrollWidth - list.clientWidth;
+    return Math.round(Math.min(second!.offsetLeft - first!.offsetLeft, max));
+  });
+}
+
+/** Presses the primary card and drags it sideways by `dx`, holding the press. */
+async function pressAndDragDeck(page: Page, dx: number, steps = 10) {
+  const box = await page.getByTestId("living-card").first().boundingBox();
+  if (!box) throw new Error("The primary card is not visible");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + 2, { steps });
+  return { x: x + dx, y: y + 2 };
+}
+
+function currentDot(page: Page) {
+  return page.locator('button[aria-current="true"][aria-label^="Tarjeta "]');
 }
 
 /** A window scroll position: a pixel offset, or as far down as the page goes. */
@@ -164,7 +214,7 @@ test.describe("with motion allowed", () => {
     await expect.poll(() => surfaceTransform(page)).toBe("none");
   });
 
-  test("swiping to the next card scales it up and moves the dot", async ({
+  test("a dot brings the next card forward, scaling it up", async ({
     page,
   }) => {
     await loginUntilHomeSettles(page);
@@ -173,8 +223,8 @@ test.describe("with motion allowed", () => {
     const scaleOf = () =>
       visa.evaluate((element) => getComputedStyle(element).transform);
 
-    // The peeking card rests smaller (scale 0.92) until it becomes the active one.
-    expect(await scaleOf()).toMatch(/^matrix\(0\.92/);
+    // The peeking card rests smaller (scale 0.94) until it becomes the active one.
+    expect(await scaleOf()).toMatch(/^matrix\(0\.94/);
 
     await page.getByRole("button", { name: "Tarjeta 2 de 2" }).click();
 
@@ -182,6 +232,82 @@ test.describe("with motion allowed", () => {
       page.getByRole("button", { name: "Tarjeta 2 de 2" }),
     ).toHaveAttribute("aria-current", "true");
     await expect.poll(scaleOf).toBe("none");
+  });
+
+  test("the deck follows a drag 1:1 and a slow release settles on the nearest card", async ({
+    page,
+  }) => {
+    await loginUntilHomeSettles(page);
+    const rest = await secondCardRest(page);
+
+    const at = await pressAndDragDeck(page, -160);
+    // Under the finger: the deck moved exactly as far as the finger did.
+    await expect.poll(() => deckOffset(page)).toBe(160);
+    // The sideways drag took the press over: the card dropped its tilt.
+    await expect.poll(() => surfaceTransform(page)).toBe("none");
+    // Hold still before letting go: no velocity, so the nearest card wins.
+    await page.waitForTimeout(150);
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.up();
+
+    await expect(currentDot(page)).toHaveAttribute(
+      "aria-label",
+      "Tarjeta 2 de 2",
+    );
+    await expect.poll(() => deckOffset(page)).toBe(rest);
+  });
+
+  test("a quick flick turns the card even after a short drag; a slow one springs back", async ({
+    page,
+  }) => {
+    await loginUntilHomeSettles(page);
+    const rest = await secondCardRest(page);
+
+    // Slow: the finger stops before letting go, so the deck returns to the first card.
+    const at = await pressAndDragDeck(page, -50);
+    await page.waitForTimeout(150);
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.up();
+    await expect.poll(() => deckOffset(page)).toBe(0);
+    await expect(currentDot(page)).toHaveAttribute(
+      "aria-label",
+      "Tarjeta 1 de 2",
+    );
+
+    // Quick: the same distance released while moving carries on to the next card.
+    await pressAndDragDeck(page, -50, 3);
+    await page.mouse.up();
+    await expect.poll(() => deckOffset(page)).toBe(rest);
+    await expect(currentDot(page)).toHaveAttribute(
+      "aria-label",
+      "Tarjeta 2 de 2",
+    );
+  });
+
+  test("past the first card the deck resists, then returns", async ({
+    page,
+  }) => {
+    await loginUntilHomeSettles(page);
+
+    await pressAndDragDeck(page, 150);
+    // A faint pull, far less than the finger's travel.
+    const pulled = await deckOffset(page);
+    expect(pulled).toBeLessThan(0);
+    expect(pulled).toBeGreaterThan(-40);
+    await page.mouse.up();
+
+    await expect.poll(() => deckOffset(page)).toBe(0);
+  });
+
+  test("the arrow keys move between cards", async ({ page }) => {
+    await loginUntilHomeSettles(page);
+    const rest = await secondCardRest(page);
+
+    await cardList(page).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => deckOffset(page)).toBe(rest);
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(() => deckOffset(page)).toBe(0);
   });
   test("the header compacts into glass on scroll, and the filters stick under it", async ({
     page,
@@ -356,5 +482,25 @@ test.describe("with prefers-reduced-motion: reduce", () => {
       await visa.evaluate((element) => getComputedStyle(element).transform),
     ).toBe("none");
     await expect(page.getByTestId("card-sweep")).toHaveCount(0);
+  });
+
+  test("the deck still follows the finger, and lands on its card at once", async ({
+    page,
+  }) => {
+    await loginUntilHomeSettles(page);
+    const rest = await secondCardRest(page);
+
+    await pressAndDragDeck(page, -160);
+    expect(await deckOffset(page)).toBe(160);
+    await page.mouse.up();
+
+    // No glide: two frames after the release it already rests on the next card.
+    await page.evaluate(
+      () =>
+        new Promise((done) =>
+          requestAnimationFrame(() => requestAnimationFrame(done)),
+        ),
+    );
+    expect(await deckOffset(page)).toBe(rest);
   });
 });

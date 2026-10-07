@@ -3,11 +3,13 @@
 import {
   useMotionTemplate,
   useMotionValue,
+  useMotionValueEvent,
   useSpring,
   useTransform,
 } from "motion/react";
 import * as m from "motion/react-m";
 import {
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -19,6 +21,7 @@ import {
 import { FADE, INSTANT, SPRING_PHYSICS } from "@/shared/ui/motion/springs";
 import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 
+import { DeckDraggingContext } from "./card-deck-drag";
 import { isFlipTap } from "./tap-guard";
 
 /** Max rotation in degrees when the finger is on an edge of the card. */
@@ -63,16 +66,17 @@ function flipAnnouncement({
 }
 
 /**
- * A card that reacts like a physical object: only while pressed and dragged, it tilts
- * towards the finger in 3D, a faint gloss follows the light and its shadow shifts; on
- * release it settles back flat. Every turn uses the one critically damped spring
+ * A card that reacts like a physical object: only while pressed, it tilts towards the
+ * finger in 3D, a faint gloss follows the light and its shadow shifts; on release it
+ * settles back flat. Inside the carousel, a press that turns into a sideways drag belongs
+ * to the carousel: the card lets go of the tilt (and of the tap) as the deck moves. Every turn uses the one critically damped spring
  * (springs.ts): it follows the finger closely and never wobbles past its rest.
  *
  * With a `back`, a tap flips it over (rotateY with the spring; it dips slightly while it
  * turns so its near edge stays inside the carousel). The whole card is a toggle button
  * (`flipLabel`, `aria-pressed`) that sits under the faces: the faces let pointer events
  * through to it, except their own controls (the eyes). Only a real tap flips: a carousel
- * swipe, a tilt drag or a long press do not (see tap-guard); Enter and Space always do.
+ * drag, a tilt drag or a long press do not (see tap-guard); Enter and Space always do.
  * The hidden face is `inert` and `aria-hidden`.
  *
  * Everything runs on motion values (no React state per frame), and only `transform`,
@@ -93,6 +97,7 @@ export function LivingCard({
   children: ReactNode;
 }) {
   const reduced = useReducedMotionPreference();
+  const deckDragging = useContext(DeckDraggingContext);
   const pressed = useRef(false);
   const press = useRef<Press | null>(null);
   const [flipped, setFlipped] = useState(false);
@@ -160,6 +165,14 @@ export function LivingCard({
     pointerY.set(0);
   }
 
+  // The carousel took the press over: flatten the card and make the press no tap.
+  const notInDeck = useMotionValue(false);
+  useMotionValueEvent(deckDragging ?? notInDeck, "change", (dragging) => {
+    if (!dragging) return;
+    release();
+    if (press.current) press.current.cancelled = true;
+  });
+
   function startPress(event: PointerEvent<HTMLButtonElement>) {
     press.current = {
       x: event.clientX,
@@ -194,7 +207,7 @@ export function LivingCard({
 
   return (
     // No pointer capture: it would retarget the click of the eye toggle to this wrapper.
-    // Swiping the carousel cancels the pointer, which releases the card.
+    // A carousel drag releases the card (above); a page scroll cancels the pointer.
     <div
       data-testid="living-card"
       className="card-scale relative isolate select-none [perspective:800px]"

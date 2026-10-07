@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { motionValue } from "motion/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stubReducedMotion } from "@/test/reduced-motion";
 
+import { DeckDraggingContext } from "./card-deck-drag";
 import { LivingCard } from "./LivingCard";
 
 afterEach(() => {
@@ -108,6 +110,30 @@ describe("LivingCard", () => {
       fireEvent.pointerDown(flipButton(), { clientX: 200, clientY: 50 });
       fireEvent.pointerCancel(flipButton());
       fireEvent.click(flipButton(), { clientX: 200, clientY: 50, detail: 1 });
+
+      expect(flipButton()).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("does not flip once the carousel took the press over as a sideways drag", () => {
+      stubReducedMotion(false);
+      const dragging = motionValue(false);
+      render(
+        <DeckDraggingContext.Provider value={dragging}>
+          <LivingCard
+            tone="primary"
+            flipLabel="Ver reverso de la tarjeta Visa terminada en 5678"
+            back={<p>Reverso</p>}
+          >
+            <p>Frente</p>
+          </LivingCard>
+        </DeckDraggingContext.Provider>,
+      );
+
+      // The deck moves with the finger, so the card's own geometry barely changes.
+      fireEvent.pointerDown(flipButton(), { clientX: 200, clientY: 50 });
+      act(() => dragging.set(true));
+      act(() => dragging.set(false));
+      fireEvent.click(flipButton(), { clientX: 202, clientY: 50, detail: 1 });
 
       expect(flipButton()).toHaveAttribute("aria-pressed", "false");
     });

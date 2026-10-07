@@ -16,6 +16,12 @@ async function loginUntilCardsSettle(page: Page) {
   // or while that transition runs, never reaches the card. Wait for both.
   await expect(flipButton(page)).toBeAttached();
   await waitForScreenToSettle(page);
+  // The deck takes drags once it has hydrated and measured its cards.
+  await expect(
+    page.getByRole("list", { name: "Tus tarjetas" }),
+  ).toHaveAttribute("data-measured");
+  // Home has built itself (HomeEntrance): the cards rest where they will stay.
+  await expect(page.locator("html")).toHaveAttribute("data-home-entered");
 }
 
 const FLIP_MASTERCARD =
@@ -120,22 +126,39 @@ test.describe("with motion allowed", () => {
     await loginUntilCardsSettle(page);
     const { x, y } = await cardCenter(page);
 
-    // Swipe-like drag to the left, released on the card.
+    const firstDot = page.getByRole("button", { name: "Tarjeta 1 de 2" });
+    const secondDot = page.getByRole("button", { name: "Tarjeta 2 de 2" });
+    /** The Mastercard's left edge: where the deck has moved it. */
+    const cardLeft = async () =>
+      Math.round(
+        (await page.getByTestId("living-card").first().boundingBox())!.x,
+      );
+    const restingLeft = await cardLeft();
+
+    // Swipe-like drag to the left past halfway, released on the card: it turns the deck
+    // instead (however fast the release: past halfway, the next card wins).
     await page.mouse.move(x, y);
     await page.mouse.down();
-    await page.mouse.move(x - 80, y + 4, { steps: 8 });
+    await page.mouse.move(x - 160, y + 4, { steps: 8 });
     await page.mouse.up();
-    // Tilt drag towards a corner, released on the card.
+    await expect(secondDot).toHaveAttribute("aria-current", "true");
+    await expect(flipButton(page)).toHaveAttribute("aria-pressed", "false");
+    await firstDot.click();
+    await expect.poll(cardLeft).toBe(restingLeft);
+    // Tilt drag towards a corner, mostly upwards (so it locks vertical: the deck stays),
+    // released on the card.
     await page.mouse.move(x, y);
     await page.mouse.down();
-    await page.mouse.move(x + 40, y - 30, { steps: 8 });
+    await page.mouse.move(x + 20, y - 40, { steps: 8 });
     await page.mouse.up();
-    // A press that stays put while the carousel scrolls under it.
+    expect(await cardLeft()).toBe(restingLeft);
+    // A press that stays put while the deck moves the card away under it (the arrow key
+    // turns the deck), released once the card has gone.
     await page.mouse.move(x, y);
     await page.mouse.down();
-    await page
-      .getByRole("list", { name: "Tus tarjetas" })
-      .evaluate((list) => list.scrollBy({ left: 40, behavior: "instant" }));
+    await page.keyboard.press("ArrowRight");
+    await expect(secondDot).toHaveAttribute("aria-current", "true");
+    await expect.poll(cardLeft).toBeLessThan(restingLeft - 100);
     await page.mouse.up();
 
     await expect(flipButton(page)).toHaveAttribute("aria-pressed", "false");

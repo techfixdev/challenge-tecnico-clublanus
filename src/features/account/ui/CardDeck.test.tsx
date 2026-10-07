@@ -13,7 +13,6 @@ const slides = [
 
 beforeEach(() => {
   stubReducedMotion(false);
-  Element.prototype.scrollTo = vi.fn();
 });
 
 afterEach(() => {
@@ -37,19 +36,39 @@ describe("CardDeck", () => {
     expect(second).not.toHaveAttribute("aria-current");
   });
 
-  it("scrolls to the card when its dot is pressed, smoothly", async () => {
+  it("brings a card to the front when its dot is pressed", async () => {
     render(<CardDeck label="Tus tarjetas" slides={slides} />);
 
     await userEvent.click(
       screen.getByRole("button", { name: "Tarjeta 2 de 2" }),
     );
 
-    expect(Element.prototype.scrollTo).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "smooth" }),
-    );
+    expect(
+      screen.getByRole("button", { name: "Tarjeta 2 de 2" }),
+    ).toHaveAttribute("aria-current", "true");
   });
 
-  it("jumps instead of gliding under prefers-reduced-motion", async () => {
+  it("moves between cards with the arrow keys, Home and End, never past the ends", async () => {
+    render(<CardDeck label="Tus tarjetas" slides={slides} />);
+    const current = () =>
+      screen
+        .getAllByRole("button")
+        .findIndex((dot) => dot.getAttribute("aria-current") === "true");
+
+    screen.getByRole("list", { name: "Tus tarjetas" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(current()).toBe(1);
+    await userEvent.keyboard("{ArrowRight}");
+    expect(current()).toBe(1);
+    await userEvent.keyboard("{Home}");
+    expect(current()).toBe(0);
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(current()).toBe(0);
+    await userEvent.keyboard("{End}");
+    expect(current()).toBe(1);
+  });
+
+  it("moves the cards under prefers-reduced-motion too", async () => {
     stubReducedMotion(true);
     render(<CardDeck label="Tus tarjetas" slides={slides} />);
 
@@ -57,9 +76,9 @@ describe("CardDeck", () => {
       screen.getByRole("button", { name: "Tarjeta 2 de 2" }),
     );
 
-    expect(Element.prototype.scrollTo).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "instant" }),
-    );
+    expect(
+      screen.getByRole("button", { name: "Tarjeta 2 de 2" }),
+    ).toHaveAttribute("aria-current", "true");
   });
 
   it("shows no dots for a single card", () => {
