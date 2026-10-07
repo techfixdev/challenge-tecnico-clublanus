@@ -6,7 +6,7 @@ import { ROUTES } from "@/shared/lib/routes";
 
 import { LOGIN_MESSAGES, parseLoginFormData } from "../domain/login-schema";
 import type { LoginFormState } from "../domain/login-form-state";
-import { signIn, signOut } from "./sign-in";
+import { signIn, signOut, type SignInResult } from "./sign-in";
 
 export async function login(
   _previousState: LoginFormState,
@@ -15,7 +15,7 @@ export async function login(
   const input = parseLoginFormData(formData);
   const values = { email: input.email, remember: input.remember ?? false };
 
-  let result: Awaited<ReturnType<typeof signIn>>;
+  let result: SignInResult;
   try {
     result = await signIn(input);
   } catch (error) {

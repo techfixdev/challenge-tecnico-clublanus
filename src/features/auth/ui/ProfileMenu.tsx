@@ -34,8 +34,20 @@ export function ProfileMenu({
   const [confirming, setConfirming] = useState(false);
   // Back from the confirmation: the focus returns to "Cerrar sesión" (autoFocus), not to
   // the top of the sheet. On a fresh open the dialog places it as usual.
-  const [cameBack, setCameBack] = useState(false);
+  const [returnedFromConfirmation, setReturnedFromConfirmation] =
+    useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+
+  function openSheet() {
+    setConfirming(false);
+    setReturnedFromConfirmation(false);
+    setOpen(true);
+  }
+
+  function cancelLogout() {
+    setReturnedFromConfirmation(true);
+    setConfirming(false);
+  }
 
   function close() {
     if (!open) return;
@@ -53,11 +65,7 @@ export function ProfileMenu({
         aria-label={SHEET_LABEL}
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => {
-          setConfirming(false);
-          setCameBack(false);
-          setOpen(true);
-        }}
+        onClick={openSheet}
         className="flex size-10 pressable items-center justify-center rounded-full bg-primary-soft/60 text-xs font-semibold text-primary focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:outline-none"
       >
         <span aria-hidden="true">{initialsOf(firstName, lastName)}</span>
@@ -94,10 +102,7 @@ export function ProfileMenu({
               variant="secondary"
               className="mt-3"
               autoFocus
-              onClick={() => {
-                setCameBack(true);
-                setConfirming(false);
-              }}
+              onClick={cancelLogout}
             >
               Cancelar
             </Button>
@@ -106,7 +111,7 @@ export function ProfileMenu({
           <Button
             variant="secondary"
             className="mt-8 gap-2"
-            autoFocus={cameBack}
+            autoFocus={returnedFromConfirmation}
             onClick={() => setConfirming(true)}
           >
             <LogoutIcon aria-hidden="true" className="size-5" />
