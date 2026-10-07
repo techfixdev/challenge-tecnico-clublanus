@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-const DEMO_USER = {
-  email: "soygranate@clublanus.com",
-  password: "GRANATE1@",
-};
+import {
+  APP_BACKGROUND_COLOR,
+  LOGIN_THEME_COLOR,
+} from "../src/shared/lib/theme";
+import { DEMO_USER, fillLoginForm, login } from "./fixtures/session";
 
 test("redirects anonymous visitors from private pages to /login", async ({
   page,
@@ -47,12 +48,7 @@ test("logs in, keeps /login out of reach, and logs out", async ({
   page,
   context,
 }) => {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(DEMO_USER.email);
-  await page.getByLabel("Contraseña", { exact: true }).fill(DEMO_USER.password);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-
-  await expect(page).toHaveURL(/\/$/);
+  await login(page);
   await expect(page.getByRole("heading", { name: "Granate" })).toBeVisible();
 
   const [sessionCookie] = (await context.cookies()).filter(
@@ -78,9 +74,7 @@ test("'Recordarme' issues a persistent 30-day cookie", async ({
   page,
   context,
 }) => {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(DEMO_USER.email);
-  await page.getByLabel("Contraseña", { exact: true }).fill(DEMO_USER.password);
+  await fillLoginForm(page);
   await page.getByLabel("Recordarme").check();
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -121,14 +115,23 @@ test("declares a safe-area viewport, theme color and branded icons", async ({
     "content",
     /user-scalable=no|maximum-scale=1\b/,
   );
-  // The login sits on the club's granate backdrop, so its browser chrome is granate;
-  // the signed-in screens keep the light app background (checked in the manifest test).
+  // The login sits on the club's granate backdrop, so its browser chrome is granate.
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
     "content",
-    "#70192d",
+    LOGIN_THEME_COLOR,
   );
   await expect(
     page.locator('link[rel="icon"][type="image/svg+xml"]'),
   ).toHaveCount(1);
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
+});
+
+test("signed-in screens color the browser chrome like the light app background", async ({
+  page,
+}) => {
+  await login(page);
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+    "content",
+    APP_BACKGROUND_COLOR,
+  );
 });

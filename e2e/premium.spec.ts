@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { fillLoginForm, login } from "./fixtures/session";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /*
@@ -7,12 +8,8 @@ import { waitForScreenToSettle } from "./fixtures/view-transitions";
  * runs with and without `prefers-reduced-motion: reduce`.
  */
 
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
+async function loginUntilHomeSettles(page: Page) {
+  await login(page);
   // Home dissolves in after login; it takes drags once it has arrived.
   await waitForScreenToSettle(page);
 }
@@ -32,48 +29,59 @@ async function dragPrimaryCard(page: Page) {
   });
 }
 
-/**
- * A Home scroll past the header's collapse (44px with the "Hola" eyebrow) and its glass
- * fade (+4px). Home is short since its rows share one grouped surface: at 390×844 it
- * scrolls about 56px, so a deeper scroll would never be reached.
- */
-const HOME_COMPACT_SCROLL = 52;
+/** A window scroll position: a pixel offset, or as far down as the page goes. */
+type ScrollTarget = number | "end";
 
 /**
- * Scrolls the window to `y` (from one pixel away, so a scroll event always fires) and waits
- * two frames for scroll-linked styles. On a cold server the page can still be streaming
- * (too short to scroll that far), so it retries until the window really sits at `y`.
+ * Home's scroll for a fully compact header: its end, read from the page itself. Home is
+ * short (its rows share one grouped surface, about 56px of scroll at 390×844), so a fixed
+ * offset past the header's collapse and glass fade would sit right at the edge of what
+ * Home can reach; its end is past both however tall the content is.
  */
-async function scrollPage(page: Page, y: number) {
+const HOME_COMPACT_SCROLL: ScrollTarget = "end";
+
+/**
+ * Scrolls the window to `target` (from one pixel away, so a scroll event always fires)
+ * and waits two frames for scroll-linked styles. On a cold server the page can still be
+ * streaming (too short to scroll that far), so it retries until the window really sits
+ * there, re-reading the page's end each time.
+ */
+async function scrollPage(page: Page, target: ScrollTarget) {
   await expect
-    .poll(() =>
-      page.evaluate(async (top) => {
-        const frame = () =>
-          new Promise((resolve) => requestAnimationFrame(resolve));
-        window.scrollTo({ top: Math.max(0, top - 1), behavior: "instant" });
-        await frame();
-        window.scrollTo({ top, behavior: "instant" });
-        await frame();
-        await frame();
-        return Math.round(window.scrollY);
-      }, y),
+    .poll(
+      () =>
+        page.evaluate(async (wanted) => {
+          const frame = () =>
+            new Promise((resolve) => requestAnimationFrame(resolve));
+          const top =
+            wanted === "end"
+              ? document.documentElement.scrollHeight - window.innerHeight
+              : wanted;
+          window.scrollTo({ top: Math.max(0, top - 1), behavior: "instant" });
+          await frame();
+          window.scrollTo({ top, behavior: "instant" });
+          await frame();
+          await frame();
+          return Math.round(window.scrollY) === Math.round(top);
+        }, target),
+      { message: `the window scrolls to ${target}` },
     )
-    .toBe(y);
+    .toBe(true);
 }
 
 /**
- * Polls a scroll-linked style, scrolling to `y` before each read. Scroll-linked values
+ * Polls a scroll-linked style, scrolling to `target` before each read. Scroll-linked values
  * only update on scroll events, and one sent before hydration finished is never seen,
  * which a single scroll followed by a poll would wait on forever.
  */
 function styleAfterScroll(
   page: Page,
-  y: number,
+  target: ScrollTarget,
   testId: string,
   property: "opacity" | "transform",
 ) {
   return expect.poll(async () => {
-    await scrollPage(page, y);
+    await scrollPage(page, target);
     return computed(page, testId, property);
   });
 }
@@ -145,7 +153,7 @@ test.describe("with motion allowed", () => {
   test("the card tilts under the finger and springs back on release", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilHomeSettles(page);
     expect(await surfaceTransform(page)).toBe("none");
 
     await dragPrimaryCard(page);
@@ -159,7 +167,7 @@ test.describe("with motion allowed", () => {
   test("swiping to the next card scales it up and moves the dot", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilHomeSettles(page);
     const cards = page.getByRole("list", { name: "Tus tarjetas" });
     const visa = cards.getByRole("listitem").nth(1);
     const scaleOf = () =>
@@ -178,7 +186,7 @@ test.describe("with motion allowed", () => {
   test("the header compacts into glass on scroll, and the filters stick under it", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilHomeSettles(page);
     expect(await computed(page, "glass-header-backdrop", "opacity")).toBe("0");
 
     await styleAfterScroll(
@@ -229,30 +237,43 @@ test.describe("with motion allowed", () => {
           (window as unknown as { layoutShifts: { total: number } })
             .layoutShifts.total,
       );
+    /** Finite animations still playing (rows, the reveal); the looping shimmer is not one. */
+    const runningEntranceAnimations = () =>
+      page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.playState === "running" &&
+                animation.effect?.getComputedTiming().iterations !== Infinity,
+            ).length,
+      );
     const entranceDone = async () => {
       // A streamed page arrives in a hidden container before React moves it into
       // place: wait until there is a single card list.
       await expect(
         page.getByRole("list", { name: "Tus tarjetas" }),
       ).toHaveCount(1);
-      // No light sweep plays on the card any more (it was cut in T12b).
-      await expect(page.getByTestId("card-sweep")).toHaveCount(0);
-      // The entrance is over once every finite animation (rows, reveal) has finished.
-      await page.evaluate(() =>
-        Promise.allSettled(
-          document
-            .getAnimations()
-            .filter(
-              (animation) =>
-                animation.effect?.getComputedTiming().iterations !== Infinity,
-            )
-            .map((animation) => animation.finished),
-        ),
-      );
+      // The latest movements stream in last, and their rows rise in a stagger.
+      await expect(
+        page
+          .getByRole("region", { name: "Últimos movimientos" })
+          .getByRole("listitem")
+          .first(),
+      ).toBeVisible();
+      await waitForScreenToSettle(page);
+      // Polled, not awaited once: a snapshot of the running animations would miss one
+      // that starts a moment later (content that lands after it).
+      await expect
+        .poll(runningEntranceAnimations, {
+          message: "the entrance animations finish",
+        })
+        .toBe(0);
     };
 
     // Client navigation after login (odometer rolls), then a server-rendered reload.
-    await login(page);
+    await loginUntilHomeSettles(page);
     await entranceDone();
     expect(await totalShift()).toBeLessThan(0.05);
 
@@ -264,7 +285,7 @@ test.describe("with motion allowed", () => {
   test("the nav indicator slides to the new section with a spring", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilHomeSettles(page);
     const { xs, target } = await switchTabRecordingIndicator(page);
     // It passed through positions between the two items: it slid, it did not jump.
     const start = xs[0]!;
@@ -278,7 +299,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
   test("the header turns to glass without scaling, and the indicator jumps", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilHomeSettles(page);
     await styleAfterScroll(
       page,
       HOME_COMPACT_SCROLL,
@@ -294,10 +315,10 @@ test.describe("with prefers-reduced-motion: reduce", () => {
     expect(xs.every((x) => x === xs[0] || x === target)).toBe(true);
   });
 
-  // Regression (T18): the header's scroll-linked styles used to go through Motion's lazy
-  // renderer, which loads after hydration; a scroll made before it arrived was lost and
-  // the header stayed transparent. Holding the app's scripts back makes that window
-  // certain instead of a race against a slow chunk.
+  // Regression guard: scroll-linked styles routed through Motion's lazy renderer (which
+  // loads after hydration) lose a scroll made before it arrives, leaving the header
+  // transparent. Holding the app's scripts back makes that window certain instead of a
+  // race against a slow chunk.
   test("the header follows a scroll made before Motion's features load", async ({
     page,
   }) => {
@@ -306,9 +327,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
       if (holdScripts) await new Promise((done) => setTimeout(done, 1_500));
       await route.continue();
     });
-    await page.goto("/login");
-    await page.getByLabel("Email").fill("soygranate@clublanus.com");
-    await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
+    await fillLoginForm(page);
     holdScripts = true;
     await page.getByRole("button", { name: "Ingresar" }).click();
     await expect(page).toHaveURL(/\/$/);
@@ -324,7 +343,7 @@ test.describe("with prefers-reduced-motion: reduce", () => {
   test("the card stays flat when dragged, and cards do not scale", async ({
     page,
   }) => {
-    await login(page);
+    await loginUntilHomeSettles(page);
     await dragPrimaryCard(page);
     expect(await surfaceTransform(page)).toBe("none");
     await page.mouse.up();

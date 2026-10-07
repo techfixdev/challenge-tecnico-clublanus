@@ -15,25 +15,13 @@ import {
   watchPrefetch,
   type TransitionEntry,
 } from "./fixtures/view-transitions";
+import { login } from "./fixtures/session";
+import { movementRows } from "./fixtures/screens";
 
 /*
  * Motion checks on real computed styles (jsdom has no CSS). Each case runs with and
  * without `prefers-reduced-motion: reduce` to prove the preference turns movement off.
  */
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("soygranate@clublanus.com");
-  await page.getByLabel("Contraseña", { exact: true }).fill("GRANATE1@");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
-
-function movementRows(page: Page) {
-  return page
-    .getByRole("region", { name: "Lista de movimientos" })
-    .getByRole("listitem");
-}
 
 /** Computed `animation-name` of each movement row (their staggered entrance). */
 async function rowAnimations(page: Page) {
@@ -243,6 +231,12 @@ test.describe("with motion allowed", () => {
       .getByRole("link", { name: "Recibido", exact: true })
       .click();
     await expect(page).toHaveURL(/type=recibido/);
+    // The URL changes before the filtered list replaces the old one: read the rows only
+    // once they are the result (each row names its type to screen readers).
+    await expect(movementRows(page).first()).toBeVisible();
+    await expect(
+      movementRows(page).filter({ hasNotText: /Recibido/ }),
+    ).toHaveCount(0);
     expect(new Set(await rowAnimations(page))).toEqual(new Set(["none"]));
     expect(await entrances()).toBe(firstPaint);
   });
