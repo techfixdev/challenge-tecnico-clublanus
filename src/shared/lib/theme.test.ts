@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import manifest from "@/app/manifest";
 
-import { APP_BACKGROUND_COLOR } from "./theme";
+import { APP_BACKGROUND_COLOR, LOGIN_THEME_COLOR } from "./theme";
 
 describe("APP_BACKGROUND_COLOR", () => {
   it("matches the background token in globals.css (one source for the browser chrome)", () => {
@@ -22,5 +22,16 @@ describe("APP_BACKGROUND_COLOR", () => {
       theme_color: APP_BACKGROUND_COLOR,
       background_color: APP_BACKGROUND_COLOR,
     });
+  });
+});
+
+describe("LOGIN_THEME_COLOR", () => {
+  it("is the official granate token in globals.css", () => {
+    const css = readFileSync(
+      new URL("../../app/globals.css", import.meta.url),
+      "utf8",
+    );
+
+    expect(css).toContain(`--color-primary: ${LOGIN_THEME_COLOR};`);
   });
 });

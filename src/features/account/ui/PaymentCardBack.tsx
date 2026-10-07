@@ -28,7 +28,7 @@ export function PaymentCardBack({ card }: { card: CardFace }) {
           aria-hidden="true"
           data-testid="card-stripe"
           style={{ height: px(34) }}
-          className="shrink-0 bg-[linear-gradient(180deg,#2c1b1f,#120a0c_70%,#1d1215)]"
+          className="shrink-0 bg-[linear-gradient(180deg,var(--color-card-stripe-edge),var(--color-card-stripe)_70%,var(--color-card-stripe-low))]"
         />
 
         <div className="mt-3 flex items-center justify-between px-5">
@@ -48,11 +48,11 @@ export function PaymentCardBack({ card }: { card: CardFace }) {
           <p
             aria-hidden="true"
             style={{ height: px(30) }}
-            className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md bg-[repeating-linear-gradient(135deg,#fbf4ee_0_4px,#efe2d8_4px_8px)] px-2 text-sm whitespace-nowrap text-[#3b2a2e] italic"
+            className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md bg-[repeating-linear-gradient(135deg,var(--color-card-signature)_0_4px,var(--color-card-signature-line)_4px_8px)] px-2 text-sm whitespace-nowrap text-card-signature-ink italic"
           >
             {card.holderName}
           </p>
-          <RevealedCvv className="flex [height:calc(var(--card-px,1px)*30)] [width:calc(var(--card-px,1px)*54)] shrink-0 items-center justify-center rounded-md bg-white text-sm font-semibold tracking-[0.12em] text-[#1b1416] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]" />
+          <RevealedCvv className="flex [height:calc(var(--card-px,1px)*30)] [width:calc(var(--card-px,1px)*54)] shrink-0 items-center justify-center rounded-md bg-white text-sm font-semibold tracking-[0.12em] text-card-cvv-ink shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]" />
         </div>
 
         <div className="mt-auto flex items-end justify-between px-5">

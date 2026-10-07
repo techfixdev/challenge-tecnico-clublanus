@@ -36,8 +36,8 @@ export const MAX_TILT_Y = 12;
  */
 const SHADOW_TONE = {
   primary:
-    "bg-[radial-gradient(closest-side,rgb(78_17_28/0.5),rgb(78_17_28/0.18)_60%,transparent)]",
-  pink: "bg-[radial-gradient(closest-side,rgb(200_110_120/0.5),rgb(200_110_120/0.16)_60%,transparent)]",
+    "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-primary-dark)_50%,transparent),color-mix(in_srgb,var(--color-primary-dark)_18%,transparent)_60%,transparent)]",
+  pink: "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-card-pink-glow)_50%,transparent),color-mix(in_srgb,var(--color-card-pink-glow)_16%,transparent)_60%,transparent)]",
 } as const;
 
 export type CardTone = keyof typeof SHADOW_TONE;
@@ -53,7 +53,7 @@ type Press = {
 
 /** The shadow the faces cast on the page, the same on both. */
 const FACE =
-  "overflow-hidden rounded-3xl shadow-[0_1px_2px_rgb(78_17_28/0.18),0_10px_20px_-12px_rgb(78_17_28/0.45)] [backface-visibility:hidden]";
+  "overflow-hidden rounded-3xl shadow-[0_1px_2px_color-mix(in_srgb,var(--color-primary-dark)_18%,transparent),0_10px_20px_-12px_color-mix(in_srgb,var(--color-primary-dark)_45%,transparent)] [backface-visibility:hidden]";
 
 /**
  * A card that reacts like a physical object: pressed and dragged, it tilts towards the

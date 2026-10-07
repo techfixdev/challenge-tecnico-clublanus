@@ -33,10 +33,12 @@ export function PaymentCard({ card }: { card: CardFace }) {
             {/* The odometer's 1.15em row leaves the digits' ink 1.25px above its center;
               the chip follows the ink, so it sits centered on the figures. */}
             <p className="mt-2 flex items-center gap-3">
-              {/* Decorative for screen readers: the balance says its currency in words. */}
+              {/* Decorative for screen readers: the balance says its currency in words.
+                The club's gold (Pantone 618 C), lit from the top-left like every fill; its
+                ink keeps 5.2:1 on the darkest stop (the official gold itself). */}
               <span
                 aria-hidden="true"
-                className="-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md bg-gradient-to-br from-[#fff3c4] via-[#f4c95d] to-[#d99a2b] px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide text-[#6b4300] shadow-sm"
+                className="-translate-y-[calc(var(--card-px,1px)*1.25)] rounded-md bg-linear-155 from-gold-light via-gold-bright via-45% to-gold px-2 py-1 text-[length:calc(var(--card-px,1px)*10)] font-semibold tracking-wide text-gold-ink shadow-sm inset-shadow-specular-gold"
               >
                 {card.currency}
               </span>

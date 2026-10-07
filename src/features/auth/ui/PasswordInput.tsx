@@ -29,7 +29,7 @@ export function PasswordInput({ id, ...inputProps }: PasswordInputProps) {
         aria-pressed={visible}
         aria-controls={id}
         title={label}
-        className="absolute inset-y-0 right-1 my-auto flex size-10 items-center justify-center rounded-lg text-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
+        className="absolute inset-y-0 right-1 my-auto flex size-10 items-center justify-center rounded-lg text-white/75 hover:text-white focus-visible:ring-2 focus-visible:ring-gold-light focus-visible:outline-none"
       >
         {visible ? <EyeOffIcon /> : <EyeIcon />}
       </button>
