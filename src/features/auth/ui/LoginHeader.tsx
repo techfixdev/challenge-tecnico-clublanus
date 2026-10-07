@@ -32,7 +32,7 @@ export function LoginHeader() {
           fetchPriority="high"
         />
       </span>
-      <h1 className="login-wordmark mt-6 font-display text-[36px] leading-tight wrap-anywhere text-white">
+      <h1 className="login-wordmark mt-6 font-display text-[36px] leading-tight font-bold wrap-anywhere text-white">
         GranaBank
       </h1>
       <p className="mt-2 text-sm text-white/80">
