@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { colorTokens } from "@/shared/lib/design-tokens";
+
 /*
  * Guards the rule "only the Club Atlético Lanús brand manual palette": granate
  * (Pantone 188 C), gold (Pantone 618 C) and Cool Gray 7C, plus tints and shades of
@@ -10,26 +12,6 @@ import { describe, expect, it } from "vitest";
  */
 
 const css = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
-
-/** Every `--color-*` declaration in globals.css, with `var()` references resolved. */
-function colorTokens(): Map<string, string> {
-  const raw = new Map<string, string>();
-  for (const [, name, value] of css.matchAll(
-    /--color-([a-z0-9-]+):\s*([^;]+);/g,
-  )) {
-    raw.set(name, value.trim());
-  }
-  const resolve = (value: string, depth = 0): string => {
-    const ref = /^var\(--color-([a-z0-9-]+)\)$/.exec(value);
-    if (!ref) return value.toLowerCase();
-    const target = raw.get(ref[1]);
-    if (target === undefined || depth > 8) {
-      throw new Error(`Unresolvable color reference: ${value}`);
-    }
-    return resolve(target, depth + 1);
-  };
-  return new Map([...raw].map(([name, value]) => [name, resolve(value)]));
-}
 
 const channels = (hex: string) =>
   [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -140,7 +122,8 @@ const ALLOWLIST: Record<string, string> = {
 const isDangerException = (name: string) => name.startsWith("danger");
 
 describe("brand palette (globals.css)", () => {
-  const tokens = colorTokens();
+  // Every `--color-*` token, `var()` references resolved (shared with `pnpm tokens:figma`).
+  const tokens = colorTokens(css);
 
   it("declares exactly the allowlisted color tokens, with their brand-derived values", () => {
     expect(Object.fromEntries(tokens)).toEqual(ALLOWLIST);

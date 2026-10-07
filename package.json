@@ -21,7 +21,8 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "db:test": "tsx scripts/with-test-db.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "tokens:figma": "tsx scripts/tokens-figma.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
