@@ -64,4 +64,20 @@ describe("MovementList", () => {
       expect(item).toHaveClass("row-enter");
     }
   });
+
+  it("staggers at most the first 6 rows of a long first paint; the rest enter with the sixth", () => {
+    render(
+      <MovementList
+        today={TODAY}
+        movements={movementsOn(
+          ...Array.from(
+            { length: 8 },
+            (_, index) => `2026-10-07T${String(20 - index).padStart(2, "0")}:00:00Z`,
+          ),
+        )}
+      />,
+    );
+
+    expect(enterSteps()).toEqual(["0", "1", "2", "3", "4", "5", "5", "5"]);
+  });
 });

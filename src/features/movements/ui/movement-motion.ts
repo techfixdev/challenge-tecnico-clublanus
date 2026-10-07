@@ -7,8 +7,9 @@
 export const MAX_STAGGER_STEPS = 5;
 
 /**
- * Stagger step of the row at `index` on the first paint. Rows inserted later never
- * animate (`data-rows-entered`), so there is no later batch to restart from.
+ * Stagger step of the row at `index`, counted from the top of the whole list. Only the
+ * page's first paint animates (row-entrance.ts turns the entrance off afterwards), so a
+ * page added by "Cargar más" never restarts the count from its own first row.
  */
 export function rowEnterStep(index: number): number {
   return Math.min(Math.max(index, 0), MAX_STAGGER_STEPS);
