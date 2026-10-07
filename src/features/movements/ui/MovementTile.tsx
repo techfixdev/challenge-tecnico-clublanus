@@ -32,7 +32,7 @@ const TILE_SHARE = {
  * Marks a movement's type tile as a shared element (React `<ViewTransition>`, built into
  * the Next App Router). When a navigation shows the same movement's tile on the next page,
  * the browser morphs it from its old box to the new one: row → detail header, and back
- * through "Volver" (see BackLink). The browser's back button swaps without a morph:
+ * through "Volver" (see NavBar). The browser's back button swaps without a morph:
  * React restores that history entry on a sync lane, where it starts no view transition.
  *
  * - `share`: the class of that morph, timed in globals.css (`.movement-morph`); none on

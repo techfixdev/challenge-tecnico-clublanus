@@ -1,8 +1,8 @@
 "use client";
 
 import { ROUTES } from "@/shared/lib/routes";
-import { BackLink } from "@/shared/ui/BackLink";
 import { CLOSE_QUICK_ACTION } from "@/shared/ui/motion/navigation";
+import { NavBar } from "@/shared/ui/NavBar";
 import { RouteError, type RouteErrorProps } from "@/shared/ui/RouteError";
 
 /**
@@ -13,7 +13,10 @@ export default function TransferError(props: RouteErrorProps) {
   return (
     <div className="flex flex-col">
       <div className="px-6 pt-8">
-        <BackLink href={ROUTES.home} transitionTypes={CLOSE_QUICK_ACTION} />
+        <NavBar
+          title="Transferir"
+          back={{ href: ROUTES.home, transitionTypes: CLOSE_QUICK_ACTION }}
+        />
       </div>
       <RouteError title="No pudimos abrir las transferencias" {...props} />
     </div>

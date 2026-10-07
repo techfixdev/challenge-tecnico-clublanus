@@ -60,6 +60,15 @@ describe("MovementDetail", () => {
     );
   });
 
+  it("sits under a navigation bar titled Movimiento, with a bare back chevron", () => {
+    render(
+      <MovementDetail movement={makeMovement()} backHref="/movimientos" />,
+    );
+
+    expect(screen.getByTestId("nav-bar-title")).toHaveTextContent("Movimiento");
+    expect(screen.getByRole("link", { name: "Volver" })).toHaveTextContent("");
+  });
+
   it("dates movements in Buenos Aires time, whatever the server's time zone", () => {
     // Vitest runs with TZ=UTC (like Vercel): 01:30 UTC on Oct 5 is still Oct 4 in Argentina.
     render(

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { CARD_BRAND_LABEL } from "@/features/account/domain/card";
 import { formatLongDate, formatTime } from "@/shared/lib/dates";
-import { BackLink } from "@/shared/ui/BackLink";
+import { NavBar } from "@/shared/ui/NavBar";
 
 import type { Movement } from "../domain/movement";
 import {
@@ -40,9 +40,9 @@ export function MovementDetail({
   const { card } = movement;
   return (
     <main className="flex flex-col px-6 pt-8">
-      <BackLink href={backHref} />
+      <NavBar title="Movimiento" back={{ href: backHref }} />
 
-      <div className="mt-8 flex flex-col items-center text-center">
+      <div className="mt-6 flex flex-col items-center text-center">
         <MovementTile id={movement.id}>
           <MovementTypeIcon type={movement.type} size="lg" />
         </MovementTile>

@@ -2,7 +2,7 @@ import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
 import { Skeleton } from "@/shared/ui/Skeleton";
 
 /**
- * Same frame as the first step: back control, progress, title, field, and the button
+ * Same frame as the first step: navigation bar, progress, title, field, and the button
  * pinned to the bottom of the screen like the step's own (StepActions).
  */
 export default function TransferLoading() {
@@ -10,11 +10,12 @@ export default function TransferLoading() {
     <ScreenTransition placeholder>
       <div aria-busy="true" className="flex flex-1 flex-col px-6 pt-8">
         <span className="sr-only">Cargando…</span>
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-24 rounded-2xl" />
+        <div className="flex h-11 items-center justify-between">
+          <Skeleton className="size-6 rounded-full" />
+          <Skeleton className="h-4 w-20" />
           <Skeleton className="h-3 w-16" />
         </div>
-        <Skeleton className="mt-6 h-1 w-full rounded-full" />
+        <Skeleton className="mt-4 h-1 w-full rounded-full" />
         <Skeleton className="mt-6 h-6 w-48" />
         <Skeleton className="mt-2 h-4 w-64" />
         <Skeleton className="mt-8 h-4 w-20" />

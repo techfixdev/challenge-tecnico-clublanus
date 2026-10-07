@@ -9,9 +9,9 @@ import {
   QUICK_ACTION_MORPH,
   QuickActionMorph,
 } from "@/features/transfers/ui/QuickActionMorph";
-import { BackLink } from "@/shared/ui/BackLink";
 import { CLOSE_QUICK_ACTION } from "@/shared/ui/motion/navigation";
 import { ScreenTransition } from "@/shared/ui/motion/ScreenTransition";
+import { NavBar } from "@/shared/ui/NavBar";
 import { ROUTES } from "@/shared/lib/routes";
 import { ReceiveIcon } from "@/shared/ui/icons";
 import { QrCode } from "@/shared/ui/qr/QrCode";
@@ -33,7 +33,10 @@ export default async function ReceivePage() {
     <ScreenTransition>
       <QuickActionMorph name={QUICK_ACTION_MORPH.receive}>
         <main className="flex flex-col px-6 pt-8">
-          <BackLink href={ROUTES.home} transitionTypes={CLOSE_QUICK_ACTION} />
+          <NavBar
+            title="Recibir"
+            back={{ href: ROUTES.home, transitionTypes: CLOSE_QUICK_ACTION }}
+          />
           <h1 className="mt-6 text-xl font-semibold text-foreground">
             Recibir dinero
           </h1>

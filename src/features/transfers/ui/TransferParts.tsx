@@ -1,12 +1,10 @@
 import type { ReactNode, Ref } from "react";
 
-import { BACK_CONTROL_CLASSES } from "@/shared/ui/back-control";
-import { ChevronLeftIcon } from "@/shared/ui/icons";
 import { INPUT_TEXT_CLASS } from "@/shared/ui/input-text";
 import { CLOSE_QUICK_ACTION } from "@/shared/ui/motion/navigation";
+import { NavBar } from "@/shared/ui/NavBar";
 
 import type { ConfirmedRecipient } from "../domain/transfer-form";
-import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /** Text inputs of the send flow (same look as the login fields). */
 export const FIELD_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEXT_CLASS} text-foreground inset-shadow-recessed outline-none ring-1 ring-transparent transition placeholder:text-sm placeholder:text-muted focus-visible:ring-2 focus-visible:ring-primary/50 aria-invalid:ring-danger`;
@@ -14,9 +12,13 @@ export const FIELD_CLASSES = `h-12 w-full rounded-xl bg-surface px-4 ${INPUT_TEX
 export const STEP_COUNT = 3;
 
 /**
- * Top of every step: back control, "Paso n de 3" with a segmented progress bar, and the
- * step title. The title takes the focus when the step changes (tabIndex -1), so a screen
- * reader announces the new step and keyboard users continue from there.
+ * Top of every step: the navigation bar (back chevron, "Transferir", "Paso n de 3"), a
+ * segmented progress bar and the step title. The title takes the focus when the step
+ * changes (tabIndex -1), so a screen reader announces the new step and keyboard users
+ * continue from there.
+ *
+ * A fragment, not a box: the bar is then a child of the whole step, so it stays stuck at
+ * the top while the step scrolls (a sticky element never leaves its parent).
  */
 export function StepHeader({
   step,
@@ -32,35 +34,23 @@ export function StepHeader({
   back: { href: string } | { onBack: () => void };
 }) {
   return (
-    <div className="flex flex-col">
-      <div className="flex items-center justify-between">
-        {"href" in back ? (
-          // Full prefetch: Home must be ready at commit for the screen to shrink back
-          // into the Enviar tile (no skeleton, so the view-transition pair exists).
-          <MotionLink
-            href={back.href}
-            prefetch
-            transitionTypes={CLOSE_QUICK_ACTION}
-            className={BACK_CONTROL_CLASSES}
-          >
-            <ChevronLeftIcon className="size-5" />
-            Volver
-          </MotionLink>
-        ) : (
-          <button
-            type="button"
-            onClick={back.onBack}
-            className={BACK_CONTROL_CLASSES}
-          >
-            <ChevronLeftIcon className="size-5" />
-            Volver
-          </button>
-        )}
-        <p className="text-xs font-medium text-muted tabular-nums">
-          Paso {step} de {STEP_COUNT}
-        </p>
-      </div>
-      <div aria-hidden="true" className="mt-6 flex gap-1.5">
+    <>
+      <NavBar
+        title="Transferir"
+        // Leaving the flow shrinks the screen back into Home's Enviar tile; NavBar's link
+        // fully prefetches Home, so the tile (the view-transition pair) is there at commit.
+        back={
+          "href" in back
+            ? { href: back.href, transitionTypes: CLOSE_QUICK_ACTION }
+            : back
+        }
+        trailing={
+          <p className="text-xs font-medium text-muted tabular-nums">
+            Paso {step} de {STEP_COUNT}
+          </p>
+        }
+      />
+      <div aria-hidden="true" className="mt-4 flex gap-1.5">
         {Array.from({ length: STEP_COUNT }, (_, index) => (
           <span
             key={index}
@@ -77,7 +67,7 @@ export function StepHeader({
         {title}
       </h1>
       <p className="mt-1 text-sm text-muted">{description}</p>
-    </div>
+    </>
   );
 }
 
