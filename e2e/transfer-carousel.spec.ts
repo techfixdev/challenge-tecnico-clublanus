@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { login } from "./fixtures/session";
+import { settle } from "./fixtures/view-transitions";
 
 /*
  * The send flow is one surface moved by the finger: recents are a strip of tiles dragged
@@ -16,7 +17,10 @@ async function centerX(target: Locator): Promise<number> {
   return box ? box.x + box.width / 2 : 0;
 }
 
-/** Drags from the middle of `target` by `dx` pixels in small steps, finger still down. */
+/**
+ * Drags from the middle of `target` by `dx` pixels in small steps, finger still down.
+ * Returns where the finger is.
+ */
 async function dragBy(page: Page, target: Locator, dx: number) {
   const box = await target.boundingBox();
   if (!box) throw new Error("nothing to drag");
@@ -25,12 +29,27 @@ async function dragBy(page: Page, target: Locator, dx: number) {
   await page.mouse.move(startX, y);
   await page.mouse.down();
   await page.mouse.move(startX + dx, y, { steps: 12 });
+  return { x: startX + dx, y };
+}
+
+/**
+ * Keeps the finger where it is for longer than the release velocity's window (moving
+ * only a pixel up and down), so lifting it then throws nothing: the strip settles on
+ * the tile nearest to where it was let go.
+ */
+async function holdStill(page: Page, finger: { x: number; y: number }) {
+  for (let sample = 0; sample < 8; sample += 1) {
+    await page.mouse.move(finger.x, finger.y + (sample % 2));
+    await page.waitForTimeout(20);
+  }
 }
 
 test.describe("the transfer flow, by hand", () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
     await page.goto("/transferir");
+    // The strip takes drags once Motion's gesture features have loaded (after hydration).
+    await settle(page);
   });
 
   test("the recents strip stretches past its start and settles back", async ({
@@ -67,8 +86,8 @@ test.describe("the transfer flow, by hand", () => {
     await expect(first).toBeVisible();
     const center = await centerX(first);
 
-    // Two tiles' worth to the left, slowly (no flick), then let go.
-    await dragBy(page, first, -2 * 108);
+    // Two tiles' worth to the left, held still (no flick), then let go.
+    await holdStill(page, await dragBy(page, first, -2 * 108));
     await page.mouse.up();
 
     // The third person settles in the center and is the one chosen.
