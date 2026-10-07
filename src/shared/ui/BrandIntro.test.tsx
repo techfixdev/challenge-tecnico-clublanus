@@ -68,4 +68,25 @@ describe("BrandIntro", () => {
 
     expect(screen.queryByTestId("brand-intro")).not.toBeInTheDocument();
   });
+
+  it("stays quiet when its layout unmounts before the dissolve finishes", async () => {
+    // Signing out mid-intro unmounts the layout; the dissolve's promise settles later.
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const dissolve = new FakeCSSAnimation(
+      "brand-intro-dissolve",
+      "running",
+      500,
+    );
+    stubIntroAnimations(dissolve);
+    const { unmount } = render(<BrandIntro>shield</BrandIntro>);
+
+    unmount();
+    await act(async () => dissolve.finish());
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("brand-intro")).not.toBeInTheDocument();
+    consoleError.mockRestore();
+  });
 });

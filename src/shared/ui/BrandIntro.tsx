@@ -37,7 +37,6 @@ export function BrandIntro({ children }: { children: ReactNode }) {
       setDone(true);
       return;
     }
-    let mounted = true;
     // Hydrated: jump the dissolve to its start if it has not begun yet. Moving the
     // timeline (instead of restarting an animation) keeps it continuous.
     for (const animation of intro.getAnimations({ subtree: true })) {
@@ -57,17 +56,15 @@ export function BrandIntro({ children }: { children: ReactNode }) {
         animation.currentTime = delay;
       }
       // Still to come: its animationend can fire while React is hydrating the rest of
-      // the tree and be dropped, so the animation's own promise unmounts it too.
+      // the tree and be dropped, so the animation's own promise unmounts it too. If the
+      // layout is gone by then (signed out mid-intro), React ignores the update.
       if (animation.animationName === "brand-intro-dissolve") {
         animation.finished.then(
-          () => mounted && setDone(true),
+          () => setDone(true),
           () => {}, // cancelled: the intro is already gone
         );
       }
     }
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   if (done) return null;
