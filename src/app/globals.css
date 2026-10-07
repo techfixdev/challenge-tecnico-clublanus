@@ -17,7 +17,8 @@
 @theme {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   /* Wordmark, screen titles and large amounts. Its x-height is lower than Poppins' (0.40em
-     against 0.55em), so it is set a couple of pixels larger where it replaces it. */
+     against 0.55em) and so are its digits (0.60em against 0.74em): titles are set 2px
+     larger than Poppins would be, amounts 4px. */
   --font-display: var(--font-rokkitt), ui-serif, Georgia, serif;
 
   /* --- Brand palette --- */
