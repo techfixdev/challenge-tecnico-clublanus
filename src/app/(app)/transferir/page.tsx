@@ -46,27 +46,7 @@ export default async function TransferPage({
     resolveTransferPrefill(prismaTransferRepository, user.id, to),
   ]);
 
-  if (cards.length === 0) {
-    return (
-      <ScreenTransition>
-        <main className="flex flex-col items-center px-6 py-16 text-center">
-          <h1 className="text-lg font-semibold text-foreground">
-            Necesitás una tarjeta para transferir
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            El dinero sale de una de tus tarjetas, y todavía no tenés ninguna.
-          </p>
-          <MotionLink
-            href={ROUTES.home}
-            transitionTypes={CLOSE_QUICK_ACTION}
-            className={buttonClassName({ size: "compact", className: "mt-8" })}
-          >
-            Volver al inicio
-          </MotionLink>
-        </main>
-      </ScreenTransition>
-    );
-  }
+  if (cards.length === 0) return <NoCardsScreen />;
 
   // Home's "Enviar" tile grows into this screen (see QuickActionMorph).
   return (
@@ -85,6 +65,29 @@ export default async function TransferPage({
           />
         </main>
       </QuickActionMorph>
+    </ScreenTransition>
+  );
+}
+
+/** Money leaves from a card: without one there is nothing to send from yet. */
+function NoCardsScreen() {
+  return (
+    <ScreenTransition>
+      <main className="flex flex-col items-center px-6 py-16 text-center">
+        <h1 className="text-lg font-semibold text-foreground">
+          Necesitás una tarjeta para transferir
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          El dinero sale de una de tus tarjetas, y todavía no tenés ninguna.
+        </p>
+        <MotionLink
+          href={ROUTES.home}
+          transitionTypes={CLOSE_QUICK_ACTION}
+          className={buttonClassName({ size: "compact", className: "mt-8" })}
+        >
+          Volver al inicio
+        </MotionLink>
+      </main>
     </ScreenTransition>
   );
 }
