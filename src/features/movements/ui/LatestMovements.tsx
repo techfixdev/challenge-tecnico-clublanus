@@ -1,11 +1,11 @@
 import { ROUTES } from "@/shared/lib/routes";
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 import { SECTION_PUSH } from "@/shared/ui/motion/navigation";
 
 import type { Movement } from "../domain/movement";
 import { DETAIL_FROM_HOME } from "../domain/movement-search-params";
 import { movementDetailHref, rowEnterStyle } from "./MovementList";
 import { MovementRow } from "./MovementRow";
-import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 /**
  * "Últimos movimientos" on Home: the few latest rows as one grouped surface, plus a link

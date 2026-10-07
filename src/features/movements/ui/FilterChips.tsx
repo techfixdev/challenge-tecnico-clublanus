@@ -1,3 +1,4 @@
+import { MotionLink } from "@/shared/ui/motion/MotionLink";
 import { IN_PLACE } from "@/shared/ui/motion/navigation";
 import { ScrollActiveIntoView } from "@/shared/ui/ScrollActiveIntoView";
 
@@ -6,7 +7,6 @@ import {
   buildMovementsHref,
   type MovementFilters,
 } from "../domain/movement-search-params";
-import { MotionLink } from "@/shared/ui/motion/MotionLink";
 
 const CHIPS: { label: string; type: MovementType | undefined }[] = [
   { label: "Todos", type: undefined },

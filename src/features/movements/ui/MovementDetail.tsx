@@ -31,7 +31,7 @@ function DetailRow({ term, children }: { term: string; children: ReactNode }) {
 
 /**
  * Movement detail (not in the Figma): same visual language as the list — the type tile,
- * the type color for the amount — plus the data a bank receipt shows and what can be done
+ * the amount toned by direction — plus the data a bank receipt shows and what can be done
  * with it (share, copy the reference, send again). The status shows once, as the badge
  * under the amount.
  */

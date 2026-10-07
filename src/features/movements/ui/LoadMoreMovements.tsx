@@ -8,12 +8,12 @@ import { Button } from "@/shared/ui/Button";
 
 import type { Movement } from "../domain/movement";
 import { formatMovementCount } from "../domain/movement-display";
+import { parseMovementPage } from "../domain/movement-dto";
 import {
   toMovementSearchParams,
   type MovementFilters,
 } from "../domain/movement-search-params";
 import { MovementList } from "./MovementList";
-import { parseMovementPage } from "../domain/movement-dto";
 
 /** A hung request must not leave the button spinning forever. */
 export const LOAD_MORE_TIMEOUT_MS = 10_000;
@@ -116,13 +116,13 @@ export function LoadMoreMovements({
         `/api/movements?${params}`,
         controller.signal,
       );
-      const next = page.movements;
-      setLoaded((current) => [...current, ...next]);
+      setLoaded((current) => [...current, ...page.movements]);
       setCursor(page.nextCursor);
-      setAnnouncement(loadedAnnouncement(next.length));
+      setAnnouncement(loadedAnnouncement(page.movements.length));
       setStatus("idle");
     } catch (error) {
-      if (requestRef.current !== controller) return; // unmounted meanwhile
+      // Unmounted meanwhile: the cleanup aborted this request and nobody is listening.
+      if (requestRef.current !== controller) return;
       if (error instanceof SessionExpiredError) {
         // End the pending state before navigating: the redirect may take a moment, and
         // the user should see why the list stopped instead of a button stuck on "Cargando…".

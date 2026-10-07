@@ -72,7 +72,8 @@ describe("MovementList", () => {
         movements={movementsOn(
           ...Array.from(
             { length: 8 },
-            (_, index) => `2026-10-07T${String(20 - index).padStart(2, "0")}:00:00Z`,
+            (_, index) =>
+              `2026-10-07T${String(20 - index).padStart(2, "0")}:00:00Z`,
           ),
         )}
       />,

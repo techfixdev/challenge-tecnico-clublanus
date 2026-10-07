@@ -22,13 +22,15 @@ const PART_CLASSES =
  * list's card style (the line wraps on very narrow screens). Each currency is totaled on
  * its own, never added to another. With one currency it is the design's single line; with
  * more, the month heads the card and each currency gets its own line underneath, so the
- * dollar and peso totals read as rows instead of wrapping into each other. Income takes the "received" color, as in the rows;
- * expenses stay neutral because they mix two types (sent and automatic debits) with
- * different colors. Amounts are spoken with their currency ("más 95 dólares").
+ * dollar and peso totals read as rows instead of wrapping into each other.
+ *
+ * Income takes the "received" color, as in the rows; expenses stay neutral because they
+ * mix two types (sent and automatic debits) with different colors. Amounts are spoken
+ * with their currency ("más 95 dólares").
  */
 export function MonthlySummaryView({ summary }: { summary: MonthlySummary }) {
   const monthName = formatMonthName(summary.month);
-  const multiCurrency = summary.totals.length > 1;
+  const isMultiCurrency = summary.totals.length > 1;
   return (
     <section aria-label={`Resumen de ${monthName}`} className={CARD_CLASSES}>
       <div className="-ml-[18px] flex min-h-11 flex-wrap content-center items-baseline gap-y-0.5 py-1.5 [clip-path:inset(0_0_0_18px)]">
@@ -37,7 +39,7 @@ export function MonthlySummaryView({ summary }: { summary: MonthlySummary }) {
         </h2>
         {summary.totals.map((totals) => (
           <Fragment key={totals.currency}>
-            {multiCurrency ? (
+            {isMultiCurrency ? (
               <span aria-hidden="true" className="basis-full" />
             ) : null}
             <dl className="contents" data-currency={totals.currency}>

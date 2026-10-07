@@ -12,7 +12,7 @@ import type { MovementType } from "../domain/movement";
  * Visual language per movement type, on its icon tile. The amount is toned by direction
  * instead (see MovementAmount), so the type's color lives on the tile alone.
  */
-export const MOVEMENT_TYPE_STYLE: Record<
+const MOVEMENT_TYPE_STYLE: Record<
   MovementType,
   {
     Icon: ComponentType<SVGProps<SVGSVGElement>>;
