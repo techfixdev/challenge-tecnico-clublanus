@@ -1,9 +1,13 @@
+import { randomBytes } from "node:crypto";
+
 import { SignJWT, jwtVerify } from "jose";
 
 import { isLanPreviewEnabled } from "@/shared/config/lan-preview";
 
 /**
- * Stateless session token (JWT, HS256) and its cookie settings.
+ * Session token (JWT, HS256) and its cookie settings. The token names a session row
+ * (`jti`) and its user (`sub`); the signature lets `proxy.ts` reject forged or expired
+ * tokens without a database hit, while the server checks the row (see ./session.ts).
  * Framework-free on purpose: it is used by both `proxy.ts` and server code, and unit-tested.
  */
 
@@ -20,7 +24,12 @@ export const SESSION_DURATION_SECONDS = {
   default: DAY_IN_SECONDS,
 } as const;
 
-export type SessionPayload = { userId: string };
+export type SessionPayload = { userId: string; sessionId: string };
+
+/** 32 random bytes (256 bits), base64url: an opaque, unguessable session id. */
+export function generateSessionId(): string {
+  return randomBytes(32).toString("base64url");
+}
 
 /** Encodes the signing key, failing fast with an actionable message on misconfiguration. */
 export function getSessionKey(
@@ -47,18 +56,22 @@ export function getSessionExpiry(remember: boolean, now = new Date()): Date {
 }
 
 export async function signSessionToken(
-  userId: string,
+  { userId, sessionId }: SessionPayload,
   { key, expiresAt }: { key: Uint8Array; expiresAt: Date },
 ): Promise<string> {
   return new SignJWT({})
     .setProtectedHeader({ alg: ALGORITHM })
     .setSubject(userId)
+    .setJti(sessionId)
     .setIssuedAt()
     .setExpirationTime(expiresAt)
     .sign(key);
 }
 
-/** Returns the session for a valid token, or `null` if it is missing, expired, forged or malformed. */
+/**
+ * Returns the session a valid token names, or `null` if it is missing, expired, forged or
+ * malformed. Signature only: whether that session is still live is the server's call.
+ */
 export async function verifySessionToken(
   token: string | undefined,
   key: Uint8Array,
@@ -68,7 +81,9 @@ export async function verifySessionToken(
     const { payload } = await jwtVerify(token, key, {
       algorithms: [ALGORITHM],
     });
-    return payload.sub ? { userId: payload.sub } : null;
+    return payload.sub && payload.jti
+      ? { userId: payload.sub, sessionId: payload.jti }
+      : null;
   } catch {
     return null;
   }

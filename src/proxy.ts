@@ -39,14 +39,15 @@ async function readSessionSafely(
 
 /**
  * Optimistic route guard: only verifies the JWT signature/expiry from the cookie (no DB),
- * because it runs on every matched request, including prefetches. The authoritative check
- * lives in the data access layer (`requireUser`).
+ * because it runs on every matched request, including prefetches (Next.js auth guide:
+ * "avoid database checks" in Proxy). Whether the session is still live (not revoked by
+ * logout) is decided by the server, in the data access layer (`requireUser`).
  */
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
   const isLoginPage = pathname === ROUTES.login;
 
-  // Signed cookie whose user no longer exists (see LOGIN_EXPIRED_PARAM): drop it, show login.
+  // Signed cookie the server no longer honours (see LOGIN_EXPIRED_PARAM): drop it, show login.
   if (isLoginPage && searchParams.has(LOGIN_EXPIRED_PARAM)) {
     const response = NextResponse.next();
     response.cookies.delete(SESSION_COOKIE_NAME);

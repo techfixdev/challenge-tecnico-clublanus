@@ -41,6 +41,7 @@ model User {
   transfersSent     Transfer[]          @relation("TransferSender")
   transfersReceived Transfer[]          @relation("TransferRecipient")
   cardReveals       CardDetailsReveal[]
+  sessions          Session[]
 }
 
 model Card {
@@ -148,4 +149,19 @@ model CardDetailsReveal {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([cardId])
+}
+
+/// One row per sign-in. The cookie holds a signed token carrying this id; the server only
+/// honours it while the row exists, is not revoked and has not expired, so logging out (or
+/// "sign out everywhere") takes effect immediately, even for a copied token. The id is
+/// random and opaque (src/features/auth/server/session-token.ts). Cascades with the user.
+model Session {
+  id        String    @id @db.VarChar(64)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  @@index([userId])
 }

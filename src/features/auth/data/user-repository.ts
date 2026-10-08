@@ -20,10 +20,3 @@ export function findCredentialsByEmail(
     select: { id: true, passwordHash: true },
   });
 }
-
-export function findSessionUserById(id: string): Promise<SessionUser | null> {
-  return db.user.findUnique({
-    where: { id },
-    select: { id: true, email: true, firstName: true, lastName: true },
-  });
-}

@@ -1,6 +1,7 @@
 /**
- * Query param that marks a login visit caused by a session whose user no longer exists
- * (e.g. the database was reset). `requireUser()` redirects there and `proxy.ts` clears the
+ * Query param that marks a login visit caused by a signed session the server no longer
+ * honours (revoked by logout, expired, or its user is gone, e.g. the database was reset).
+ * `requireUser()` redirects there and `proxy.ts` clears the
  * cookie for it; a plain redirect to /login would bounce back to / because the proxy only
  * checks the token signature.
  */

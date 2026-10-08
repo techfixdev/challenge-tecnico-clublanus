@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SESSION_DURATION_SECONDS,
   buildSessionCookieOptions,
+  generateSessionId,
   getSessionKey,
   getSessionExpiry,
   signSessionToken,
@@ -14,6 +15,7 @@ import {
 
 const SECRET = "a-test-secret-that-is-at-least-32-characters";
 const key = getSessionKey(SECRET);
+const SESSION = { userId: "user_123", sessionId: "session_abc" };
 
 describe("getSessionKey", () => {
   afterEach(() => {
@@ -32,19 +34,17 @@ describe("getSessionKey", () => {
 });
 
 describe("session token", () => {
-  it("round-trips the user id", async () => {
-    const token = await signSessionToken("user_123", {
+  it("round-trips the user id and the session id", async () => {
+    const token = await signSessionToken(SESSION, {
       key,
       expiresAt: getSessionExpiry(false),
     });
 
-    await expect(verifySessionToken(token, key)).resolves.toEqual({
-      userId: "user_123",
-    });
+    await expect(verifySessionToken(token, key)).resolves.toEqual(SESSION);
   });
 
-  it("only carries the user id (no PII) in the payload", async () => {
-    const token = await signSessionToken("user_123", {
+  it("only carries the user id and the opaque session id (no PII) in the payload", async () => {
+    const token = await signSessionToken(SESSION, {
       key,
       expiresAt: getSessionExpiry(true),
     });
@@ -52,11 +52,12 @@ describe("session token", () => {
       Buffer.from(token.split(".")[1], "base64url").toString(),
     ) as Record<string, unknown>;
 
-    expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "sub"]);
+    expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "jti", "sub"]);
+    expect(payload).toMatchObject({ sub: "user_123", jti: "session_abc" });
   });
 
   it("rejects an expired token", async () => {
-    const token = await signSessionToken("user_123", {
+    const token = await signSessionToken(SESSION, {
       key,
       expiresAt: new Date(Date.now() - 60_000),
     });
@@ -64,7 +65,7 @@ describe("session token", () => {
   });
 
   it("rejects a tampered token", async () => {
-    const token = await signSessionToken("user_123", {
+    const token = await signSessionToken(SESSION, {
       key,
       expiresAt: getSessionExpiry(false),
     });
@@ -80,7 +81,7 @@ describe("session token", () => {
 
   it("rejects a token signed with a different secret", async () => {
     const otherKey = getSessionKey("another-secret-that-is-also-32-chars-long");
-    const token = await signSessionToken("user_123", {
+    const token = await signSessionToken(SESSION, {
       key: otherKey,
       expiresAt: getSessionExpiry(false),
     });
@@ -90,6 +91,16 @@ describe("session token", () => {
   it("rejects a token without a subject", async () => {
     const token = await new SignJWT({})
       .setProtectedHeader({ alg: "HS256" })
+      .setJti("session_abc")
+      .setExpirationTime("1h")
+      .sign(key);
+    await expect(verifySessionToken(token, key)).resolves.toBeNull();
+  });
+
+  it("rejects a token without a session id (issued before sessions were revocable)", async () => {
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user_123")
       .setExpirationTime("1h")
       .sign(key);
     await expect(verifySessionToken(token, key)).resolves.toBeNull();
@@ -98,6 +109,15 @@ describe("session token", () => {
   it("returns null for missing or garbage input", async () => {
     await expect(verifySessionToken(undefined, key)).resolves.toBeNull();
     await expect(verifySessionToken("not-a-jwt", key)).resolves.toBeNull();
+  });
+});
+
+describe("generateSessionId", () => {
+  it("returns a long, unguessable, URL-safe id that never repeats", () => {
+    const ids = new Set(Array.from({ length: 100 }, generateSessionId));
+
+    expect(ids.size).toBe(100);
+    for (const id of ids) expect(id).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 });
 

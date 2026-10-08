@@ -118,6 +118,31 @@ test("logs in, keeps /login out of reach, and logs out", async ({
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("logging out revokes the session: a copy of the cookie stops working", async ({
+  page,
+  context,
+}) => {
+  await login(page);
+  const copied = (await context.cookies()).filter(
+    (cookie) => cookie.name === "granabank_session",
+  );
+  expect(copied).toHaveLength(1);
+
+  await page
+    .getByRole("navigation", { name: "Principal" })
+    .getByRole("button", { name: "Cerrar sesión" })
+    .click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  // Replaying the still validly signed token: the server finds its session revoked.
+  await context.addCookies(copied);
+  const replayed = await page.request.get("/api/movements");
+  expect(replayed.status()).toBe(401);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByLabel("Email")).toBeVisible();
+});
+
 test("'Recordarme' issues a persistent 30-day cookie", async ({
   page,
   context,
