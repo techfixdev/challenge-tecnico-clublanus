@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   EDGE_RESISTANCE,
-  FLICK_VELOCITY,
+  DECK_FLICK_VELOCITY,
   resistEdges,
   snapIndex,
   snapProgress,
@@ -26,16 +26,26 @@ describe("snapIndex: the card a release settles on", () => {
 
   it("carries the release's velocity: a flick turns a card even after a short drag", () => {
     expect(
-      snapIndex({ offset: 30, velocity: FLICK_VELOCITY, snaps, from: 0 }),
+      snapIndex({ offset: 30, velocity: DECK_FLICK_VELOCITY, snaps, from: 0 }),
     ).toBe(1);
     expect(
-      snapIndex({ offset: 280, velocity: -FLICK_VELOCITY, snaps, from: 1 }),
+      snapIndex({
+        offset: 280,
+        velocity: -DECK_FLICK_VELOCITY,
+        snaps,
+        from: 1,
+      }),
     ).toBe(0);
   });
 
   it("lets a flick against a long drag win: the finger's last word decides", () => {
     expect(
-      snapIndex({ offset: 250, velocity: -FLICK_VELOCITY, snaps, from: 0 }),
+      snapIndex({
+        offset: 250,
+        velocity: -DECK_FLICK_VELOCITY,
+        snaps,
+        from: 0,
+      }),
     ).toBe(0);
   });
 
@@ -45,10 +55,15 @@ describe("snapIndex: the card a release settles on", () => {
 
   it("never leaves the deck: a flick past either end rests on the end card", () => {
     expect(
-      snapIndex({ offset: 560, velocity: FLICK_VELOCITY, snaps, from: 2 }),
+      snapIndex({ offset: 560, velocity: DECK_FLICK_VELOCITY, snaps, from: 2 }),
     ).toBe(2);
     expect(
-      snapIndex({ offset: -20, velocity: -FLICK_VELOCITY, snaps, from: 0 }),
+      snapIndex({
+        offset: -20,
+        velocity: -DECK_FLICK_VELOCITY,
+        snaps,
+        from: 0,
+      }),
     ).toBe(0);
   });
 

@@ -11,6 +11,10 @@ import { SPRING_PHYSICS } from "../motion/springs";
  * - a released surface coasts as a scroll view decelerates (`projectRelease`) and lands
  *   on the one critically damped spring, started at the finger's velocity, capped only so
  *   it never passes where it rests (`settleVelocity`).
+ * The card deck shares the velocity, the coast and the settle, but keeps two rules of its
+ * own (features/account/ui/card-snap.ts): a fainter, linear pull past its ends
+ * (`resistEdges`), since a long stretch would read as more cards, and a lighter flick
+ * (`DECK_FLICK_VELOCITY`, 400), since a flick there turns one card and is easy to undo.
  */
 
 /** How far from the screen's left edge a press can start the swipe back. */

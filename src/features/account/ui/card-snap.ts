@@ -19,9 +19,11 @@ export const EDGE_RESISTANCE = 0.12;
 
 /**
  * A release faster than this is a flick: it turns the card in its direction even after a
- * short drag. Slower, the card follows where the finger left the deck.
+ * short drag. Slower, the card follows where the finger left the deck. Lighter than the
+ * shared `FLICK_VELOCITY` (500) of the edge swipe and the sheet: a deck flick only ever
+ * turns one card, which is easy to undo, whereas those leave the screen or close it.
  */
-export const FLICK_VELOCITY = 400;
+export const DECK_FLICK_VELOCITY = 400;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -68,8 +70,8 @@ export function snapIndex({
   if (snaps.length === 0) return 0;
   const progress = snapProgress(offset, snaps);
   let target: number;
-  if (velocity >= FLICK_VELOCITY) target = Math.floor(progress) + 1;
-  else if (velocity <= -FLICK_VELOCITY) target = Math.ceil(progress) - 1;
+  if (velocity >= DECK_FLICK_VELOCITY) target = Math.floor(progress) + 1;
+  else if (velocity <= -DECK_FLICK_VELOCITY) target = Math.ceil(progress) - 1;
   else target = nearestCard(projectRelease(offset, velocity), snaps);
   return clamp(
     target,
