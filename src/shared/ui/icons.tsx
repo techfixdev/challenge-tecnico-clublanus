@@ -175,11 +175,3 @@ export function CheckIcon(props: IconProps) {
     </Icon>
   );
 }
-
-export function ChevronRightIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="m9 5 7 7-7 7" />
-    </Icon>
-  );
-}

@@ -47,8 +47,9 @@ function toRoundedCents(value: MoneyInput): number {
   return minus ? -cents : cents;
 }
 
-function groupThousands(units: number): string {
-  return String(units).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+/** Thousands grouping of a run of integer digits: "1234567" → "1.234.567". */
+export function groupThousands(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 /**
@@ -65,8 +66,8 @@ function formatCents(
   const remainder = absolute % 100;
   const showsDecimals = (fractionDigits ?? (remainder === 0 ? 0 : 2)) === 2;
   const text = showsDecimals
-    ? `${groupThousands(units)},${String(remainder).padStart(2, "0")}`
-    : groupThousands(units + (remainder >= 50 ? 1 : 0));
+    ? `${groupThousands(String(units))},${String(remainder).padStart(2, "0")}`
+    : groupThousands(String(units + (remainder >= 50 ? 1 : 0)));
   // An amount that rounds to zero is just "0", never "-0".
   return { isNegative: cents < 0 && /[1-9]/.test(text), text };
 }

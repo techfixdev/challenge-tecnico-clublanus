@@ -1,9 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
 /** Phones (incl. 320px and Android's page zoom), the 390px design, tablets, desktop. */
-export const WIDTHS = [240, 280, 320, 360, 390, 412, 768, 1024];
+const WIDTHS = [240, 280, 320, 360, 390, 412, 768, 1024];
 /** Extreme page zoom: wrapping and stacking are fine, sideways page scroll is not. */
-export const EXTREME_WIDTHS = [180, 200];
+const EXTREME_WIDTHS = [180, 200];
 
 export type LayoutReport = { overflow: number; problems: string[] };
 

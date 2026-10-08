@@ -7,7 +7,7 @@ import { useReducedMotionPreference } from "@/shared/ui/reduced-motion";
 import { MORPH_ID, morphTransition } from "./transfer-morph";
 
 /** "Hincha Granate" → "HG": there are no photos, so a person is their initials. */
-export function initialsOf(fullName: string): string {
+function initialsOf(fullName: string): string {
   return fullName
     .split(/\s+/)
     .filter(Boolean)

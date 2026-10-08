@@ -11,12 +11,9 @@
  * ignored. Every other dot in the result groups thousands, and a comma is the decimal one.
  */
 
-export type EditedAmount = { value: string; caret: number };
+import { groupThousands } from "@/shared/lib/format";
 
-/** Thousands grouping of a run of integer digits: "1234567" → "1.234.567". */
-function groupThousands(digits: string): string {
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
+export type EditedAmount = { value: string; caret: number };
 
 /** Where `previous` and `next` differ: the start of the change and what was inserted. */
 function diff(previous: string, next: string) {
