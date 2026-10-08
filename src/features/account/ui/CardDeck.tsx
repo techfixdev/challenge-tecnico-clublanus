@@ -236,9 +236,12 @@ export function CardDeck({
   return (
     <DeckDraggingContext.Provider value={dragging}>
       {/* `overflow-x-hidden`: the row scrolls only from code (the deck's offset) and from
-          the browser's own scroll-into-view, never on its own under a wheel or a swipe. */}
+          the browser's own scroll-into-view, never on its own under a wheel or a swipe.
+          `data-gesture-viewport`: a strip the finger drags, whose later cards wait off
+          screen on purpose. */}
       <ul
         ref={listRef}
+        data-gesture-viewport=""
         aria-label={label}
         data-measured={measured || undefined}
         tabIndex={0}
