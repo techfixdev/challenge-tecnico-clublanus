@@ -79,7 +79,8 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T37](#t37--sesiones-revocables-08102026) | Sesiones revocables | `08aaa0f`, `26e198a`, `05495e8` |
 | | T38 | "Qué mejoraría" actualizado (README) | `f7b0c63` |
 | | [T39](#t39--pase-final-de-código-limpio-08102026) | Pase final de código limpio | `d114c53`…`9412ae4` (7) + este commit |
-| | [T40](#t40--diagramas-de-arquitectura-08102026) | Diagramas de arquitectura (README) | este commit |
+| | [T40](#t40--diagramas-de-arquitectura-08102026) | Diagramas de arquitectura (README) | `4c509fa` |
+| | [T41](#t41--videos-del-recorrido-y-antes-y-después-08102026) | Videos: recorrido con subtítulos y antes y después | este commit |
 | | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
@@ -1139,6 +1140,20 @@ El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es par
 
 **Cómo se verificó:** cada diagrama se renderizó con `@mermaid-js/mermaid-cli` y se revisó la imagen; `prettier --check README.md` limpio y todos los enlaces relativos del README existen.
 
+#### T41 — Videos del recorrido y antes y después (08/10/2026)
+
+**Pedido:** dos videos que muestren qué cambió respecto del diseño original de Figma, enlazados desde el README. Solo medios y documentación: el código no cambia.
+
+**Qué se agregó** (en `docs/videos/`):
+
+- **`recorrido.mp4`** (1 min 58 s, 780×1688, H.264, sin audio, 4,5 MB): la app real de punta a punta (Login → Inicio → Movimientos → Detalle → Transferir → Recibir → cerrar sesión). Antes de cada pantalla, una tarjeta dice si viene del diseño original o es nueva, y un subtítulo arriba nombra cada interacción (ojo de los datos, inclinación 3D, vuelta de la tarjeta, mazo, búsqueda, filtros, resumen del mes, los tres pasos de la transferencia).
+- **`recorrido-preview.gif`** (9 s, 390 px de ancho, 1,3 MB): la inclinación y la vuelta de la tarjeta, como vista previa en el README (GitHub reproduce los GIF en línea; el MP4 se abre en un reproductor).
+- **`antes-y-despues.mp4`** (43 s, 1280×1280, H.264, sin audio, 1,0 MB): Login, Inicio y Movimientos con la captura del Figma (`docs/design/`) a la izquierda y la app a la derecha, con una línea de qué cambió; cierra con las pantallas agregadas (detalle, transferir, recibir) en paralelo.
+
+**Cómo se hicieron:** un script de Playwright (fuera del repo) manejó el build de producción a 390×844 en modo mobile con toque y `es-AR`, a ritmo humano, y grabó la pantalla con el screencast de Chrome DevTools a @2x (`--force-device-scale-factor=2`: el `recordVideo` de Playwright en headless graba a 1x). Los subtítulos son un `<div>` temporal inyectado en la página durante la grabación, con Poppins y Rokkitt de la propia app. El video comparativo se armó con ffmpeg (`overlay`, `drawtext`). La transferencia del recorrido es real: 1.500 ARS de la cuenta demo a Matías Herrera, enviada una sola vez; el tramo de la pantalla de éxito sale de esa primera grabación (a 1x, reescalada) y el resto de una segunda que no confirma nada.
+
+**Cómo se verificó:** `ffprobe` de cada archivo (duración, resolución, tamaño), fotogramas extraídos y revisados de cada tramo, `prettier --check README.md` limpio y todos los enlaces relativos del README existen.
+
 #### T5 — Deploy (pendiente)
 
 **Pedido:** repositorio en GitHub y deploy en Vercel con Neon.
@@ -1193,7 +1208,7 @@ src/
 prisma/   schema · migrations · seed
 e2e/      specs de Playwright + fixtures/
 scripts/  base de tests, tokens para Figma, captura de pantallas
-docs/     BITACORA.md · CHECKLIST.md · design/ · screenshots/
+docs/     BITACORA.md · CHECKLIST.md · design/ · screenshots/ · videos/
 ```
 
 **Convenciones**

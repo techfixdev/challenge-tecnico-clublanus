@@ -20,6 +20,7 @@
 
 <p align="center">
   <a href="https://github.com/techfixdev/challenge-tecnico-clublanus"><strong>Repositorio</strong></a> ·
+  <a href="#video">Video</a> ·
   <a href="#demo">Demo</a> ·
   <a href="#flujo-de-la-app">Flujo</a> ·
   <a href="#cómo-correrlo">Cómo correrlo</a> ·
@@ -39,6 +40,15 @@ Login, dos tarjetas (dólares y pesos) con sus datos ocultos por defecto, movimi
 | ![Transferir: destinatario](docs/screenshots/transfer-recipient.png) | ![Transferir: monto](docs/screenshots/transfer-amount.png) | ![Transferir: revisión](docs/screenshots/transfer-review.png) | ![Recibir](docs/screenshots/receive.png) |
 
 Capturas del build de producción a 390×844 (@2x).
+
+## Video
+
+<p align="center">
+  <a href="docs/videos/recorrido.mp4"><img src="docs/videos/recorrido-preview.gif" alt="Vista previa del recorrido: la tarjeta se inclina en 3D y se da vuelta" width="300"></a>
+</p>
+
+- [**Recorrido con subtítulos**](docs/videos/recorrido.mp4) (≈2 min): la app real de punta a punta, con una tarjeta por pantalla que dice qué venía del diseño original y qué es nuevo.
+- [**Antes y después**](docs/videos/antes-y-despues.mp4) (≈45 s): Login, Inicio y Movimientos del Figma al lado de la app, y al final las pantallas agregadas (detalle, transferir y recibir).
 
 ## Demo
 
