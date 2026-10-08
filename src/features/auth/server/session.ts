@@ -36,7 +36,10 @@ export async function createSession(
 ): Promise<void> {
   const expiresAt = getSessionExpiry(remember);
   const sessionId = generateSessionId();
-  await deleteDeadSessions(userId);
+  // Housekeeping only: a failure here must not stop the sign-in.
+  await deleteDeadSessions(userId).catch((error: unknown) => {
+    console.error("Could not delete dead sessions", error);
+  });
   await insertSession({ id: sessionId, userId, expiresAt });
   const token = await signSessionToken(
     { userId, sessionId },
@@ -69,10 +72,18 @@ export async function readSessionUser(): Promise<SessionUser | null> {
   return findLiveSessionUser(session);
 }
 
-/** Logout: revokes the current session row (server side), then deletes the cookie. */
+/**
+ * Logout: revokes the current session row (server side), then deletes the cookie. If the
+ * revoke fails the cookie is still deleted, so the user can always sign out on this
+ * device; the row then lives until it expires, and the failure is logged.
+ */
 export async function deleteSession(): Promise<void> {
   const session = await readSessionToken();
-  if (session) await revokeSessionById(session.sessionId);
+  if (session) {
+    await revokeSessionById(session.sessionId).catch((error: unknown) => {
+      console.error("Could not revoke the session on logout", error);
+    });
+  }
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
