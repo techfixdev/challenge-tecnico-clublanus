@@ -7,14 +7,16 @@ import type { CardBrand } from "../domain/card";
  * Each base color carries a soft light from the top-left and a slightly deeper bottom
  * edge, plus a hairline inner highlight, so the card reads as a material, not a flat
  * fill. The currency chip takes the other club color: gold on granate, granate on gold.
- * Shared by both faces of a card.
+ * Shared by both faces of a card: `card` paints the art layer (it tilts in 3D), `ink`
+ * colors the flat text layer above it.
  */
 export const BRAND_THEME: Record<
   CardBrand,
-  { card: string; label: string; eye: string; chip: string }
+  { card: string; ink: string; label: string; eye: string; chip: string }
 > = {
   MASTERCARD: {
-    card: "bg-primary bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.16),transparent_55%),linear-gradient(155deg,transparent_45%,color-mix(in_srgb,var(--color-primary-deep)_35%,transparent))] text-white",
+    card: "bg-primary bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.16),transparent_55%),linear-gradient(155deg,transparent_45%,color-mix(in_srgb,var(--color-primary-deep)_35%,transparent))]",
+    ink: "text-white",
     label: "text-white/75",
     eye: "text-white/75 hover:text-white focus-visible:ring-white/70",
     // The club's gold (Pantone 618 C), lit from the top-left like every fill; its ink
@@ -23,7 +25,8 @@ export const BRAND_THEME: Record<
   },
   VISA: {
     // Its darkest stop is `card-gold-shade` itself, the surface the AA pairs check.
-    card: "bg-card-gold bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.45),transparent_55%),linear-gradient(155deg,transparent_45%,var(--color-card-gold-shade))] text-gold-ink",
+    card: "bg-card-gold bg-[radial-gradient(130%_110%_at_0%_0%,rgb(255_255_255/0.45),transparent_55%),linear-gradient(155deg,transparent_45%,var(--color-card-gold-shade))]",
+    ink: "text-gold-ink",
     label: "text-card-gold-label",
     eye: "text-card-gold-label hover:text-gold-ink focus-visible:ring-gold-ink/40",
     // Granate on gold: white keeps 9.8:1 on its lightest stop.

@@ -5,7 +5,7 @@ import { makeCard } from "@/test/movement-fixtures";
 
 import { cardPhrase, toCardFace, type Card } from "../domain/card";
 import { CardRevealProvider } from "./CardReveal";
-import { PaymentCard as PaymentCardFront } from "./PaymentCard";
+import { PaymentCardArt, PaymentCard as PaymentCardFront } from "./PaymentCard";
 
 /** The front as Home renders it: from the card's face, inside its reveal provider. */
 function PaymentCard({ card }: { card: Card }) {
@@ -78,15 +78,27 @@ describe("PaymentCard", () => {
     ]);
   });
 
-  it("draws the Visa wordmark as a path, not as live text in a box", () => {
+  it("draws the Visa wordmark on the card's art as a path, not as live text in a box", () => {
     const { container } = render(
-      <PaymentCard card={makeCard({ brand: "VISA", last4: "5678" })} />,
+      <PaymentCardArt
+        card={toCardFace(makeCard({ brand: "VISA", last4: "5678" }))}
+      />,
     );
 
     const logo = container.querySelector("svg[data-brand-logo=VISA]");
     expect(logo).not.toBeNull();
     expect(logo!.querySelector("path")).not.toBeNull();
     expect(logo!.querySelector("text, rect")).toBeNull();
+  });
+
+  it("keeps its text on a transparent box: the surface and brand mark are the art's", () => {
+    const { container } = render(<PaymentCard card={makeCard()} />);
+    const region = screen.getByRole("region", {
+      name: "Tarjeta Mastercard terminada en 1234",
+    });
+
+    expect(region.className).not.toMatch(/\bbg-/);
+    expect(container.querySelector("[data-brand-logo]")).toBeNull();
   });
 
   it("uses a different tone for Visa cards", () => {

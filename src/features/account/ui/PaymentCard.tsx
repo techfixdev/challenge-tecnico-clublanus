@@ -8,7 +8,26 @@ import {
 import { BRAND_THEME, CARD_EDGE } from "./card-theme";
 
 /**
- * The front of a payment card. It renders from the card's face only (no balance): the
+ * The front's art: the card's surface and its brand mark, the decorative layer that
+ * tilts and flips in 3D under the text (see LivingCard). Same size as the text layer.
+ */
+export function PaymentCardArt({ card }: { card: CardFace }) {
+  return (
+    <div
+      aria-hidden="true"
+      data-brand={card.brand}
+      className={`card-scale absolute inset-0 rounded-3xl ${CARD_EDGE} ${BRAND_THEME[card.brand].card}`}
+    >
+      <span className="absolute top-5 right-5">
+        <CardBrandLogo brand={card.brand} />
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The front of a payment card: its text and its eye, on a transparent box that lies flat
+ * over the art (PaymentCardArt). It renders from the card's face only (no balance): the
  * balance and the full number arrive when the user reveals this card with its eye
  * (see CardReveal), so it must sit inside a CardRevealProvider.
  */
@@ -21,7 +40,7 @@ export function PaymentCard({ card }: { card: CardFace }) {
       <section
         aria-label={describeCard(card)}
         data-brand={card.brand}
-        className={`flex h-[calc(var(--card-px,1px)*180)] flex-col justify-between rounded-3xl p-5 ${CARD_EDGE} ${theme.card}`}
+        className={`flex h-[calc(var(--card-px,1px)*180)] flex-col justify-between rounded-3xl p-5 ${theme.ink}`}
       >
         <div className="flex items-start justify-between">
           <div>
@@ -43,7 +62,7 @@ export function PaymentCard({ card }: { card: CardFace }) {
               <RevealedBalance currency={card.currency} />
             </p>
           </div>
-          <CardBrandLogo brand={card.brand} />
+          {/* The brand mark lies on the art, in this corner. */}
         </div>
 
         <RevealedCardNumber last4={card.last4} />

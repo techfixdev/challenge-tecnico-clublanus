@@ -25,6 +25,34 @@ describe("LivingCard", () => {
     expect(screen.queryByTestId("card-sweep")).not.toBeInTheDocument();
   });
 
+  it("keeps its text out of the layer that tilts and flips in 3D, so it stays level and crisp", () => {
+    stubReducedMotion(false);
+    render(
+      <LivingCard
+        tone="primary"
+        art={<span data-testid="front-art" />}
+        backArt={<span data-testid="back-art" />}
+        flipLabel="Ver reverso de la tarjeta Mastercard terminada en 1234"
+        back={<p>Reverso</p>}
+      >
+        <p>978,85</p>
+      </LivingCard>,
+    );
+    const surface = screen.getByTestId("living-card-surface");
+    const text = screen.getByTestId("living-card-text");
+
+    // The rotating surface only carries the decorative art (gradient, logo, sheen).
+    expect(surface).toContainElement(screen.getByTestId("front-art"));
+    expect(surface).toContainElement(screen.getByTestId("back-art"));
+    expect(surface).not.toContainElement(screen.getByText("978,85"));
+    expect(surface).not.toContainElement(screen.getByText("Reverso"));
+    expect(surface).toHaveAttribute("aria-hidden", "true");
+    // The text of both faces lies on the flat layer above it.
+    expect(text).toContainElement(screen.getByText("978,85"));
+    expect(text).toContainElement(screen.getByText("Reverso"));
+    expect(surface).not.toContainElement(text);
+  });
+
   it("stays flat under prefers-reduced-motion", () => {
     stubReducedMotion(true);
     render(

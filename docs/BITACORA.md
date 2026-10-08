@@ -1079,6 +1079,14 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Cómo se verificó:** test primero. Rojo antes de implementar: 5 tests unitarios del login (un atacante desde otra IP bloqueaba al dueño, el tope de 50, la devolución en su ventana, la devolución que falla, sin IP) y 2 de la limpieza (el pedido esperaba la limpieza; un error en ella lo hacía fallar). Verde después. Integración: un atacante agota el cupo desde una IP y el mismo email desde otra IP sigue verificando la contraseña; la devolución resta en la ventana del intento aunque ya haya empezado la siguiente. Una corrida e2e falló una vez en "el 6.º intento" porque el escenario cruzó el borde de una ventana de 15 minutos (4 intentos en una, 2 en la otra): es el costo conocido de la ventana fija, y la corrida siguiente pasó completa.
 
+#### T36b — Texto de la tarjeta derecho mientras se inclina (08/10/2026)
+
+**Problema:** al inclinar la tarjeta de Home, todo el texto (saldo, número, también revelado, titular y vencimiento) giraba en 3D con la superficie y se veía torcido y con bordes dentados.
+
+**Solución:** la tarjeta pasa a tener dos capas. El arte (degradé, brillo, sombra, banda magnética y logo de la marca) sigue inclinándose y girando en 3D igual que antes. El texto y los controles van en una capa plana encima que nunca rota: con la inclinación solo se desplaza hasta 5 px (paralaje, de los mismos _motion values_), así que se ve nítido. En la vuelta, el texto de cada cara se angosta con la cara y se desvanece antes de que quede de canto (el frente se va antes de ~55°, el reverso aparece después de ~125°), así nunca se ve espejado ni despegado. El orden del DOM, las etiquetas, el botón de vuelta, los ojos y el modo de movimiento reducido no cambian.
+
+**Cómo se verificó:** test primero. Rojo antes de implementar: el test que pide que la superficie que rota no contenga el texto fallaba (no había capa de texto). Verde después. Playwright contra el servidor de desarrollo, a escala 2: capturas en reposo, inclinación máxima (con y sin el número revelado), media vuelta, reverso inclinado y con un dedo en el celular; `getComputedStyle` confirma que la capa de texto tiene solo traslación (`matrix(1, 0, 0, 1, 4.7, -4.6)`) mientras el arte tiene una `matrix3d` con rotación. Los e2e de la tarjeta pasan.
+
 #### T5 — Deploy (pendiente)
 
 **Pedido:** repositorio en GitHub y deploy en Vercel con Neon.

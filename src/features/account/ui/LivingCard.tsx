@@ -49,6 +49,9 @@ type Press = {
   cancelled: boolean;
 };
 
+/** How far, in px, the flat text layer slides at full tilt (the parallax). */
+const TEXT_PARALLAX = 5;
+
 /** The shadow the faces cast on the page, the same on both. */
 const FACE =
   "overflow-hidden rounded-3xl shadow-[0_1px_2px_color-mix(in_srgb,var(--color-primary-dark)_18%,transparent),0_10px_20px_-12px_color-mix(in_srgb,var(--color-primary-dark)_45%,transparent)] [backface-visibility:hidden]";
@@ -79,21 +82,32 @@ function flipAnnouncement({
  * drag, a tilt drag or a long press do not (see tap-guard); Enter and Space always do.
  * The hidden face is `inert` and `aria-hidden`.
  *
+ * The card is two layers: the art (`art`, `backArt`: surface, brand mark, sheen) tilts
+ * and flips in 3D, while the text (`children`, `back`) lies on a flat layer above it that
+ * only slides a few px with the tilt, so balances, numbers and names never render skewed.
+ *
  * Everything runs on motion values (no React state per frame), and only `transform`,
  * `opacity` and background position change, so the browser composites it on the GPU.
  * Under reduced motion the card stays flat and still, and the flip is a crossfade.
  */
 export function LivingCard({
   tone,
+  art,
   back,
+  backArt,
   flipLabel,
   children,
 }: {
   tone: CardTone;
-  /** The card's back face; without it the card does not flip. */
+  /** The front's decorative art (surface, brand mark): it tilts and flips in 3D. */
+  art?: ReactNode;
+  /** The back face's text and controls; without it the card does not flip. */
   back?: ReactNode;
+  /** The back's decorative art, turned 180° inside the card. */
+  backArt?: ReactNode;
   /** Accessible name of the flip button, e.g. "Ver reverso de la tarjeta …". */
   flipLabel?: string;
+  /** The front's text and controls: a flat layer that never rotates. */
   children: ReactNode;
 }) {
   const reduced = useReducedMotionPreference();
@@ -144,6 +158,29 @@ export function LivingCard({
     else flipAngle.set(flipped ? 180 : 0);
   }, [flipped, reduced, flipAngle]);
   const fade = reduced && flippedOnce ? FADE : INSTANT;
+
+  // The flat text layer follows the art without rotating: a small parallax slide (the
+  // way a layer just above a tilted surface moves), never a skew that would blur glyphs.
+  const textX = useTransform(
+    rotateY,
+    [-MAX_TILT_Y, MAX_TILT_Y],
+    [-TEXT_PARALLAX, TEXT_PARALLAX],
+  );
+  const textY = useTransform(
+    rotateX,
+    [-MAX_TILT_X, MAX_TILT_X],
+    [TEXT_PARALLAX, -TEXT_PARALLAX],
+  );
+  // While the card turns over, each face's text narrows with it (|cos| of the turn) and
+  // fades out well before the face goes edge-on, so it never shows mirrored or detached.
+  const flipCos = useTransform(flipAngle, (angle) =>
+    Math.cos((angle * Math.PI) / 180),
+  );
+  const textScaleX = useTransform(flipCos, (cos) =>
+    Math.max(Math.abs(cos), 0.001),
+  );
+  const frontTextOpacity = useTransform(flipCos, [0.6, 0.95], [0, 1]);
+  const backTextOpacity = useTransform(flipCos, [-0.95, -0.6], [1, 0]);
   // One gloss layer per face, so it turns with the face it lies on.
   const sheen = (
     <m.div
@@ -242,38 +279,76 @@ export function LivingCard({
           onClick={flipOnTap}
         />
       )}
+      {/* The art (gradient, sheen, brand mark) tilts and flips in 3D. It is decorative:
+        the text layer above it carries everything a reader needs. */}
       <m.div
         data-testid="living-card-surface"
         data-flipped={back ? flipped : undefined}
-        className="pointer-events-none relative z-[1] [transform-style:preserve-3d]"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-[1] [transform-style:preserve-3d]"
         style={{ rotateX, rotateY: surfaceRotateY, scale: surfaceScale }}
       >
         <m.div
-          data-face="front"
-          className={`relative ${FACE}`}
-          inert={back && flipped ? true : undefined}
-          aria-hidden={back && flipped ? true : undefined}
+          data-art="front"
+          className={`absolute inset-0 ${FACE}`}
           initial={false}
           animate={{ opacity: reduced && flipped ? 0 : 1 }}
           transition={fade}
         >
-          {children}
+          {art}
           {sheen}
         </m.div>
         {back && (
           <m.div
-            data-face="back"
+            data-art="back"
             className={`absolute inset-0 ${FACE}`}
-            inert={!flipped || undefined}
-            aria-hidden={!flipped || undefined}
             // Under reduced motion both faces lie flat and the back fades over the front.
             style={{ rotateY: reduced ? 0 : 180 }}
             initial={false}
             animate={{ opacity: reduced && !flipped ? 0 : 1 }}
             transition={fade}
           >
-            {back}
+            {backArt}
             {sheen}
+          </m.div>
+        )}
+      </m.div>
+      {/* The text never rotates, so it stays level and crisp: it only slides a few px
+        with the tilt (as if it floated just above the art) and, during a flip, narrows
+        with the turning face and fades out before the face goes edge-on. */}
+      <m.div
+        data-testid="living-card-text"
+        className="pointer-events-none relative z-[2]"
+        style={{ x: textX, y: textY, scale: surfaceScale }}
+      >
+        <m.div
+          data-face="front"
+          className="relative"
+          inert={back && flipped ? true : undefined}
+          aria-hidden={back && flipped ? true : undefined}
+          style={{ scaleX: textScaleX }}
+          initial={false}
+          animate={{ opacity: reduced && flipped ? 0 : 1 }}
+          transition={fade}
+        >
+          <m.div style={{ opacity: reduced ? 1 : frontTextOpacity }}>
+            {children}
+          </m.div>
+        </m.div>
+        {back && (
+          <m.div
+            data-face="back"
+            className="absolute inset-0"
+            inert={!flipped || undefined}
+            aria-hidden={!flipped || undefined}
+            style={{ scaleX: textScaleX }}
+            initial={false}
+            animate={{ opacity: reduced && !flipped ? 0 : 1 }}
+            transition={fade}
+          >
+            <m.div style={{ opacity: reduced ? 1 : backTextOpacity }}>
+              {back}
+            </m.div>
           </m.div>
         )}
       </m.div>

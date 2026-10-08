@@ -2,8 +2,8 @@ import { cardPhrase, type CardFace } from "../domain/card";
 import { CardDeck } from "./CardDeck";
 import { CardRevealProvider } from "./CardReveal";
 import { LivingCard } from "./LivingCard";
-import { PaymentCard } from "./PaymentCard";
-import { PaymentCardBack } from "./PaymentCardBack";
+import { PaymentCard, PaymentCardArt } from "./PaymentCard";
+import { PaymentCardBack, PaymentCardBackArt } from "./PaymentCardBack";
 
 /**
  * Home card carousel. The cards themselves stay server-rendered from their faces (no
@@ -39,7 +39,9 @@ function CarouselCard({ card }: { card: CardFace }) {
       <LivingCard
         tone={card.brand === "VISA" ? "gold" : "primary"}
         flipLabel={`Ver reverso de la ${phrase}`}
+        art={<PaymentCardArt card={card} />}
         back={<PaymentCardBack card={card} />}
+        backArt={<PaymentCardBackArt card={card} />}
       >
         <PaymentCard card={card} />
       </LivingCard>
