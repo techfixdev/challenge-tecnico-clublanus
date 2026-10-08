@@ -78,7 +78,11 @@ export function useAxisDrag(
     function onPointerDown(event: PointerEvent) {
       // A new press: whatever click a previous drag left pending never came.
       swallowNextClick = false;
-      if (press || !event.isPrimary || event.button !== 0) return;
+      if (!event.isPrimary || event.button !== 0) return;
+      // A drag holds the pointer captured, so its pointerup always comes back here. A press
+      // that never became one did not: a mouse that left the element and lifted elsewhere
+      // left it behind, and a new primary press means that one is over.
+      if (press?.dragging) return;
       if (!latest.current.canStart(event)) return;
       press = {
         pointerId: event.pointerId,
