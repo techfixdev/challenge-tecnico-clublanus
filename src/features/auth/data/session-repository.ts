@@ -49,8 +49,8 @@ export async function revokeSessionById(sessionId: string): Promise<void> {
   });
 }
 
-/** "Sign out on every device": revokes all of the user's live sessions; returns how many. */
-export async function revokeAllUserSessions(userId: string): Promise<number> {
+/** Marks every live session of a user revoked; returns how many. */
+export async function revokeSessionsByUserId(userId: string): Promise<number> {
   const { count } = await db.session.updateMany({
     where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },

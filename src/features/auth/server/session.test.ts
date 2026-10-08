@@ -8,8 +8,8 @@ vi.mock("../data/session-repository", () => ({
   deleteDeadSessions: vi.fn(),
   findLiveSessionUser: vi.fn(),
   insertSession: vi.fn(),
-  revokeAllUserSessions: vi.fn(),
   revokeSessionById: vi.fn(),
+  revokeSessionsByUserId: vi.fn(),
 }));
 vi.mock("./session-token", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./session-token")>()),

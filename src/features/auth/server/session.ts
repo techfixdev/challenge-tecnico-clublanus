@@ -6,8 +6,8 @@ import {
   deleteDeadSessions,
   findLiveSessionUser,
   insertSession,
-  revokeAllUserSessions,
   revokeSessionById,
+  revokeSessionsByUserId,
 } from "../data/session-repository";
 import type { SessionUser } from "../data/user-repository";
 import {
@@ -89,9 +89,9 @@ export async function deleteSession(): Promise<void> {
 }
 
 /**
- * "Sign out on every device": revokes every live session of the user. Data-layer
+ * "Sign out on every device": revokes every live session of the user. Server-side
  * capability only (no route or UI by design); returns how many sessions were revoked.
  */
 export function revokeAllSessionsForUser(userId: string): Promise<number> {
-  return revokeAllUserSessions(userId);
+  return revokeSessionsByUserId(userId);
 }

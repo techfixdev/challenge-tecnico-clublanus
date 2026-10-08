@@ -1122,7 +1122,7 @@ Cerrar sesión (Server Action o `POST /api/auth/logout`) revoca la fila y despu�
 - **Rojo de error:** es una excepción de accesibilidad a la paleta institucional (granate, oro y Cool Gray).
 - **Datos de tarjeta ficticios:** PAN inventado y CVV derivado en el servidor solo para la demo; en un sistema real el PAN va cifrado o tokenizado.
 - **Límites de intentos de ventana fija:** en el borde entre dos ventanas pueden pasar hasta el doble de intentos en poco tiempo (y un e2e que cruza ese borde puede fallar, muy de vez en cuando); el límite por IP confía en los headers del proxy (Vercel). Quien reparte 50 intentos fallidos entre muchas IP sí bloquea la cuenta hasta que termina la ventana.
-- **Cerrar sesión en todos los dispositivos sin interfaz:** existe en la capa de datos (`revokeAllSessionsForUser`), pero por decisión de producto no tiene botón ni ruta (T37).
+- **Cerrar sesión en todos los dispositivos sin interfaz:** existe en el servidor (`revokeAllSessionsForUser`), pero por decisión de producto no tiene botón ni ruta (T37).
 - **Desktop:** se muestra la columna móvil centrada; el Figma es solo mobile y la alternativa responsive quedó archivada.
 - **Tests bajo carga extrema:** "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que el CI); en condiciones normales pasa siempre.
 - **Observaciones menores abiertas tras T26:** tres, no bloqueantes, en `RecipientCarousel.tsx`, `RecipientCarousel.test.tsx` y `e2e/gestures.spec.ts` (esta última de nivel advertencia).
