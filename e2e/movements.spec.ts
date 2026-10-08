@@ -78,6 +78,11 @@ test("home → search → filter → detail → back", async ({ page }) => {
   await expect(page).toHaveURL(/\/movimientos\?focus=1$/);
   const search = page.getByRole("searchbox", { name: "Buscar movimientos" });
   await expect(search).toBeFocused();
+  // The month summary and the list stream in with a reveal (a view transition). Text
+  // pasted in one go while it runs can reach the box without React's onChange (measured:
+  // about 1 run in 100 under load, the box showing "adobe" and no search ever sent), so
+  // the paste waits for the screen to settle.
+  await waitForScreenToSettle(page);
 
   // Typing filters through the URL (debounced, server-side).
   await search.fill("adobe");
