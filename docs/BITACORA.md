@@ -18,7 +18,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 - **Qué es:** GranaBank, billetera móvil del Club Atlético Lanús. Login con un usuario demo, Home con dos tarjetas (dólares y pesos), lista de movimientos con búsqueda, filtros y agrupación por día, detalle de cada movimiento, transferencias reales entre usuarios demo y pantalla de Recibir con QR.
 - **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly`, Motion para la física de gestos, Vitest + Testing Library, Playwright.
 - **Diseño:** layout del Figma, paleta institucional del club (granate, oro y Cool Gray), Poppins para la interfaz y Rokkitt como tipografía de display.
-- **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos.
+- **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos (10 revelados por usuario cada 10 minutos, cada uno registrado). El login admite 5 intentos fallidos por email y 20 por IP cada 15 minutos.
 - **Tests en `7c50a67`:** 1021 unitarios (108 archivos) · 54 de integración contra PostgreSQL · 113 end-to-end (16 archivos).
 - **Repositorio:** [github.com/techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus).
 - **Pendiente:** T5, el deploy en Vercel. Requiere la aprobación explícita del candidato.
@@ -1057,6 +1057,16 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Cómo se verificó:** test primero. Un test de integración crea 20 000 movimientos de un usuario dentro de una transacción que siempre se revierte, corre `EXPLAIN` sobre el `WHERE` real del repositorio y exige los dos índices: rojo antes de la migración (`Seq Scan`), verde después (`BitmapOr` sobre `Movement_counterparty_search_idx` y `Movement_description_search_idx`). En la base de desarrollo, con `enable_seqscan = off`, la consulta real muestra `Bitmap Index Scan on "Movement_counterparty_search_idx"`. Términos de menos de 3 letras no generan trigramas y no aprovechan el índice.
 
+#### T36 — Límites de intentos en PostgreSQL (08/10/2026)
+
+**Problema:** nada frenaba probar contraseñas contra el login ni pedir los datos de una tarjeta una y otra vez. Un contador en memoria no sirve en serverless (cada instancia tiene el suyo) y sumar Redis agregaba un servicio más para la demo.
+
+**Solución:** contadores de ventana fija en una tabla de PostgreSQL (`RateLimitBucket`), la única pieza que comparten todas las instancias. Cada intento es **una sola sentencia** (`INSERT … ON CONFLICT DO UPDATE SET count = count + 1 RETURNING count`), así que pedidos simultáneos no pueden colarse. Login: 5 intentos fallidos por email y 20 por IP cada 15 minutos; el intento se cuenta antes de verificar la contraseña y se devuelve si sale bien, y pasado el límite no se verifica nada ("Demasiados intentos. Probá de nuevo en N minutos.", igual para un email inexistente). Revelado de tarjeta: 10 por usuario cada 10 minutos, 429 con `Retry-After` y un aviso en la tarjeta; cada revelado exitoso queda en una tabla de auditoría (`CardDetailsReveal`). La IP sale de `x-forwarded-for`/`x-real-ip`, que Vercel pisa con la real; sin ese proxy el límite por IP sería solo orientativo y el de email sigue valiendo. Las ventanas viejas se borran en el 1 % de los pedidos, sin cron. Se eligió ventana fija sobre ventana deslizante: una fila por clave en vez de una por intento, a cambio de permitir hasta el doble en el borde entre ventanas.
+
+**Tests sin tropezar con los límites:** los límites no se apagan con una variable de entorno. Los e2e vacían todos los contadores al empezar y los de cada usuario al iniciar sesión. Un primer intento vaciaba **todos** los contadores en cada login y falló: los archivos de e2e corren en paralelo y uno borraba lo que otro estaba contando. Por eso el reseteo quedó acotado al usuario de cada escenario.
+
+**Cómo se verificó:** test primero. Rojo antes de implementar: el 11.º revelado respondía 200 en vez de 429, 6 tests del login (el 6.º intento fallido, por IP, email normalizado, éxito que no cuenta) fallaban y la ruta REST del login fallaba sin el límite. Verde después. Integración contra PostgreSQL: de 25 pedidos en paralelo pasan exactamente 10, ventanas, devolución, limpieza, el 6.º login fallido bloqueado y 10 filas de auditoría para 10 revelados. E2E: el 6.º intento en el formulario muestra el aviso y, con el cupo gastado, el ojo de la tarjeta muestra cuánto esperar y la API responde 429.
+
 #### T5 — Deploy (pendiente)
 
 **Pedido:** repositorio en GitHub y deploy en Vercel con Neon.
@@ -1074,7 +1084,7 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 - **Tipografía:** Rokkitt reemplaza a la tipografía comercial del club, que no estuvo disponible en un formato utilizable.
 - **Rojo de error:** es una excepción de accesibilidad a la paleta institucional (granate, oro y Cool Gray).
 - **Datos de tarjeta ficticios:** PAN inventado y CVV derivado en el servidor solo para la demo; en un sistema real el PAN va cifrado o tokenizado.
-- **Sin límite de intentos** en el login ni en el revelado de tarjetas; requiere un servicio externo (por ejemplo Redis) porque en serverless un límite en memoria no sirve.
+- **Límites de intentos de ventana fija:** en el borde entre dos ventanas pueden pasar hasta el doble de intentos en poco tiempo; el límite por IP confía en los headers del proxy (Vercel).
 - **Sesiones no revocables:** el JWT no se puede invalidar antes de su vencimiento; se mitiga verificando el usuario en cada lectura.
 - **Desktop:** se muestra la columna móvil centrada; el Figma es solo mobile y la alternativa responsive quedó archivada.
 - **Tests bajo carga extrema:** "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que el CI); en condiciones normales pasa siempre.
