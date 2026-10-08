@@ -259,6 +259,177 @@ Cada feature usa las mismas capas, y solo las que necesita:
 
 Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van en una sola dirección: `ui` y `data` dependen de `domain`, nunca al revés.
 
+## Arquitectura
+
+Tres vistas del mismo sistema, sacadas del código: cómo dependen las capas, qué guarda la base y qué pasa cuando se envía una transferencia.
+
+### Capas y dependencias
+
+Las flechas son imports reales. `domain/` solo usa zod y utilidades puras de `shared/lib`; Prisma entra únicamente por `data/` y `shared/lib/db.ts`. Las páginas pasan las Server Actions a la UI como props, y las listas de movimientos (Server Components) leen el repositorio directamente.
+
+```mermaid
+flowchart TB
+  subgraph Entrada["Entrada (src/app y src/proxy.ts)"]
+    Proxy["proxy.ts: firma del JWT (optimista)"]
+    Pages["app: páginas (Server Components)"]
+    Api["app/api: route handlers REST"]
+  end
+
+  subgraph Features["src/features/{auth, account, movements, transfers}"]
+    UI["ui/: componentes React"]
+    Server["server/: Server Actions, sesión, login"]
+    Domain["domain/: reglas, casos de uso, schemas zod, puertos"]
+    Data["data/: repositorios Prisma (adaptadores)"]
+  end
+
+  subgraph Shared["src/shared"]
+    Lib["lib/: dinero, fechas, formato, validación"]
+    Db["lib/db.ts: cliente Prisma"]
+  end
+
+  PG[("PostgreSQL")]
+
+  Proxy -- "session-token" --> Server
+  Pages -- "renderiza y pasa Server Actions" --> UI
+  Pages -- "requireUser" --> Server
+  Pages -- "lecturas" --> Data
+  Api -- "getCurrentUser, casos de uso" --> Server
+  Api -- "lecturas" --> Data
+  UI -. "invoca Server Actions (POST)" .-> Server
+  UI -- "lecturas (movimientos)" --> Data
+  UI --> Domain
+  Server -- "casos de uso" --> Domain
+  Server -- "inyecta el repositorio" --> Data
+  Data -- "implementa los puertos" --> Domain
+  Domain --> Lib
+  Data --> Db
+  Db --> PG
+```
+
+### Modelo de datos
+
+Campos clave de [`prisma/schema.prisma`](prisma/schema.prisma). Los montos son `Decimal(12,2)`. `RateLimitBucket` no tiene FK: se identifica por `(scope, key, windowStart)`.
+
+```mermaid
+erDiagram
+  User ||--o{ Card : "tiene"
+  User ||--o{ Movement : "registra"
+  User ||--o{ Session : "abre"
+  User ||--o{ CardDetailsReveal : "revela"
+  User ||--o{ Transfer : "envía (senderId)"
+  User ||--o{ Transfer : "recibe (recipientId)"
+  Card |o--o{ Movement : "cardId opcional"
+  Card |o--o{ Transfer : "origen (sourceCardId)"
+  Card |o--o{ Transfer : "destino (destinationCardId)"
+  Card ||--o{ CardDetailsReveal : "auditada"
+  Transfer |o--o{ Movement : "genera SENT y RECEIVED"
+
+  User {
+    string id PK
+    string email UK
+    string alias UK "opcional"
+    string cvu UK "opcional, 22 dígitos"
+  }
+  Card {
+    string id PK
+    string userId FK
+    decimal balance "CHECK balance >= 0"
+    string currency "USD por defecto"
+    boolean isPrimary
+  }
+  Movement {
+    string id PK
+    string userId FK
+    string cardId FK "opcional"
+    string transferId FK "opcional, único con type"
+    enum type "SUBSCRIPTION, RECEIVED, SENT"
+    decimal amount
+    string currency
+    string reference UK
+  }
+  Transfer {
+    string id PK
+    string senderId FK
+    string recipientId FK
+    string sourceCardId FK "opcional"
+    string destinationCardId FK "opcional"
+    decimal amount
+    string currency
+    uuid idempotencyKey "único con senderId"
+  }
+  Session {
+    string id PK
+    string userId FK
+    datetime expiresAt
+    datetime revokedAt "opcional"
+  }
+  CardDetailsReveal {
+    string id PK
+    string userId FK
+    string cardId FK
+    string ip "opcional"
+    datetime createdAt
+  }
+  RateLimitBucket {
+    string scope PK "sin FK"
+    string key PK "depende del scope"
+    datetime windowStart PK
+    int count
+  }
+```
+
+### Secuencia de una transferencia
+
+Del botón "Confirmar y enviar" al comprobante. La UI usa la Server Action `submitTransfer`; `POST /api/transfers` comparte el mismo `sendTransferAs`. Lo que impide el sobregiro bajo concurrencia es el débito condicional, no la lectura previa del saldo.
+
+```mermaid
+sequenceDiagram
+  actor U as Usuario
+  participant UI as TransferFlow (cliente)
+  participant SA as submitTransfer (Server Action)
+  participant Auth as getCurrentUser
+  participant Dom as sendTransfer (dominio)
+  participant Repo as prismaTransferRepository
+  participant DB as PostgreSQL
+
+  U->>UI: Toca "Confirmar y enviar"
+  UI->>SA: POST FormData con monto, destinatario, tarjeta e idempotencyKey
+  SA->>Auth: getCurrentUser()
+  Auth->>DB: Verifica el JWT y busca la fila Session vigente
+  alt Sin sesión
+    SA-->>UI: Error "Tu sesión expiró"
+  end
+  SA->>Dom: sendTransferAs(userId, datos)
+  Dom->>Dom: parseTransferRequest (zod)
+  alt Datos inválidos
+    Dom-->>SA: invalid_input
+    SA-->>UI: Error en el paso del campo inválido
+  end
+  Dom->>Repo: execute(senderId, request)
+  Repo->>DB: ¿La idempotencyKey ya se confirmó? Si es así, repite el comprobante
+  Repo->>DB: BEGIN (READ COMMITTED)
+  Repo->>DB: Lee remitente, destinatario y tarjeta de origen
+  Repo->>Repo: planTransfer: destinatario, moneda, tope y saldo
+  Repo->>DB: INSERT Transfer (reclama la idempotencyKey)
+  Repo->>DB: UPDATE Card SET balance = balance - monto WHERE id = origen AND balance >= monto
+  alt Saldo insuficiente (0 filas actualizadas)
+    Repo->>DB: ROLLBACK
+    Repo-->>SA: insufficient_funds
+    SA-->>UI: Error con step "amount"
+    UI-->>U: Vuelve al paso de monto: "No tenés saldo suficiente en esta tarjeta"
+  else Débito aplicado (1 fila)
+    Repo->>DB: UPDATE Card destino: balance + monto
+    Repo->>DB: INSERT Movement RECEIVED y SENT
+    Repo->>DB: COMMIT
+    Repo-->>SA: Comprobante
+    SA->>SA: revalidatePath("/", "layout")
+    SA-->>UI: success con una idempotencyKey nueva
+    UI-->>U: Comprobante "¡Transferencia enviada!"
+  end
+```
+
+El débito y el crédito se ejecutan en orden de id de tarjeta para que dos transferencias cruzadas no se bloqueen entre sí. Si `planTransfer` rechaza antes de mover dinero (destinatario inexistente, moneda distinta, tope), la transacción también hace rollback y la UI vuelve al paso que corresponde: destinatario o monto.
+
 ## Decisiones técnicas
 
 - **App Router + Server Components.** Las páginas leen la base en el servidor: no hay credenciales ni consultas en el navegador y se envía menos JavaScript. Client Components solo donde hay interacción: formularios, búsqueda, "Cargar más", el flujo de Transferir, los gestos y el saldo (odómetro y ocultar).

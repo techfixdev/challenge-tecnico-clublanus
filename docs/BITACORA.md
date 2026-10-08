@@ -79,6 +79,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T37](#t37--sesiones-revocables-08102026) | Sesiones revocables | `08aaa0f`, `26e198a`, `05495e8` |
 | | T38 | "Qué mejoraría" actualizado (README) | `f7b0c63` |
 | | [T39](#t39--pase-final-de-código-limpio-08102026) | Pase final de código limpio | `d114c53`…`9412ae4` (7) + este commit |
+| | [T40](#t40--diagramas-de-arquitectura-08102026) | Diagramas de arquitectura (README) | este commit |
 | | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
@@ -1125,6 +1126,18 @@ El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es par
 - **Test más estricto:** "una fila de sesión por inicio de sesión" ahora cuenta las sesiones vivas antes y después y exige exactamente una más (antes solo pedía que hubiera alguna).
 
 **Cómo se verificó:** typecheck, lint y Prettier limpios; 1065 unitarios, 72 de integración y la suite e2e completa (112 pasan, 4 omitidos) sin cambios en su resultado. Ningún test se borró ni se relajó.
+
+#### T40 — Diagramas de arquitectura (08/10/2026)
+
+**Pedido:** sumar al README, junto al "Flujo de la app", tres diagramas Mermaid sacados del código real. Solo documentación: el código no cambia.
+
+**Qué se agregó:** una sección "Arquitectura" en el README con:
+
+- **Capas y dependencias** (`flowchart`): entrada (`src/app`, `src/app/api`, `src/proxy.ts`), las capas de cada feature y `src/shared`. Las flechas salen de los imports reales: `domain/` solo usa zod y utilidades puras de `shared/lib`; las páginas, las rutas de la API y las listas de movimientos (Server Components) leen `data/` directamente, y eso también se dibuja.
+- **Modelo de datos** (`erDiagram`): los siete modelos de `prisma/schema.prisma` con sus campos clave y cardinalidades. `RateLimitBucket` queda sin relaciones porque no tiene FK.
+- **Secuencia de una transferencia** (`sequenceDiagram`): de "Confirmar y enviar" a la Server Action `submitTransfer`, la sesión (`getCurrentUser`, fila `Session` vigente), zod, la transacción con el débito condicional (`balance >= monto`) y la rama de saldo insuficiente.
+
+**Cómo se verificó:** cada diagrama se renderizó con `@mermaid-js/mermaid-cli` y se revisó la imagen; `prettier --check README.md` limpio y todos los enlaces relativos del README existen.
 
 #### T5 — Deploy (pendiente)
 
