@@ -53,27 +53,27 @@ Capturas del build de producción a 390×844 (@2x).
 ## Demo
 
 - **Repositorio:** [github.com/techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)
-- **Deploy:** _pendiente_
+- **Deploy:** [challenge-tecnico-clublanus.vercel.app](https://challenge-tecnico-clublanus.vercel.app) (Vercel + Neon Postgres)
 - **Credenciales de prueba:** `soygranate@clublanus.com` / `GRANATE1@`
 
 ## Requerimientos del challenge
 
 Cada requerimiento de la consigna, con dónde se cumple. El detalle con su evidencia está en [`docs/CHECKLIST.md`](docs/CHECKLIST.md).
 
-| Requerimiento                                     | Estado    | Dónde                                                                                                                                                                              |
-| ------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lista de elementos                                | Cumplido  | Movimientos ([`/movimientos`](<src/app/(app)/movimientos/(list)/page.tsx>)) y "Últimos movimientos" en Inicio                                                                      |
-| Detalle de un elemento                            | Cumplido  | [`/movimientos/[id]`](<src/app/(app)/movimientos/[id]/page.tsx>), con 404 real                                                                                                     |
-| Estados de carga, error y vacío                   | Cumplido  | `loading.tsx` y `error.tsx` por pantalla, [`MovementsEmptyState`](src/features/movements/ui/MovementsEmptyState.tsx) (ver [Cómo ver los estados](#cómo-ver-los-estados))           |
-| App funcional y navegable                         | Cumplido  | Login → Inicio → Movimientos → detalle → Transferir / Recibir → cerrar sesión, cubierto por los e2e                                                                                |
-| Next.js + TypeScript                              | Cumplido  | Next.js 16 (App Router) y TypeScript estricto                                                                                                                                      |
-| Backend con API routes de Next                    | Cumplido  | [`src/app/api`](src/app/api) (ver [API](#api))                                                                                                                                     |
-| Base relacional (PostgreSQL) + ORM                | Cumplido  | PostgreSQL 17 + Prisma 7 ([`prisma/schema.prisma`](prisma/schema.prisma), migraciones y seed)                                                                                      |
-| Validaciones, estructura, estados y datos, UX     | Cumplido  | zod en el servidor, features por capas, filtros en la URL y paginación por cursor, feedback y accesibilidad                                                                        |
-| Diseño de Figma (Login, Inicio, Movimientos)      | Cumplido  | Layout y textos del Figma ([`docs/design/`](docs/design)); desvíos deliberados y documentados en [Marca](#marca-club-atlético-lanús) y [Decisiones técnicas](#decisiones-técnicas) |
-| Repositorio en GitHub                             | Cumplido  | [techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)                                                                                |
-| Deploy en Vercel                                  | Pendiente | —                                                                                                                                                                                  |
-| README: cómo correrlo, decisiones y qué mejoraría | Cumplido  | [Cómo correrlo](#cómo-correrlo), [Decisiones técnicas](#decisiones-técnicas), [Qué mejoraría](#qué-mejoraría-con-más-tiempo)                                                       |
+| Requerimiento                                     | Estado   | Dónde                                                                                                                                                                              |
+| ------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lista de elementos                                | Cumplido | Movimientos ([`/movimientos`](<src/app/(app)/movimientos/(list)/page.tsx>)) y "Últimos movimientos" en Inicio                                                                      |
+| Detalle de un elemento                            | Cumplido | [`/movimientos/[id]`](<src/app/(app)/movimientos/[id]/page.tsx>), con 404 real                                                                                                     |
+| Estados de carga, error y vacío                   | Cumplido | `loading.tsx` y `error.tsx` por pantalla, [`MovementsEmptyState`](src/features/movements/ui/MovementsEmptyState.tsx) (ver [Cómo ver los estados](#cómo-ver-los-estados))           |
+| App funcional y navegable                         | Cumplido | Login → Inicio → Movimientos → detalle → Transferir / Recibir → cerrar sesión, cubierto por los e2e                                                                                |
+| Next.js + TypeScript                              | Cumplido | Next.js 16 (App Router) y TypeScript estricto                                                                                                                                      |
+| Backend con API routes de Next                    | Cumplido | [`src/app/api`](src/app/api) (ver [API](#api))                                                                                                                                     |
+| Base relacional (PostgreSQL) + ORM                | Cumplido | PostgreSQL 17 + Prisma 7 ([`prisma/schema.prisma`](prisma/schema.prisma), migraciones y seed)                                                                                      |
+| Validaciones, estructura, estados y datos, UX     | Cumplido | zod en el servidor, features por capas, filtros en la URL y paginación por cursor, feedback y accesibilidad                                                                        |
+| Diseño de Figma (Login, Inicio, Movimientos)      | Cumplido | Layout y textos del Figma ([`docs/design/`](docs/design)); desvíos deliberados y documentados en [Marca](#marca-club-atlético-lanús) y [Decisiones técnicas](#decisiones-técnicas) |
+| Repositorio en GitHub                             | Cumplido | [techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)                                                                                |
+| Deploy en Vercel                                  | Cumplido | [challenge-tecnico-clublanus.vercel.app](https://challenge-tecnico-clublanus.vercel.app), con PostgreSQL en Neon                                                                   |
+| README: cómo correrlo, decisiones y qué mejoraría | Cumplido | [Cómo correrlo](#cómo-correrlo), [Decisiones técnicas](#decisiones-técnicas), [Qué mejoraría](#qué-mejoraría-con-más-tiempo)                                                       |
 
 ## Flujo de la app
 
@@ -697,7 +697,7 @@ La pantalla de "¡Transferencia enviada!" mueve plata entre los usuarios demo, a
 
 - **PAN cifrado o tokenizado** (y un proveedor que muestre los datos en un iframe propio) si las tarjetas fueran reales.
 - **Monitoreo** con Sentry o similar, usando el `digest` de los errores.
-- **Deploy previews** por PR y e2e contra el preview.
+- **E2E contra el deploy preview de cada PR.** Vercel ya genera un preview por PR; faltaría correr la suite de Playwright contra esa URL en CI.
 - **Notificaciones reales.** Hoy la campanita es decorativa (quedó fuera del alcance desde el principio). El siguiente paso sería avisar cuando llega una transferencia, con una tabla de notificaciones y un indicador en la campanita.
 - **"Cerrar sesión en todos los dispositivos" en la interfaz.** La capacidad ya existe en el servidor (`revokeAllSessionsForUser`); faltaría la pantalla que la ofrezca, junto con la lista de sesiones activas.
 - **Ventana deslizante para los límites de intentos.** La ventana fija actual permite, en el peor caso, el doble del límite en una ráfaga que cruce el cambio de ventana. Una ventana deslizante lo evita a cambio de guardar un registro por intento.

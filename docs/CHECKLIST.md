@@ -55,11 +55,11 @@ Repositorio: [github.com/techfixdev/challenge-tecnico-clublanus](https://github.
 ## Entregables (excluyentes)
 
 - [x] Link al repositorio de GitHub → [techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus).
-- [ ] Deploy en Vercel → **pendiente** (T5).
+- [x] Deploy en Vercel → [challenge-tecnico-clublanus.vercel.app](https://challenge-tecnico-clublanus.vercel.app) (T5), con PostgreSQL en Neon; login, Home, Movimientos, Transferir y Recibir probados en producción con Playwright.
 - [x] README: cómo correr el proyecto → sección "Cómo correrlo".
 - [x] README: decisiones técnicas → sección "Decisiones técnicas".
 - [x] README: qué mejoraría → sección "Qué mejoraría con más tiempo".
 
 ## Pendiente
 
-- [ ] Deploy en Vercel con una base PostgreSQL administrada, y el link en el README (hoy dice "Deploy: _pendiente_").
+- Nada pendiente de la consigna.
