@@ -77,12 +77,28 @@ export function EdgeSwipeBack({
     style.opacity = String(COVERED_SCREEN_DIM * (1 - uncovered));
   });
 
-  // A screen shown again (kept by the router, or by the browser's back/forward cache)
-  // starts at rest, whatever state it was left in.
+  // A screen shown again starts at rest, whatever state it was left in. One the router
+  // kept mounts again, so this runs; one the browser's back/forward cache restores (left
+  // mid-swipe by a navigation that fell back to a full page load) runs no effect, only
+  // `pageshow`.
   useEffect(() => {
-    leaving.current = false;
-    offset.jump(0);
-    return () => travel.current?.stop();
+    function rest() {
+      travel.current?.stop();
+      leaving.current = false;
+      offset.jump(0);
+      if (shade.current)
+        shade.current.style.opacity = String(COVERED_SCREEN_DIM);
+      delete frame.current?.dataset.swiping;
+    }
+    function restoreFromCache(event: PageTransitionEvent) {
+      if (event.persisted) rest();
+    }
+    rest();
+    window.addEventListener("pageshow", restoreFromCache);
+    return () => {
+      window.removeEventListener("pageshow", restoreFromCache);
+      travel.current?.stop();
+    };
   }, [offset]);
 
   function springTo(target: number, velocity: number, onComplete?: () => void) {
