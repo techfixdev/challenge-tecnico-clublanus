@@ -16,15 +16,21 @@ import { signIn } from "./sign-in";
 const RUN_ID = randomUUID().slice(0, 8);
 const EMAIL = `it-login-${RUN_ID}@granabank.test`;
 const CLIENT_IP = `it-ip-${RUN_ID}`;
+const ATTACKER_IP = `it-attacker-${RUN_ID}`;
+const OWNER_IP = `it-owner-${RUN_ID}`;
 
 afterAll(async () => {
   await db.rateLimitBucket.deleteMany({
-    where: { key: { in: [EMAIL, CLIENT_IP] } },
+    where: { key: { contains: RUN_ID } },
   });
 });
 
+function failWith(email: string, clientIp: string) {
+  return signIn({ email, password: "wrong-password" }, { clientIp });
+}
+
 describe("signIn rate limiting (PostgreSQL)", () => {
-  it("refuses the 6th failed attempt for an email within 15 minutes", async () => {
+  it("refuses a client's 6th failed attempt for an email within 15 minutes", async () => {
     for (let attempt = 1; attempt <= 5; attempt++) {
       expect(
         await signIn(
@@ -45,13 +51,31 @@ describe("signIn rate limiting (PostgreSQL)", () => {
       retryAfterSeconds: expect.any(Number),
     });
     const buckets = await db.rateLimitBucket.findMany({
-      where: { key: { in: [EMAIL, CLIENT_IP] } },
+      where: { key: { in: [EMAIL, `${EMAIL}|${CLIENT_IP}`, CLIENT_IP] } },
       select: { scope: true, count: true },
       orderBy: { scope: "asc" },
     });
+    // The refused attempt stops at the email+client bucket: the email-wide one is spared.
     expect(buckets).toEqual([
-      { scope: "login:email", count: 6 },
+      { scope: "login:email", count: 5 },
+      { scope: "login:email-client", count: 6 },
       { scope: "login:ip", count: 6 },
     ]);
+  });
+
+  it("does not let failures from one IP lock the same email out for another IP", async () => {
+    const email = `it-victim-${RUN_ID}@granabank.test`;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await failWith(email, ATTACKER_IP);
+    }
+    expect(await failWith(email, ATTACKER_IP)).toMatchObject({
+      reason: "rate_limited",
+    });
+
+    // The owner, from their own network, still gets their password checked.
+    expect(await failWith(email, OWNER_IP)).toEqual({
+      ok: false,
+      reason: "invalid_credentials",
+    });
   });
 });

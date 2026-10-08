@@ -42,7 +42,11 @@ describe("consumeRateLimit", () => {
         POLICY,
         NEVER_SWEEP,
       );
-      expect(decision).toEqual({ allowed: true, remaining: 10 - hit });
+      expect(decision).toEqual({
+        allowed: true,
+        remaining: 10 - hit,
+        windowStart: new Date("2026-10-08T12:00:00.000Z"),
+      });
     }
 
     const eleventh = await consumeRateLimit(
@@ -52,7 +56,7 @@ describe("consumeRateLimit", () => {
       NEVER_SWEEP,
     );
     // Window 12:00–12:10, now 12:03 → 7 minutes left.
-    expect(eleventh).toEqual({ allowed: false, retryAfterSeconds: 420 });
+    expect(eleventh).toMatchObject({ allowed: false, retryAfterSeconds: 420 });
   });
 
   it("lets exactly `limit` of N concurrent hits through", async () => {
@@ -97,7 +101,11 @@ describe("consumeRateLimit", () => {
       random: () => 1,
     });
 
-    expect(decision).toEqual({ allowed: true, remaining: 9 });
+    expect(decision).toEqual({
+      allowed: true,
+      remaining: 9,
+      windowStart: nextWindow,
+    });
     // The raw SQL write and Prisma's read agree on the instant, whatever the process zone.
     const windows = await db.rateLimitBucket.findMany({
       where: { key: k },
@@ -114,14 +122,39 @@ describe("consumeRateLimit", () => {
 describe("refundRateLimit", () => {
   it("gives one hit back, never going below zero", async () => {
     const k = key("refund");
-    await consumeRateLimit("login:email", k, POLICY, NEVER_SWEEP);
-    await refundRateLimit("login:email", k, POLICY, { now: NOW });
-    await refundRateLimit("login:email", k, POLICY, { now: NOW });
+    const hit = await consumeRateLimit("login:email", k, POLICY, NEVER_SWEEP);
+    await refundRateLimit("login:email", k, hit.windowStart);
+    await refundRateLimit("login:email", k, hit.windowStart);
 
     const bucket = await db.rateLimitBucket.findFirstOrThrow({
       where: { scope: "login:email", key: k },
     });
     expect(bucket.count).toBe(0);
+  });
+
+  it("refunds the window the hit was counted in, even once the next one has started", async () => {
+    const k = key("refund-boundary");
+    // Counted a moment before 12:10; the refund (after a slow password check) lands after.
+    const hit = await consumeRateLimit("login:email", k, POLICY, {
+      now: new Date("2026-10-08T12:09:59.900Z"),
+      random: () => 1,
+    });
+    await consumeRateLimit("login:email", k, POLICY, {
+      now: new Date("2026-10-08T12:10:00.100Z"),
+      random: () => 1,
+    });
+
+    await refundRateLimit("login:email", k, hit.windowStart);
+
+    const windows = await db.rateLimitBucket.findMany({
+      where: { key: k },
+      orderBy: { windowStart: "asc" },
+      select: { windowStart: true, count: true },
+    });
+    expect(windows).toEqual([
+      { windowStart: new Date("2026-10-08T12:00:00.000Z"), count: 0 },
+      { windowStart: new Date("2026-10-08T12:10:00.000Z"), count: 1 },
+    ]);
   });
 });
 

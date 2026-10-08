@@ -16,8 +16,9 @@ import { clientIpFrom } from "@/shared/server/client-ip";
  * Body: `{ "email": string, "password": string, "remember"?: boolean }`.
  * 200 → `{ "data": { "userId": string } }` plus the session cookie; errors use the shared
  * `{ "error": { code, message, details? } }` envelope (400, 401, 415, 429, 500, 503).
- * Rate limited like the form (5 failed attempts per email, 20 per client IP, every 15
- * minutes): past the limit it answers 429 `RATE_LIMITED` with `Retry-After` (seconds).
+ * Rate limited like the form (every 15 minutes: 5 failed attempts per email from one
+ * client IP, 50 per email, 20 per client IP): past a limit it answers 429 `RATE_LIMITED`
+ * with `Retry-After` (seconds).
  *
  * Requiring a JSON body blocks login CSRF: a cross-site HTML form cannot send
  * `application/json`, and `fetch` with that content type triggers a CORS preflight.

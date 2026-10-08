@@ -4,6 +4,7 @@ import {
   CARD_REVEAL_POLICY,
   combineDecisions,
   decide,
+  LOGIN_EMAIL_CLIENT_POLICY,
   LOGIN_EMAIL_POLICY,
   LOGIN_IP_POLICY,
   secondsUntilWindowEnds,
@@ -15,8 +16,9 @@ import {
 const FIVE_PER_15_MIN: RateLimitPolicy = { limit: 5, windowMs: 15 * 60_000 };
 
 describe("policies", () => {
-  it("limits failed logins to 5 per email and 20 per IP every 15 minutes, and reveals to 10 per user every 10 minutes", () => {
-    expect(LOGIN_EMAIL_POLICY).toEqual({ limit: 5, windowMs: 900_000 });
+  it("limits failed logins to 5 per email from one IP, 50 per email and 20 per IP every 15 minutes, and reveals to 10 per user every 10 minutes", () => {
+    expect(LOGIN_EMAIL_CLIENT_POLICY).toEqual({ limit: 5, windowMs: 900_000 });
+    expect(LOGIN_EMAIL_POLICY).toEqual({ limit: 50, windowMs: 900_000 });
     expect(LOGIN_IP_POLICY).toEqual({ limit: 20, windowMs: 900_000 });
     expect(CARD_REVEAL_POLICY).toEqual({ limit: 10, windowMs: 600_000 });
   });

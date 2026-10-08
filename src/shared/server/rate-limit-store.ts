@@ -12,7 +12,11 @@ import {
  * The database is the one place every serverless instance shares, so no Redis is needed.
  */
 
-export type RateLimitScope = "login:email" | "login:ip" | "card:reveal";
+export type RateLimitScope =
+  "login:email-client" | "login:email" | "login:ip" | "card:reveal";
+
+/** A counted hit: the verdict, plus the window it was counted in (to refund it later). */
+export type RateLimitHit = RateLimitDecision & { windowStart: Date };
 
 /** Buckets whose window ended more than this long ago are deleted (longest window: 15 min). */
 const STALE_AFTER_MS = 24 * 60 * 60_000;
@@ -41,7 +45,7 @@ export async function consumeRateLimit(
   key: string,
   policy: RateLimitPolicy,
   { now = new Date(), random = Math.random }: Options = {},
-): Promise<RateLimitDecision> {
+): Promise<RateLimitHit> {
   const windowStart = windowStartFor(now, policy);
   const db = await database();
   const [{ count }] = await db.$queryRaw<[{ count: number }]>`
@@ -51,20 +55,21 @@ export async function consumeRateLimit(
     DO UPDATE SET "count" = "RateLimitBucket"."count" + 1
     RETURNING "count"`;
   if (random() < SWEEP_PROBABILITY) await sweepStaleBuckets(now);
-  return decide(count, windowStart, now, policy);
+  return { ...decide(count, windowStart, now, policy), windowStart };
 }
 
 /**
- * Gives back one hit counted in the current window (e.g. the attempt turned out to be a
- * successful login, which the policy does not count). Never below zero.
+ * Gives back one hit counted in the window that started at `windowStart` (pass the
+ * `windowStart` of the hit being refunded, e.g. an attempt that turned out to be a
+ * successful login, which the policy does not count). Recomputing the window here instead
+ * would refund the wrong bucket when the hit and the refund straddle a window boundary.
+ * Never below zero.
  */
 export async function refundRateLimit(
   scope: RateLimitScope,
   key: string,
-  policy: RateLimitPolicy,
-  { now = new Date() }: Pick<Options, "now"> = {},
+  windowStart: Date,
 ): Promise<void> {
-  const windowStart = windowStartFor(now, policy);
   const db = await database();
   await db.$executeRaw`
     UPDATE "RateLimitBucket" SET "count" = GREATEST("count" - 1, 0)

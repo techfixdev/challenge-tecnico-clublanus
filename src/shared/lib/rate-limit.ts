@@ -23,9 +23,23 @@ export type RateLimitDecision =
 
 const MINUTE_MS = 60_000;
 
-/** Failed logins per normalized email: slows guessing one account's password. */
-export const LOGIN_EMAIL_POLICY: RateLimitPolicy = {
+/**
+ * Failed logins per normalized email *from one client IP*: the tight limit that stops one
+ * client guessing an account's password. Keyed by email and IP together, so whoever
+ * exhausts it only locks themselves out, never the account's owner on another network.
+ */
+export const LOGIN_EMAIL_CLIENT_POLICY: RateLimitPolicy = {
   limit: 5,
+  windowMs: 15 * MINUTE_MS,
+};
+
+/**
+ * Failed logins per normalized email from every client together: a much looser cap that
+ * still slows guessing spread over many IPs. Reaching it does lock the account out for
+ * the rest of the window, but takes ten times the tight limit's attempts.
+ */
+export const LOGIN_EMAIL_POLICY: RateLimitPolicy = {
+  limit: 50,
   windowMs: 15 * MINUTE_MS,
 };
 

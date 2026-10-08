@@ -76,7 +76,8 @@ beforeEach(() => {
     .mockImplementation(async (scope: string, key: string, policy) => {
       const count = (counts.get(`${scope}|${key}`) ?? 0) + 1;
       counts.set(`${scope}|${key}`, count);
-      return decide(count, windowStartFor(NOW, policy), NOW, policy);
+      const windowStart = windowStartFor(NOW, policy);
+      return { ...decide(count, windowStart, NOW, policy), windowStart };
     });
   mocks.refundRateLimit.mockReset().mockResolvedValue(undefined);
 });
@@ -190,7 +191,7 @@ describe("POST /api/auth/login", () => {
     );
   });
 
-  it("answers the 6th failed attempt for an email with 429 and Retry-After, without checking the password", async () => {
+  it("answers a client's 6th failed attempt for an email with 429 and Retry-After, without checking the password", async () => {
     const wrong = JSON.stringify({ ...CREDENTIALS, password: "wrong" });
     for (let attempt = 1; attempt <= 5; attempt++) {
       expect((await post(wrong)).status).toBe(401);

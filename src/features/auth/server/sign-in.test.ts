@@ -1,17 +1,19 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   decide,
+  LOGIN_EMAIL_CLIENT_POLICY,
   LOGIN_EMAIL_POLICY,
   LOGIN_IP_POLICY,
   windowStartFor,
 } from "@/shared/lib/rate-limit";
 
 /*
- * The login service's rate limiting: failed attempts per email and per client IP. The
- * verdict logic is the real one; the PostgreSQL counter is replaced by one in memory (it
- * has its own integration test), and so are the user store, bcrypt and the cookie.
+ * The login service's rate limiting: failed attempts per email from one client, per email
+ * overall and per client IP. The verdict logic is the real one; the PostgreSQL counter is
+ * replaced by one in memory (it has its own integration test), and so are the user store,
+ * bcrypt and the cookie.
  */
 const mocks = vi.hoisted(() => ({
   findCredentialsByEmail: vi.fn(),
@@ -37,7 +39,9 @@ vi.mock("@/shared/server/rate-limit-store", () => ({
 const { signIn } = await import("./sign-in");
 
 const NOW = new Date("2026-10-08T12:05:00.000Z");
+const WINDOW_START = new Date("2026-10-08T12:00:00.000Z");
 const IP = "203.0.113.7";
+const ATTACKER_IP = "198.51.100.66";
 const USER = { email: "soygranate@clublanus.com", password: "GRANATE1@" };
 const WRONG = { ...USER, password: "wrong-password" };
 let counts: Map<string, number>;
@@ -49,7 +53,8 @@ beforeEach(() => {
     .mockImplementation(async (scope: string, key: string, policy) => {
       const count = (counts.get(`${scope}|${key}`) ?? 0) + 1;
       counts.set(`${scope}|${key}`, count);
-      return decide(count, windowStartFor(NOW, policy), NOW, policy);
+      const windowStart = windowStartFor(NOW, policy);
+      return { ...decide(count, windowStart, NOW, policy), windowStart };
     });
   mocks.refundRateLimit
     .mockReset()
@@ -70,7 +75,15 @@ beforeEach(() => {
   mocks.createSession.mockReset().mockResolvedValue(undefined);
 });
 
-async function failTimes(times: number, email = USER.email, clientIp = IP) {
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+async function failTimes(
+  times: number,
+  email = USER.email,
+  clientIp: string | null = IP,
+) {
   for (let attempt = 0; attempt < times; attempt++) {
     const result = await signIn({ ...WRONG, email }, { clientIp });
     expect(result).toEqual({ ok: false, reason: "invalid_credentials" });
@@ -78,7 +91,7 @@ async function failTimes(times: number, email = USER.email, clientIp = IP) {
 }
 
 describe("signIn rate limiting", () => {
-  it("blocks the 6th failed attempt for an email without verifying the password", async () => {
+  it("blocks a client's 6th failed attempt for an email without verifying the password", async () => {
     await failTimes(5);
     mocks.compare.mockClear();
     mocks.findCredentialsByEmail.mockClear();
@@ -95,6 +108,39 @@ describe("signIn rate limiting", () => {
     expect(mocks.compare).not.toHaveBeenCalled();
     expect(mocks.findCredentialsByEmail).not.toHaveBeenCalled();
     expect(mocks.createSession).not.toHaveBeenCalled();
+  });
+
+  it("does not let an attacker lock the owner out: failures from one IP leave other IPs alone", async () => {
+    await failTimes(5, USER.email, ATTACKER_IP);
+    expect(await signIn(WRONG, { clientIp: ATTACKER_IP })).toMatchObject({
+      reason: "rate_limited",
+    });
+
+    expect(await signIn(USER, { clientIp: IP })).toEqual({
+      ok: true,
+      userId: "user_1",
+    });
+  });
+
+  it("caps failed attempts for one email at 50 across all IPs, without verifying the password", async () => {
+    for (let client = 0; client < 10; client++) {
+      await failTimes(5, USER.email, `192.0.2.${client}`);
+    }
+    mocks.compare.mockClear();
+
+    const result = await signIn(USER, { clientIp: "192.0.2.200" });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 600,
+    });
+    expect(mocks.compare).not.toHaveBeenCalled();
+    expect(mocks.consumeRateLimit).toHaveBeenCalledWith(
+      "login:email",
+      USER.email,
+      LOGIN_EMAIL_POLICY,
+    );
   });
 
   it("treats an unknown email exactly like a known one", async () => {
@@ -137,7 +183,7 @@ describe("signIn rate limiting", () => {
     ).toEqual({ ok: false, reason: "invalid_credentials" });
   });
 
-  it("does not count a successful login", async () => {
+  it("does not count a successful login: every bucket it took is given back, in the window it was taken from", async () => {
     await failTimes(4);
     expect(await signIn(USER, { clientIp: IP })).toEqual({
       ok: true,
@@ -147,19 +193,43 @@ describe("signIn rate limiting", () => {
     // Still one attempt left: the success gave its slot back.
     await failTimes(1);
     expect(mocks.refundRateLimit).toHaveBeenCalledWith(
+      "login:email-client",
+      `${USER.email}|${IP}`,
+      WINDOW_START,
+    );
+    expect(mocks.refundRateLimit).toHaveBeenCalledWith(
       "login:email",
       USER.email,
-      LOGIN_EMAIL_POLICY,
+      WINDOW_START,
     );
     expect(mocks.refundRateLimit).toHaveBeenCalledWith(
       "login:ip",
       IP,
-      LOGIN_IP_POLICY,
+      WINDOW_START,
+    );
+    expect(mocks.consumeRateLimit).toHaveBeenCalledWith(
+      "login:email-client",
+      `${USER.email}|${IP}`,
+      LOGIN_EMAIL_CLIENT_POLICY,
     );
   });
 
-  it("limits by email alone when the request carries no client IP", async () => {
-    await failTimes(5, USER.email, null as unknown as string);
+  it("still signs in when giving the attempt back fails (the failure is only logged)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.refundRateLimit.mockRejectedValue(new Error("database down"));
+
+    expect(await signIn(USER, { clientIp: IP })).toEqual({
+      ok: true,
+      userId: "user_1",
+    });
+    expect(mocks.createSession).toHaveBeenCalledWith("user_1", {
+      remember: false,
+    });
+    expect(log).toHaveBeenCalled();
+  });
+
+  it("puts requests without a client IP in one shared bucket per email, and skips the per-IP limit", async () => {
+    await failTimes(5, USER.email, null);
 
     expect(await signIn(WRONG, { clientIp: null })).toMatchObject({
       reason: "rate_limited",
@@ -169,6 +239,8 @@ describe("signIn rate limiting", () => {
       expect.anything(),
       expect.anything(),
     );
+    // A client that does carry an IP is not affected.
+    expect(await signIn(USER, { clientIp: IP })).toMatchObject({ ok: true });
   });
 
   it("does not count invalid input", async () => {
