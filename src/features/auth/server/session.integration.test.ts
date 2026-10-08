@@ -86,14 +86,17 @@ afterAll(async () => {
 
 describe("revocable sessions (PostgreSQL)", () => {
   it("stores one session row per sign-in and accepts its token", async () => {
+    const countLive = () =>
+      db.session.count({
+        where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+      });
+    const before = await countLive();
+
     const token = await signInAndCopyToken(userId);
 
+    expect(await countLive()).toBe(before + 1);
     presentCookie(token);
     await expect(readSessionUser()).resolves.toMatchObject({ id: userId });
-    const live = await db.session.count({
-      where: { userId, revokedAt: null },
-    });
-    expect(live).toBeGreaterThan(0);
   });
 
   it("rejects a validly signed token whose session was revoked", async () => {
