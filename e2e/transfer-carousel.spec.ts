@@ -32,10 +32,18 @@ async function dragBy(page: Page, target: Locator, dx: number) {
   return { x: startX + dx, y };
 }
 
+/** Distance between two neighboring tiles' centers, measured on the strip at rest. */
+async function tileStep(strip: Locator): Promise<number> {
+  const tiles = strip.getByRole("option");
+  return (await centerX(tiles.nth(1))) - (await centerX(tiles.nth(0)));
+}
+
 /**
  * Keeps the finger where it is for longer than the release velocity's window (moving
  * only a pixel up and down), so lifting it then throws nothing: the strip settles on
- * the tile nearest to where it was let go.
+ * the tile nearest to where it was let go. The hold is real time on purpose: Motion
+ * measures a pan's velocity with its own clock, not the events' timestamps, so only
+ * letting time pass zeroes it. A slower machine only holds longer, which throws less.
  */
 async function holdStill(page: Page, finger: { x: number; y: number }) {
   for (let sample = 0; sample < 8; sample += 1) {
@@ -85,9 +93,10 @@ test.describe("the transfer flow, by hand", () => {
     const third = strip.getByRole("option", { name: /Matías Herrera/ });
     await expect(first).toBeVisible();
     const center = await centerX(first);
+    const step = await tileStep(strip);
 
     // Two tiles' worth to the left, held still (no flick), then let go.
-    await holdStill(page, await dragBy(page, first, -2 * 108));
+    await holdStill(page, await dragBy(page, first, -2 * step));
     await page.mouse.up();
 
     // The third person settles in the center and is the one chosen.
@@ -140,6 +149,45 @@ test.describe("the transfer flow, by hand", () => {
       page.getByRole("option", { name: /Hincha Granate/ }),
     ).toHaveAttribute("aria-selected", "true");
   });
+
+  for (const reducedMotion of ["no-preference", "reduce"] as const) {
+    test(`goes on straight from the reason field (${reducedMotion} motion)`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.reload();
+      await page.getByRole("option", { name: /Hincha Granate/ }).click();
+      const keypad = page.getByRole("group", { name: "Teclado numérico" });
+      await keypad.getByRole("button", { name: "7", exact: true }).click();
+
+      // Typing the reason hands the screen to the phone's keyboard: the keypad folds.
+      const reason = page.getByLabel(/Motivo/);
+      await reason.fill("Entradas");
+      await expect(keypad).toHaveCount(0);
+
+      // Pressing "Continuar" from there blurs the field first, which brings the keypad
+      // back between press and release. It rises above the button, which is pinned to
+      // the bottom, so the button stays where the pointer went down.
+      const proceed = page.getByRole("button", { name: "Continuar" });
+      const pressedAt = await proceed.boundingBox();
+      await reason.blur();
+      await expect(keypad).toBeVisible();
+      await expect
+        .poll(async () => (await proceed.boundingBox())?.y)
+        .toBeCloseTo(pressedAt?.y ?? Number.NaN, 0);
+
+      await reason.focus();
+      await expect(keypad).toHaveCount(0);
+      await proceed.click();
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: "Revisá la transferencia",
+        }),
+      ).toBeVisible();
+      await expect(page.getByText("Entradas")).toBeVisible();
+    });
+  }
 
   test("works by keyboard: the strip's arrows and Enter, then typed digits", async ({
     page,
