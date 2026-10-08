@@ -1,0 +1,561 @@
+{
+  "color": {
+    "brand": {
+      "cool-gray": {
+        "base": {
+          "$description": "The club's institutional Cool Gray 7C. Decorative only: 2.8:1 on white is below AA for text.",
+          "$type": "color",
+          "$value": "#9a999d"
+        },
+        "dark": {
+          "$description": "Cool Gray 7C darkened (OKLCH L 0.48): 6.5:1 on white, 5.2:1 on `cool-gray-soft`.",
+          "$type": "color",
+          "$value": "#5e5d61"
+        },
+        "soft": {
+          "$description": "25% Cool Gray 7C over white: the sent-movement tile.",
+          "$type": "color",
+          "$value": "#e6e6e7"
+        }
+      },
+      "garnet": {
+        "base": {
+          "$description": "The club's institutional granate, Pantone 188 C. Every tint and shade below derives from it.",
+          "$type": "color",
+          "$value": "#70192d"
+        },
+        "dark": {
+          "$description": "Same hue, darker (OKLCH L 0.27): granate-tinted shadows.",
+          "$type": "color",
+          "$value": "#470f1b"
+        },
+        "deep": {
+          "$description": "The deepest granate: the bottom of the login backdrop, the shade side of lit fills.",
+          "$type": "color",
+          "$value": "#3a0d18"
+        },
+        "glow": {
+          "$description": "Granate lifted (OKLCH L +0.035): the light around the shield on the login backdrop.",
+          "$type": "color",
+          "$value": "#7e1f34"
+        },
+        "soft": {
+          "$description": "25% granate over white.",
+          "$type": "color",
+          "$value": "#dbc6ca"
+        }
+      },
+      "gold": {
+        "base": {
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$type": "color",
+          "$value": "#b4982f"
+        },
+        "bright": {
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$type": "color",
+          "$value": "#e6bf5d"
+        },
+        "dark": {
+          "$description": "Gold's hue darkened (OKLCH L 0.48, C 0.09) into an ink: 6.5:1 on white, 5.2:1 on `gold-soft`, 5.3:1 on `gold-light`. Subscriptions and pending statuses.",
+          "$type": "color",
+          "$value": "#6f5c14"
+        },
+        "ink": {
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$type": "color",
+          "$value": "#352602"
+        },
+        "light": {
+          "$description": "The club's institutional gold, Pantone 618 C: the currency chip and focus accents on granate. The chip is polished metal graded around it: `gold-light` (OKLCH L 0.93) and `gold-bright` (L 0.82, a touch warmer) catch the light, the official gold is its shade. `gold-ink` is its text: 5.2:1 on the official gold, the darkest stop.",
+          "$type": "color",
+          "$value": "#fae7b3"
+        },
+        "soft": {
+          "$description": "25% gold over white (the same recipe as `primary-soft`): the subscription tile.",
+          "$type": "color",
+          "$value": "#ece5cb"
+        }
+      }
+    },
+    "card": {
+      "cvv-ink": {
+        "$description": "Inks printed on the card: the signature (warmed toward granate) and the CVV digits.",
+        "$type": "color",
+        "$value": "#1b1416"
+      },
+      "gold": {
+        "$description": "Second card in the Home carousel: satin gold on Pantone 618 C's hue, beside the granate card (the club's two colors). Light (OKLCH L 0.84 / C 0.08) because Visa's blue wordmark stays untouched: 8.7:1 on it, 7.1:1 on the shade. `card-gold-shade` (L 0.78 / C 0.10) is its darkest stop, toward the official gold. Text is `gold-ink` (9.0:1 / 7.3:1); labels are `card-gold-label`, gold's hue at L 0.38 (6.1:1 / 5.0:1).",
+        "$type": "color",
+        "$value": "#dcca8e"
+      },
+      "gold-label": {
+        "$description": "Second card in the Home carousel: satin gold on Pantone 618 C's hue, beside the granate card (the club's two colors). Light (OKLCH L 0.84 / C 0.08) because Visa's blue wordmark stays untouched: 8.7:1 on it, 7.1:1 on the shade. `card-gold-shade` (L 0.78 / C 0.10) is its darkest stop, toward the official gold. Text is `gold-ink` (9.0:1 / 7.3:1); labels are `card-gold-label`, gold's hue at L 0.38 (6.1:1 / 5.0:1).",
+        "$type": "color",
+        "$value": "#4d4219"
+      },
+      "gold-shade": {
+        "$description": "Second card in the Home carousel: satin gold on Pantone 618 C's hue, beside the granate card (the club's two colors). Light (OKLCH L 0.84 / C 0.08) because Visa's blue wordmark stays untouched: 8.7:1 on it, 7.1:1 on the shade. `card-gold-shade` (L 0.78 / C 0.10) is its darkest stop, toward the official gold. Text is `gold-ink` (9.0:1 / 7.3:1); labels are `card-gold-label`, gold's hue at L 0.38 (6.1:1 / 5.0:1).",
+        "$type": "color",
+        "$value": "#cdb66a"
+      },
+      "signature": {
+        "$description": "Signature-panel paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
+        "$type": "color",
+        "$value": "#f8f5ed"
+      },
+      "signature-ink": {
+        "$description": "Inks printed on the card: the signature (warmed toward granate) and the CVV digits.",
+        "$type": "color",
+        "$value": "#3b2a2e"
+      },
+      "signature-line": {
+        "$description": "Signature-panel paper on gold's hue (OKLCH L 0.97 / 0.92, barely tinted).",
+        "$type": "color",
+        "$value": "#e9e5d6"
+      },
+      "stripe": {
+        "$description": "Payment card materials (PaymentCardBack): magnetic stripe and signature panel.",
+        "$type": "color",
+        "$value": "#120a0c"
+      },
+      "stripe-edge": {
+        "$description": "Payment card materials (PaymentCardBack): magnetic stripe and signature panel.",
+        "$type": "color",
+        "$value": "#2c1b1f"
+      },
+      "stripe-low": {
+        "$description": "Payment card materials (PaymentCardBack): magnetic stripe and signature panel.",
+        "$type": "color",
+        "$value": "#1d1215"
+      }
+    },
+    "neutral": {
+      "background": {
+        "$description": "Neutral off-white on Cool Gray 7C's hue (OKLCH L 0.982): no blue tint.",
+        "$type": "color",
+        "$value": "#f9f9fa"
+      },
+      "border": {
+        "$description": "Cool Gray 7C at 20% over white: hairlines and placeholders.",
+        "$type": "color",
+        "$value": "#ebebed"
+      },
+      "foreground": {
+        "$description": "Near-black ink on Cool Gray 7C's hue (OKLCH L 0.22): 17.3:1 on white.",
+        "$type": "color",
+        "$value": "#1b1a1d"
+      },
+      "muted": {
+        "$description": "Cool Gray 7C's hue, darkened to the lightest grey with AA 4.5:1 on every background it sits on (4.6 on the page and lit surfaces, 4.9 on white). The design's #8a8d9b was 3.2:1.",
+        "$type": "color",
+        "$value": "#727174"
+      },
+      "skeleton": {
+        "$description": "neutral skeleton (--color-skeleton)",
+        "$type": "color",
+        "$value": "#ebebed"
+      },
+      "surface": {
+        "$description": "Neutral off-white on Cool Gray 7C's hue (OKLCH L 0.982): no blue tint.",
+        "$type": "color",
+        "$value": "#ffffff"
+      }
+    },
+    "role": {
+      "danger": {
+        "base": {
+          "$description": "Accessibility exception (README → Brand): errors stay red, because red is what reads as \"error\" for everyone and granate already means the brand and money in. It is pulled toward granate's hue (OKLCH 0.51 / 0.17 / 24°, granate is 12°) but stays much lighter and more saturated than it. 6.3:1 on white, 5.4:1 on its tint.",
+          "$type": "color",
+          "$value": "#b32d32"
+        },
+        "on-brand": {
+          "$description": "Errors on the granate login backdrop: 5.8:1 at its lightest, 4.8:1 inside a field.",
+          "$type": "color",
+          "$value": "#ffb4ab"
+        },
+        "soft": {
+          "$description": "10% danger over white.",
+          "$type": "color",
+          "$value": "#f7eaeb"
+        }
+      },
+      "received": {
+        "base": {
+          "$description": "Alias of {color.brand.garnet.base}.",
+          "$type": "color",
+          "$value": "#70192d"
+        },
+        "soft": {
+          "$description": "Alias of {color.brand.garnet.soft}.",
+          "$type": "color",
+          "$value": "#dbc6ca"
+        }
+      },
+      "sent": {
+        "base": {
+          "$description": "Alias of {color.brand.cool-gray.dark}.",
+          "$type": "color",
+          "$value": "#5e5d61"
+        },
+        "soft": {
+          "$description": "Alias of {color.brand.cool-gray.soft}.",
+          "$type": "color",
+          "$value": "#e6e6e7"
+        }
+      },
+      "subscription": {
+        "base": {
+          "$description": "Roles, all on the brand palette: each movement type keeps its own brand color (subscription gold, received granate, sent Cool Gray), and statuses reuse them. Alias of {color.brand.gold.dark}.",
+          "$type": "color",
+          "$value": "#6f5c14"
+        },
+        "soft": {
+          "$description": "Roles, all on the brand palette: each movement type keeps its own brand color (subscription gold, received granate, sent Cool Gray), and statuses reuse them. Alias of {color.brand.gold.soft}.",
+          "$type": "color",
+          "$value": "#ece5cb"
+        }
+      },
+      "success": {
+        "base": {
+          "$description": "Granate on its soft tint: 6.9:1. Alias of {color.brand.garnet.base}.",
+          "$type": "color",
+          "$value": "#70192d"
+        },
+        "soft": {
+          "$description": "Granate on its soft tint: 6.9:1. Alias of {color.brand.garnet.soft}.",
+          "$type": "color",
+          "$value": "#dbc6ca"
+        }
+      },
+      "warning": {
+        "base": {
+          "$description": "Pending: gold ink on the light gold, 5.3:1. Alias of {color.brand.gold.dark}.",
+          "$type": "color",
+          "$value": "#6f5c14"
+        },
+        "soft": {
+          "$description": "Pending: gold ink on the light gold, 5.3:1. Alias of {color.brand.gold.light}.",
+          "$type": "color",
+          "$value": "#fae7b3"
+        }
+      }
+    }
+  },
+  "font": {
+    "display": {
+      "$description": "Wordmark, screen titles and large amounts. Its x-height is lower than Poppins' (0.40em against 0.55em) and so are its digits (0.60em against 0.74em): titles are set 2px larger than Poppins would be, amounts 4px.",
+      "$type": "fontFamily",
+      "$value": ["Rokkitt", "ui-serif", "Georgia", "serif"]
+    },
+    "sans": {
+      "$description": "Font family (--font-sans).",
+      "$type": "fontFamily",
+      "$value": ["Poppins", "ui-sans-serif", "system-ui", "sans-serif"]
+    }
+  },
+  "motion": {
+    "duration": {
+      "base": {
+        "$description": "Motion duration-base.",
+        "$type": "duration",
+        "$value": "280ms"
+      },
+      "fast": {
+        "$description": "Motion duration-fast.",
+        "$type": "duration",
+        "$value": "160ms"
+      },
+      "nav": {
+        "$description": "Motion duration-nav.",
+        "$type": "duration",
+        "$value": "400ms"
+      }
+    },
+    "ease": {
+      "$description": "The one easing curve.",
+      "$type": "cubicBezier",
+      "$value": [0.32, 0.72, 0, 1]
+    },
+    "rhythm": {
+      "shimmer-period": {
+        "$description": "Period of the skeleton's looping highlight (a rhythm, not a transition).",
+        "$type": "duration",
+        "$value": "1.4s"
+      },
+      "stagger-step": {
+        "$description": "Delay between consecutive list rows; at most 6 rows stagger (movement-motion.ts).",
+        "$type": "duration",
+        "$value": "40ms"
+      }
+    }
+  },
+  "shadow": {
+    "drop": {
+      "1": {
+        "$description": "Elevation 1: controls resting on the page (inactive chips, small surfaces).",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "0px",
+            "color": "#34182608",
+            "inset": false,
+            "offsetX": "0px",
+            "offsetY": "0px",
+            "spread": "1px"
+          },
+          {
+            "blur": "2px",
+            "color": "#3418260f",
+            "inset": false,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "10px",
+            "color": "#34182624",
+            "inset": false,
+            "offsetX": "1px",
+            "offsetY": "4px",
+            "spread": "-6px"
+          }
+        ]
+      },
+      "card": {
+        "$description": "Elevation 2: cards, rows, the default surface.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "0px",
+            "color": "#34182608",
+            "inset": false,
+            "offsetX": "0px",
+            "offsetY": "0px",
+            "spread": "1px"
+          },
+          {
+            "blur": "2px",
+            "color": "#3418260d",
+            "inset": false,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "24px",
+            "color": "#3418262e",
+            "inset": false,
+            "offsetX": "2px",
+            "offsetY": "10px",
+            "spread": "-12px"
+          }
+        ]
+      },
+      "float": {
+        "$description": "Elevation 4: bars floating over content (bottom nav); the shade rises above it.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "24px",
+            "color": "#34182629",
+            "inset": false,
+            "offsetX": "0px",
+            "offsetY": "-8px",
+            "spread": "-12px"
+          }
+        ]
+      },
+      "on-brand": {
+        "$description": "A white control resting on the granate backdrop (login button).",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "2px",
+            "color": "#3a0d1899",
+            "inset": false,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "22px",
+            "color": "#3a0d18d9",
+            "inset": false,
+            "offsetX": "2px",
+            "offsetY": "10px",
+            "spread": "-8px"
+          }
+        ]
+      },
+      "pressed": {
+        "$description": "A granate fill pressed into the page: only the contact shadow is left.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "1px",
+            "color": "#470f1b4d",
+            "inset": false,
+            "offsetX": "0px",
+            "offsetY": "0.5px",
+            "spread": "0px"
+          }
+        ]
+      },
+      "raised": {
+        "$description": "Elevation 3: a granate fill raised toward the light (primary button, active chip).",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "2px",
+            "color": "#470f1b3d",
+            "inset": false,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "12px",
+            "color": "#470f1b6b",
+            "inset": false,
+            "offsetX": "1px",
+            "offsetY": "6px",
+            "spread": "-6px"
+          }
+        ]
+      }
+    },
+    "inset": {
+      "pressed": {
+        "$description": "Pressed: the highlight is gone and the top inner edge is in shade.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "3px",
+            "color": "#3a0d1859",
+            "inset": true,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          }
+        ]
+      },
+      "recessed": {
+        "$description": "Recessed fields (inputs): shade on the inner top edge, light on the outer bottom.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "2px",
+            "color": "#34182614",
+            "inset": true,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "0px",
+            "color": "#3418260f",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "0px",
+            "spread": "1px"
+          }
+        ]
+      },
+      "recessed-on-brand": {
+        "$description": "A field pressed into the granate backdrop (login).",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "3px",
+            "color": "#3a0d188c",
+            "inset": true,
+            "offsetX": "0.5px",
+            "offsetY": "1px",
+            "spread": "0px"
+          }
+        ]
+      },
+      "specular": {
+        "$description": "Specular edges: the top edge catches the light, the bottom edge turns away from it.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "0px",
+            "color": "#ffffff38",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "0px",
+            "color": "#3a0d1833",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "-2px",
+            "spread": "0px"
+          }
+        ]
+      },
+      "specular-glass": {
+        "$description": "Specular edges: the top edge catches the light, the bottom edge turns away from it.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "0px",
+            "color": "#ffffffcc",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "1px",
+            "spread": "0px"
+          }
+        ]
+      },
+      "specular-gold": {
+        "$description": "Gold chip: a bright top edge (polished metal) and a hint of its own deeper gold below.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "0px",
+            "color": "#ffffff8c",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "0px",
+            "color": "#35260238",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "-1px",
+            "spread": "0px"
+          }
+        ]
+      },
+      "specular-soft": {
+        "$description": "Specular edges: the top edge catches the light, the bottom edge turns away from it.",
+        "$type": "shadow",
+        "$value": [
+          {
+            "blur": "0px",
+            "color": "#ffffffb3",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "1px",
+            "spread": "0px"
+          },
+          {
+            "blur": "0px",
+            "color": "#3418260d",
+            "inset": true,
+            "offsetX": "0px",
+            "offsetY": "-1px",
+            "spread": "0px"
+          }
+        ]
+      }
+    }
+  }
+}

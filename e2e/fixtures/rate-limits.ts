@@ -1,0 +1,58 @@
+import {
+  CARD_REVEAL_POLICY,
+  windowStartFor,
+} from "../../src/shared/lib/rate-limit";
+import { withTestDb } from "./test-db";
+
+/*
+ * The rate-limit counters (`RateLimitBucket`) as the e2e specs need them. The limits stay
+ * on in the app under test (no env flag turns them off); instead every scenario that signs
+ * in starts with empty counters for its user, like a new visitor, so a full run (which
+ * logs in and reveals cards many times as the same demo users) never trips them by
+ * accident. Resets are scoped to one user's keys: spec files run in parallel workers, and
+ * a global reset in one would wipe the counters another spec is building up.
+ */
+
+/** Empties every counter (failed logins per email/IP, reveals per user): before a run only. */
+export function resetAllRateLimits(): Promise<void> {
+  return withTestDb(async (client) => {
+    await client.query(`DELETE FROM "RateLimitBucket"`);
+  });
+}
+
+/**
+ * Empties every counter a sign-in as `email` meets: its failed logins (per email, and per
+ * email from each client), ALL per-IP login counters and, if it is a user, its reveals.
+ * Every spec signs in from the same local address, so the per-IP counter is shared by the
+ * whole run: it is emptied before any user's sign-in, or a run's worth of failed-login
+ * scenarios would trip it.
+ */
+export function resetRateLimitsBeforeSignIn(email: string): Promise<void> {
+  return withTestDb(async (client) => {
+    await client.query(
+      `DELETE FROM "RateLimitBucket"
+        WHERE "key" = $1
+           OR ("scope" = 'login:email-client' AND starts_with("key", $1 || '|'))
+           OR "scope" = 'login:ip'
+           OR ("scope" = 'card:reveal'
+               AND "key" IN (SELECT id FROM "User" WHERE email = $1))`,
+      [email],
+    );
+  });
+}
+
+/** Spends `email`'s whole reveal budget for the current window: the next reveal is a 429. */
+export function exhaustRevealBudget(email: string): Promise<void> {
+  const windowStart = windowStartFor(new Date(), CARD_REVEAL_POLICY);
+  return withTestDb(async (client) => {
+    // The column is a UTC `timestamp`: the instant is converted explicitly, whatever the
+    // session's time zone.
+    await client.query(
+      `INSERT INTO "RateLimitBucket" ("scope", "key", "windowStart", "count")
+       SELECT 'card:reveal', u.id, ($2::timestamptz AT TIME ZONE 'UTC'), $3
+         FROM "User" u WHERE u.email = $1
+       ON CONFLICT ("scope", "key", "windowStart") DO UPDATE SET "count" = EXCLUDED."count"`,
+      [email, windowStart.toISOString(), CARD_REVEAL_POLICY.limit],
+    );
+  });
+}

@@ -47,3 +47,15 @@ next-env.d.ts
 # local tooling
 /.atl/
 /odd/
+/.pw-*.mjs
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/AGENTS.md
+/CLAUDE.md
+/docs/ENTREVISTA.md
+
+# Figma screen captures (pnpm screens:capture regenerates them)
+/design/screens/
