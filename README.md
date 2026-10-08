@@ -517,6 +517,10 @@ La pantalla de "¡Transferencia enviada!" mueve plata entre los usuarios demo, a
 - **PAN cifrado o tokenizado** (y un proveedor que muestre los datos en un iframe propio) si las tarjetas fueran reales.
 - **Monitoreo** con Sentry o similar, usando el `digest` de los errores.
 - **Deploy previews** por PR y e2e contra el preview.
+- **Notificaciones reales.** Hoy la campanita es decorativa (quedó fuera del alcance desde el principio). El siguiente paso sería avisar cuando llega una transferencia, con una tabla de notificaciones y un indicador en la campanita.
+- **"Cerrar sesión en todos los dispositivos" en la interfaz.** La capacidad ya existe en el servidor (`revokeAllSessionsForUser`); faltaría la pantalla que la ofrezca, junto con la lista de sesiones activas.
+- **Ventana deslizante para los límites de intentos.** La ventana fija actual permite, en el peor caso, el doble del límite en una ráfaga que cruce el cambio de ventana. Una ventana deslizante lo evita a cambio de guardar un registro por intento.
+- **QR de pago interoperable (Transferencias 3.0), solo con un adquirente real.** El QR de Recibir es texto plano a propósito: el formato interoperable lo emite un adquirente registrado ante el BCRA, y una demo no debe imitarlo.
 - Modo oscuro, i18n y soporte offline/PWA.
 
 ## Proceso de trabajo
