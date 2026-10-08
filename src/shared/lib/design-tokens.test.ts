@@ -28,7 +28,7 @@ describe("parseCustomProperties", () => {
   --color-c: #00ff00;
 }
 @theme inline {
-  --font-display: var(--font-rokkitt), serif;
+  --radius-pill: 9999px;
 }
 .ignored {
   --color-z: #000000;
@@ -46,7 +46,7 @@ describe("parseCustomProperties", () => {
       "--color-a",
       "--color-b",
       "--color-c",
-      "--font-display",
+      "--radius-pill",
       "--motion-x",
       "--motion-y",
     ]);
