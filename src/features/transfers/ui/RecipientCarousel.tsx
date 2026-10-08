@@ -65,6 +65,7 @@ export function RecipientCarousel({
   selectedQuery: string | null;
   onSelect: (recipient: ConfirmedRecipient) => void;
   onPick: (recipient: ConfirmedRecipient) => void;
+  /** A lookup is pending: the strip neither moves nor chooses until it answers. */
   disabled: boolean;
 }) {
   const reduced = useReducedMotionPreference();
@@ -81,6 +82,10 @@ export function RecipientCarousel({
 
   const lastIndex = recipients.length - 1;
 
+  // Where the strip comes to rest: the target of its settle (or the tile it sits on),
+  // null while the finger holds it.
+  const restingAt = useRef<number | null>(-centered * TILE_STEP);
+
   // Typing a recent's alias in the field below chooses them too: the strip follows.
   const [followedIndex, setFollowedIndex] = useState(selectedIndex);
   if (selectedIndex !== followedIndex) {
@@ -88,18 +93,19 @@ export function RecipientCarousel({
     if (selectedIndex !== -1) setCentered(selectedIndex);
   }
   useEffect(() => {
-    if (selectedIndex === -1 || offset.isAnimating()) return;
+    // Under the finger, the release decides where the strip goes.
+    if (selectedIndex === -1 || restingAt.current === null) return;
     const target = -selectedIndex * TILE_STEP;
-    if (offset.get() !== target) {
-      animate(offset, target, reduced ? INSTANT : SPRING);
-    }
+    // Compared with where the strip is headed, not where it is: a settle still running
+    // toward another tile is redirected (the spring keeps its velocity), not left to land.
+    if (restingAt.current === target) return;
+    restingAt.current = target;
+    animate(offset, target, reduced ? INSTANT : SPRING);
   }, [selectedIndex, offset, reduced]);
 
-  /** Centers a tile, carrying the release velocity (px/s) into the settle. */
-  function settleOn(index: number, velocity = 0) {
-    setCentered(index);
-    onSelect(recipients[index]);
-    const target = -index * TILE_STEP;
+  /** Glides the strip to rest at `target`, carrying a release velocity (px/s). */
+  function glideTo(target: number, velocity = 0) {
+    restingAt.current = target;
     animate(
       offset,
       target,
@@ -112,13 +118,25 @@ export function RecipientCarousel({
     );
   }
 
+  /** Centers a tile and chooses that person. */
+  function settleOn(index: number, velocity = 0) {
+    setCentered(index);
+    onSelect(recipients[index]);
+    glideTo(-index * TILE_STEP, velocity);
+  }
+
+  // While a lookup is pending the choice is frozen, as the field it writes is: a drag
+  // or an arrow key would put another alias in it under the answer for this one.
   function handlePanStart() {
     dragged.current = true;
+    if (disabled) return;
     offset.stop();
+    restingAt.current = null;
     panStart.current = offset.get();
   }
 
   function handlePan(_: PointerEvent, info: PanInfo) {
+    if (restingAt.current !== null) return;
     offset.set(
       withEdgeResistance(
         panStart.current + info.offset.x,
@@ -130,6 +148,12 @@ export function RecipientCarousel({
   }
 
   function handlePanEnd(_: PointerEvent, info: PanInfo) {
+    if (restingAt.current !== null) return;
+    // A lookup that started mid-drag: back to the chosen tile, choosing no one else.
+    if (disabled) {
+      glideTo(-centered * TILE_STEP, info.velocity.x);
+      return;
+    }
     settleOn(
       snapToStep(offset.get(), info.velocity.x, TILE_STEP, recipients.length),
       info.velocity.x,
@@ -137,6 +161,7 @@ export function RecipientCarousel({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (disabled) return;
     const target = {
       ArrowRight: Math.min(centered + 1, lastIndex),
       ArrowLeft: Math.max(centered - 1, 0),
@@ -148,7 +173,7 @@ export function RecipientCarousel({
       settleOn(target);
       return;
     }
-    if ((event.key === "Enter" || event.key === " ") && !disabled) {
+    if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       settleOn(centered);
       onPick(recipients[centered]);
