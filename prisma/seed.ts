@@ -107,7 +107,10 @@ type CardSeed = {
 /** A user's two cards: the primary one Home shows first, and a second one. */
 type UserCards = { primary: CardSeed; secondary: CardSeed };
 
-/** Balances are seed facts the e2e specs assert (they already include PAST_TRANSFERS). */
+/**
+ * Balances are fixed seed facts the e2e specs assert, not the sum of the movements: the
+ * movements (PAST_TRANSFERS included) are history and move no money when seeded.
+ */
 const DEMO_USER_CARDS: UserCards = {
   primary: {
     brand: "MASTERCARD",
@@ -451,7 +454,7 @@ type PastTransferSeed = {
  * Past transfers sent by the demo user, newest first: the second demo user (so transfers
  * go both ways), then the past recipients, so "Recientes" shows six people. Older than
  * every other movement, so Home and the first page of Movements stay as in the design.
- * Card balances are seed facts that already include them (they move no money now).
+ * They are history: they move no money, and no card balance is derived from them.
  */
 const PAST_TRANSFERS: PastTransferSeed[] = [
   {
@@ -515,6 +518,13 @@ const PAST_TRANSFERS: PastTransferSeed[] = [
     hour: 17,
   },
 ];
+
+/** How many PAST_TRANSFERS `user` received: one RECEIVED movement each. */
+function pastTransfersTo(user: UserSeed) {
+  return PAST_TRANSFERS.filter(
+    ({ recipient }) => recipient.email === user.email,
+  ).length;
+}
 
 /** Upserts the user by email, keeping its id (and so the sessions) across runs. */
 async function upsertUser(
@@ -680,85 +690,97 @@ async function main() {
 
   // One interactive transaction: the upserts, the wipe and the recreate either all apply or
   // none do, so a failure half-way never leaves a demo user without cards or movements.
-  const counts = await prisma.$transaction(async (tx) => {
-    const demo = await upsertUser(tx, DEMO_USER, demoHash);
-    const second = await upsertUser(tx, SECOND_USER, secondHash);
-    const recipients = [];
-    for (const [index, recipient] of PAST_RECIPIENTS.entries()) {
-      recipients.push(await upsertUser(tx, recipient, recipientHashes[index]!));
-    }
-    const userIds = [demo.id, second.id, ...recipients.map(({ id }) => id)];
+  const counts = await prisma.$transaction(
+    async (tx) => {
+      const demo = await upsertUser(tx, DEMO_USER, demoHash);
+      const second = await upsertUser(tx, SECOND_USER, secondHash);
+      const recipients = [];
+      for (const [index, recipient] of PAST_RECIPIENTS.entries()) {
+        recipients.push(
+          await upsertUser(tx, recipient, recipientHashes[index]!),
+        );
+      }
+      const userIds = [demo.id, second.id, ...recipients.map(({ id }) => id)];
 
-    // Idempotency: wipe every seeded user's data and recreate it so re-running converges
-    // to the same state. Transfers first: they reference the cards; the other side of a
-    // transfer with a user the seed does not own keeps its movement (its transferId
-    // becomes null).
-    await tx.transfer.deleteMany({
-      where: {
-        OR: [{ senderId: { in: userIds } }, { recipientId: { in: userIds } }],
-      },
-    });
-    await tx.movement.deleteMany({ where: { userId: { in: userIds } } });
-    await tx.card.deleteMany({ where: { userId: { in: userIds } } });
+      // Idempotency: wipe every seeded user's data and recreate it so re-running converges
+      // to the same state. Transfers first: they reference the cards; the other side of a
+      // transfer with a user the seed does not own keeps its movement (its transferId
+      // becomes null).
+      await tx.transfer.deleteMany({
+        where: {
+          OR: [{ senderId: { in: userIds } }, { recipientId: { in: userIds } }],
+        },
+      });
+      await tx.movement.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.card.deleteMany({ where: { userId: { in: userIds } } });
 
-    const demoCards = await createCards(
-      tx,
-      demo.id,
-      DEMO_USER,
-      DEMO_USER_CARDS,
-    );
-    const secondCards = await createCards(
-      tx,
-      second.id,
-      SECOND_USER,
-      SECOND_USER_CARDS,
-    );
-    const seededUsers = new Map<string, SeededUser>([
-      [DEMO_USER.email, { id: demo.id, seed: DEMO_USER, cards: demoCards }],
-      [
-        SECOND_USER.email,
-        { id: second.id, seed: SECOND_USER, cards: secondCards },
-      ],
-    ]);
-    for (const [index, recipient] of PAST_RECIPIENTS.entries()) {
-      const { id } = recipients[index]!;
-      const cards = await createCards(
+      const demoCards = await createCards(
         tx,
-        id,
-        recipient,
-        pastRecipientCards(index),
+        demo.id,
+        DEMO_USER,
+        DEMO_USER_CARDS,
       );
-      seededUsers.set(recipient.email, { id, seed: recipient, cards });
-    }
-
-    const demoMovements = await tx.movement.createMany({
-      data: toMovementRows(demo.id, DEMO_USER_MOVEMENTS, demoCards, "GB-"),
-    });
-    const secondMovements = await tx.movement.createMany({
-      data: toMovementRows(
+      const secondCards = await createCards(
+        tx,
         second.id,
-        SECOND_USER_MOVEMENTS,
-        secondCards,
-        "GB-H",
-      ),
-    });
-
-    const sender = seededUsers.get(DEMO_USER.email)!;
-    for (const transfer of PAST_TRANSFERS) {
-      await createPastTransfer(
-        tx,
-        transfer,
-        sender,
-        seededUsers.get(transfer.recipient.email)!,
+        SECOND_USER,
+        SECOND_USER_CARDS,
       );
-    }
+      const seededUsers = new Map<string, SeededUser>([
+        [DEMO_USER.email, { id: demo.id, seed: DEMO_USER, cards: demoCards }],
+        [
+          SECOND_USER.email,
+          { id: second.id, seed: SECOND_USER, cards: secondCards },
+        ],
+      ]);
+      for (const [index, recipient] of PAST_RECIPIENTS.entries()) {
+        const { id } = recipients[index]!;
+        const cards = await createCards(
+          tx,
+          id,
+          recipient,
+          pastRecipientCards(index),
+        );
+        seededUsers.set(recipient.email, { id, seed: recipient, cards });
+      }
 
-    // Each past transfer adds a sent movement to the demo user; one went to the second.
-    return {
-      demo: demoMovements.count + PAST_TRANSFERS.length,
-      second: secondMovements.count + 1,
-    };
-  });
+      const demoMovements = await tx.movement.createMany({
+        data: toMovementRows(demo.id, DEMO_USER_MOVEMENTS, demoCards, "GB-"),
+      });
+      const secondMovements = await tx.movement.createMany({
+        data: toMovementRows(
+          second.id,
+          SECOND_USER_MOVEMENTS,
+          secondCards,
+          "GB-H",
+        ),
+      });
+
+      const sender = seededUsers.get(DEMO_USER.email)!;
+      for (const transfer of PAST_TRANSFERS) {
+        await createPastTransfer(
+          tx,
+          transfer,
+          sender,
+          seededUsers.get(transfer.recipient.email)!,
+        );
+      }
+
+      // Each past transfer adds a SENT movement to the demo user and a RECEIVED one to its
+      // recipient.
+      return {
+        demo: demoMovements.count + PAST_TRANSFERS.length,
+        second: secondMovements.count + pastTransfersTo(SECOND_USER),
+        recipients: PAST_RECIPIENTS.reduce(
+          (total, recipient) => total + pastTransfersTo(recipient),
+          0,
+        ),
+      };
+    },
+    // Some thirty sequential round trips: Prisma's 5 s default can make the seed fail
+    // (and roll back) against a slow or remote database.
+    { maxWait: 10_000, timeout: 60_000 },
+  );
 
   console.log(`Seeded ${DEMO_USER.email}: 2 cards, ${counts.demo} movements.`);
   console.log(
@@ -768,7 +790,7 @@ async function main() {
     `Seeded ${SECOND_USER.email}: 2 cards, ${counts.second} movements.`,
   );
   console.log(
-    `Seeded ${PAST_RECIPIENTS.length} past recipients: 2 cards and 1 movement each.`,
+    `Seeded ${PAST_RECIPIENTS.length} past recipients: 2 cards each, ${counts.recipients} movements in all.`,
   );
 }
 
