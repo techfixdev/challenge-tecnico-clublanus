@@ -20,8 +20,8 @@ export const EDGE_RESISTANCE = 0.12;
 /**
  * A release faster than this is a flick: it turns the card in its direction even after a
  * short drag. Slower, the card follows where the finger left the deck. Lighter than the
- * shared `FLICK_VELOCITY` (500) of the edge swipe and the sheet: a deck flick only ever
- * turns one card, which is easy to undo, whereas those leave the screen or close it.
+ * shared `FLICK_VELOCITY` (500) of the edge swipe: a deck flick only ever turns one card,
+ * which is easy to undo, whereas the swipe leaves the screen.
  */
 export const DECK_FLICK_VELOCITY = 400;
 
