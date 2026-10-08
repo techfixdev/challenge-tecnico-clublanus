@@ -74,10 +74,11 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T34](#t34--e2e-del-destinatario-sin-contar-recientes-08102026) | E2E del destinatario sin contar recientes | `a4c7ade` |
 | | [T35](#t35--índice-trigram-para-la-búsqueda-de-movimientos-08102026) | Índice trigram para la búsqueda de movimientos | `95f0f43` |
 | | [T36](#t36--límites-de-intentos-en-postgresql-08102026) | Límites de intentos en PostgreSQL | `f790d9a`…`b706c14` (3) |
-| | [T36c](#t36c--login-sin-bloqueo-por-terceros-y-observaciones-de-la-revisión-08102026) | Login sin bloqueo por terceros y observaciones de la revisión | `e609b97` + este commit |
 | | [T36b](#t36b--texto-de-la-tarjeta-derecho-mientras-se-inclina-08102026) | Texto de la tarjeta derecho mientras se inclina | `165d8d6` |
-| | [T37](#t37--sesiones-revocables-08102026) | Sesiones revocables | `08aaa0f`, `26e198a` |
-| | [T39](#t39--pase-final-de-código-limpio-08102026) | Pase final de código limpio | `d114c53`…`3b17ea2` (6) + este commit |
+| | [T36c](#t36c--login-sin-bloqueo-por-terceros-y-observaciones-de-la-revisión-08102026) | Login sin bloqueo por terceros y observaciones de la revisión | `e609b97`, `d31a642`, `d1803f0` |
+| | [T37](#t37--sesiones-revocables-08102026) | Sesiones revocables | `08aaa0f`, `26e198a`, `05495e8` |
+| | T38 | "Qué mejoraría" actualizado (README) | `f7b0c63` |
+| | [T39](#t39--pase-final-de-código-limpio-08102026) | Pase final de código limpio | `d114c53`…`9412ae4` (7) + este commit |
 | | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
@@ -1110,6 +1111,8 @@ Cerrar sesión (Server Action o `POST /api/auth/logout`) revoca la fila y despu�
 #### T39 — Pase final de código limpio (08/10/2026)
 
 **Pedido:** antes de cerrar, un pase de nombres, código muerto, comentarios y consistencia, sin cambiar el comportamiento: ni funciones nuevas, ni UI, ni textos, ni dependencias, ni API, ni esquema.
+
+El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es parte de T39: es la corrección de la revisión de T37. Si falla la limpieza de sesiones vencidas, el inicio de sesión sigue; si falla la revocación al cerrar sesión, la cookie se borra igual y la falla queda en el log. Es una decisión consciente: que el usuario siempre pueda salir en su dispositivo pesa más que el caso raro de una sesión que queda viva en el servidor hasta vencer.
 
 **Qué se limpió:**
 

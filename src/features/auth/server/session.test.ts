@@ -34,6 +34,7 @@ describe("session lifecycle failures", () => {
 
     await expect(deleteSession()).resolves.toBeUndefined();
 
+    expect(repository.revokeSessionById).toHaveBeenCalledWith("s1");
     expect(cookieStore.delete).toHaveBeenCalledOnce();
     expect(console.error).toHaveBeenCalled();
   });
