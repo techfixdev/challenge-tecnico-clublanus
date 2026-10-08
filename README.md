@@ -367,7 +367,7 @@ Para importarlo: en Figma, plugin **Tokens Studio** → _Load from file/folder_ 
 
 `pnpm tokens:figma --check` falla si el JSON commiteado no coincide con `globals.css`; `pnpm test` también lo verifica (`scripts/tokens-figma.test.ts`). Si cambia un token, correr `pnpm tokens:figma` y commitear el JSON.
 
-**Pantallas.** `pnpm screens:capture` recorre la app con Playwright y guarda PNG de 390×844 @2x en `design/screens/` (login vacío, validación y error; Inicio, tarjeta revelada y dada vuelta; Movimientos, filtrado, búsqueda y búsqueda vacía; detalle; Transferir pasos 1 a 3 y alias inexistente; Recibir; perfil y confirmación de cierre de sesión). Corre con movimiento reducido para que no haya transiciones a medias. Los PNG no se versionan (pesan ~5 MB): se regeneran contra un servidor apuntado a la base de tests, nunca a la de desarrollo.
+**Pantallas.** `pnpm screens:capture` recorre la app con Playwright y guarda PNG de 390×844 @2x en `design/screens/` (login vacío, validación y error; Inicio, tarjeta revelada y dada vuelta; Movimientos, filtrado, búsqueda y búsqueda vacía; detalle; Transferir: búsqueda vacía, filtrada y con la oferta de buscar un alias, alias inexistente y pasos 2 y 3; Recibir). Corre con movimiento reducido para que no haya transiciones a medias. Los PNG no se versionan (pesan ~5 MB): se regeneran contra un servidor apuntado a la base de tests, nunca a la de desarrollo.
 
 ```bash
 pnpm build

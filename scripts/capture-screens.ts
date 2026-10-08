@@ -3,7 +3,11 @@ import path from "node:path";
 
 import { chromium, expect, type Page } from "@playwright/test";
 
-import { movementRows, primaryCard } from "../e2e/fixtures/screens";
+import {
+  movementRows,
+  primaryCard,
+  recipientSearch,
+} from "../e2e/fixtures/screens";
 import { DEMO_USER, login } from "../e2e/fixtures/session";
 import { waitForScreenToSettle } from "../e2e/fixtures/view-transitions";
 
@@ -218,14 +222,27 @@ async function captureTransferSteps(page: Page) {
   ).toBeVisible();
   await shoot(page, "transfer-1-recipient");
 
-  await page.getByLabel("Alias o CVU").fill("nadie.en.granabank");
+  // The search narrows the recents strip as it is typed.
+  await recipientSearch(page).fill("valen");
+  await expect(
+    page.getByRole("option", { name: /Valentina Sosa/ }),
+  ).toBeVisible();
+  await shoot(page, "transfer-1-search");
+
+  // An alias no recent has: the search offers to look it up (not done here).
+  await recipientSearch(page).fill("nadie.en.granabank");
+  await expect(
+    page.getByRole("button", { name: /Buscar «nadie\.en\.granabank»/ }),
+  ).toBeVisible();
+  await shoot(page, "transfer-1-lookup");
+
   await proceed.click();
   await expect(
     page.getByRole("alert").filter({ hasText: "No encontramos" }),
   ).toBeVisible();
   await shoot(page, "transfer-1-not-found");
 
-  await page.getByLabel("Alias o CVU").fill(RECIPIENT_ALIAS);
+  await recipientSearch(page).fill(RECIPIENT_ALIAS);
   await proceed.click();
   await expect(
     page.getByRole("heading", { name: "¿Cuánto le enviás?" }),
@@ -256,18 +273,6 @@ async function captureReceive(page: Page) {
     page.getByRole("heading", { name: "Recibir dinero" }),
   ).toBeVisible();
   await shoot(page, "receive");
-}
-
-async function captureProfile(page: Page) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Tu perfil" }).click();
-  const sheet = page.getByRole("dialog", { name: "Tu perfil" });
-  await expect(sheet).toBeVisible();
-  await shoot(page, "profile-sheet");
-
-  await sheet.getByRole("button", { name: "Cerrar sesión" }).click();
-  await expect(sheet).toContainText("¿Cerrar sesión?");
-  await shoot(page, "profile-logout-confirm");
 }
 
 async function main() {
@@ -303,7 +308,6 @@ async function main() {
       );
     }
     await captureReceive(page);
-    await captureProfile(page);
     console.log(`${captured} screens captured.`);
   } finally {
     await browser.close();
