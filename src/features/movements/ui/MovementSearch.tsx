@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -40,6 +41,9 @@ type MovementSearchProps = {
  * filtros", the nav link) the box adopts it, even while focused, because the list below
  * already shows that query; a pending search for the old text is dropped. When the change
  * is just our own search landing, the box keeps whatever the user typed since.
+ *
+ * Typed text is read from the box itself, never only from React's `onChange`, so none is
+ * ever lost (see `searchWhatWasTyped`).
  */
 export function MovementSearch({
   filters,
@@ -92,14 +96,33 @@ export function MovementSearch({
     });
   }
 
-  function handleChange(text: string) {
-    setValue(text);
+  function scheduleSearch(text: string) {
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       // An outside URL change replaced the text meanwhile: that search is stale.
       if (inputRef.current?.value === text) navigate(text);
     }, SEARCH_DEBOUNCE_MS);
   }
+
+  const searchWhatWasTyped = useEffectEvent((text: string) => {
+    setValue(text);
+    scheduleSearch(text);
+  });
+
+  // The search is scheduled from the box's own `input` event, not from React's onChange,
+  // which misses text in two cases: React turns its events off while it starts a view
+  // transition (a reveal, a list swap) until the browser captures the old screen, so a
+  // paste delivered meanwhile never reaches onChange; and text typed before hydration is
+  // kept in the box without any event at all (the box then differs from its server value,
+  // `defaultValue`). onChange still mirrors the text, so React never puts the old one back.
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    if (input.value !== input.defaultValue) searchWhatWasTyped(input.value);
+    const onInput = () => searchWhatWasTyped(input.value);
+    input.addEventListener("input", onInput);
+    return () => input.removeEventListener("input", onInput);
+  }, []);
 
   function handleClear() {
     setValue("");
@@ -136,7 +159,7 @@ export function MovementSearch({
           autoComplete="off"
           enterKeyHint="search"
           placeholder="Ingresá un nombre o servicio"
-          onChange={(event) => handleChange(event.target.value)}
+          onChange={(event) => setValue(event.target.value)}
           className={`h-full min-w-0 flex-1 bg-transparent ${INPUT_TEXT_CLASS} text-foreground outline-none placeholder:text-xs placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none`}
         />
         {value && (

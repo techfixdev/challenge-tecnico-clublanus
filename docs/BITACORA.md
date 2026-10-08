@@ -67,6 +67,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T26](#t26--pase-sobre-las-observaciones-de-t23-07102026) | Pase sobre las observaciones de T23 | `28cc013`…`ff12385` (13) |
 | | [T29](#t29--vuelta-al-diseño-recibir-cerrar-sesión-y-escudo-del-login-07102026) | Vuelta al diseño: Recibir, cerrar sesión y escudo del login | `a32c541`, `3cc6c13`, `32e856b` |
 | | [T30](#t30--buscador-de-destinatario-07102026) | Buscador de destinatario | `2a4eeb6`…`3e8b928` (10) |
+| | [T31](#t31--pegar-en-el-buscador-durante-la-animación-08102026) | Pegar en el buscador durante la animación | este commit |
 | | [T5](#t5--deploy-pendiente) | GitHub y deploy en Vercel | pendiente |
 
 ---
@@ -1004,6 +1005,16 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 **Cómo se verificó:** test primero en el subtítulo del paso 1. 1017 unitarios, 54 de integración y 110 e2e sobre el build de producción; formato, lint, typecheck y `tokens:figma --check` limpios.
 
 **Commits:** `2a4eeb6`, `f90d971`, `bbf75dc`, `789f8a4`, `d502f18`, `a7d5478`, `ed62b15`, `b15276b`, `f94c728`, `3e8b928`
+
+#### T31 — Pegar en el buscador durante la animación (08/10/2026)
+
+**Problema:** pegar "adobe" en el buscador de Movimientos mientras el resumen y la lista se revelan dejaba el texto en el campo, pero la búsqueda nunca salía. En T30 el test esperaba a que la pantalla se asentara; un usuario real no espera.
+
+**Causa:** React apaga su sistema de eventos al empezar a confirmar una transición de vista y lo vuelve a encender recién en el callback de `startViewTransition`, cuando el navegador ya capturó la pantalla vieja. Bajo carga, el navegador entrega el `input` del pegado justo en ese hueco: el campo muestra el texto y `onChange` nunca corre (sondeado: 5 de 240 corridas, sin `onChange` y con el valor interno de React todavía vacío). Lo mismo pasa con lo que se escribe antes de hidratar: React conserva el texto en el campo sin avisar.
+
+**Solución:** `MovementSearch` agenda la búsqueda desde el evento `input` nativo del propio campo (un listener en el elemento, que no depende del sistema de eventos de React) y, al montar, adopta el texto que difiere del valor del servidor (`defaultValue`). `onChange` solo refleja el texto, para que React no vuelva a poner el anterior.
+
+**Cómo se verificó:** test primero. Dos unitarios (un `input` que React no ve y texto escrito antes de hidratar) y dos e2e en `e2e/search-paste.spec.ts` que ponen el pegado exactamente en ese hueco y antes de hidratar: rojos antes del arreglo (3 de 3 y 1 de 1), verdes después (20 de 20 con `--repeat-each=10 --workers=4`). Se quitó la espera de `movements.spec.ts`: el recorrido completo pasó 200 de 200 con 8 workers. 1019 unitarios y 106 e2e sobre el build de producción; formato, lint y typecheck limpios.
 
 #### T5 — Deploy (pendiente)
 

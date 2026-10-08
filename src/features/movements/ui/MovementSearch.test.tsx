@@ -6,7 +6,17 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 
 import { MovementSearch, SEARCH_DEBOUNCE_MS } from "./MovementSearch";
 
@@ -24,8 +34,17 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** A keystroke: browsers report each one with an `input` event. */
 function typeInto(text: string) {
-  fireEvent.change(screen.getByRole("searchbox"), { target: { value: text } });
+  fireEvent.input(screen.getByRole("searchbox"), { target: { value: text } });
+}
+
+/** Sets the box's text the way the browser does, without telling React. */
+function setBoxValue(box: HTMLInputElement, text: string) {
+  Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )!.set!.call(box, text);
 }
 
 function waitForDebounce() {
@@ -164,6 +183,53 @@ describe("MovementSearch", () => {
         transitionTypes: ["no-morph"],
       });
       expect(replace).toHaveBeenNthCalledWith(2, "/movimientos?q=rona", {
+        scroll: false,
+        transitionTypes: ["no-morph"],
+      });
+    });
+
+    it("searches text whose input event never reached React's onChange", () => {
+      // React turns its events off while it starts a view transition (a reveal, a list
+      // swap): a paste the browser delivers meanwhile reaches only the box itself. A
+      // non-bubbling event plays that here, since React reads onChange as events bubble.
+      render(<MovementSearch filters={{}} />);
+      const box = screen.getByRole<HTMLInputElement>("searchbox");
+
+      act(() => {
+        setBoxValue(box, "adobe");
+        box.dispatchEvent(new Event("input", { bubbles: false }));
+      });
+      waitForDebounce();
+
+      expect(box).toHaveValue("adobe");
+      expect(replace).toHaveBeenCalledOnce();
+      expect(replace).toHaveBeenCalledWith("/movimientos?q=adobe", {
+        scroll: false,
+        transitionTypes: ["no-morph"],
+      });
+    });
+
+    it("searches text typed before hydration", () => {
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(<MovementSearch filters={{}} />);
+      document.body.append(container);
+      // Typed into the server's HTML while the scripts still load: no React, no events.
+      const box = container.querySelector("input")!;
+      setBoxValue(box, "adobe");
+
+      let root!: ReturnType<typeof hydrateRoot>;
+      act(() => {
+        root = hydrateRoot(container, <MovementSearch filters={{}} />);
+      });
+      onTestFinished(() => {
+        act(() => root.unmount());
+        container.remove();
+      });
+      waitForDebounce();
+
+      expect(box).toHaveValue("adobe");
+      expect(replace).toHaveBeenCalledOnce();
+      expect(replace).toHaveBeenCalledWith("/movimientos?q=adobe", {
         scroll: false,
         transitionTypes: ["no-morph"],
       });
