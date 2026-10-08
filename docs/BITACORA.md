@@ -72,7 +72,9 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T32](#t32--texto-escrito-antes-de-hidratar-en-el-buscador-de-destinatario-08102026) | Texto escrito antes de hidratar en el buscador de destinatario | `7c50a67` |
 | | [T33](#t33--readme-con-la-marca-del-club-y-requerimientos-08102026) | README con la marca del club y requerimientos | `7a5feb1` |
 | | [T34](#t34--e2e-del-destinatario-sin-contar-recientes-08102026) | E2E del destinatario sin contar recientes | `a4c7ade` |
-| | [T35](#t35--índice-trigram-para-la-búsqueda-de-movimientos-08102026) | Índice trigram para la búsqueda de movimientos | este commit |
+| | [T35](#t35--índice-trigram-para-la-búsqueda-de-movimientos-08102026) | Índice trigram para la búsqueda de movimientos | `95f0f43` |
+| | [T36](#t36--límites-de-intentos-en-postgresql-08102026) | Límites de intentos en PostgreSQL | `f790d9a`…`b706c14` (3) |
+| | [T36c](#t36c--login-sin-bloqueo-por-terceros-y-observaciones-de-la-revisión-08102026) | Login sin bloqueo por terceros y observaciones de la revisión | `e609b97` + este commit |
 | | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
@@ -1057,6 +1059,8 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Cómo se verificó:** test primero. Un test de integración crea 20 000 movimientos de un usuario dentro de una transacción que siempre se revierte, corre `EXPLAIN` sobre el `WHERE` real del repositorio y exige los dos índices: rojo antes de la migración (`Seq Scan`), verde después (`BitmapOr` sobre `Movement_counterparty_search_idx` y `Movement_description_search_idx`). En la base de desarrollo, con `enable_seqscan = off`, la consulta real muestra `Bitmap Index Scan on "Movement_counterparty_search_idx"`. Términos de menos de 3 letras no generan trigramas y no aprovechan el índice.
 
+**Por qué sin `CONCURRENTLY`:** los índices se crean con un `CREATE INDEX` común, que bloquea las escrituras en `Movement` mientras se construyen. `CREATE INDEX CONCURRENTLY` no puede correr dentro de una transacción y Prisma aplica cada migración dentro de una. Con una tabla chica (la de la demo) el bloqueo dura un instante y es aceptable; con millones de filas en producción convendría crear los índices aparte, con `CONCURRENTLY`, fuera de la migración.
+
 #### T36 — Límites de intentos en PostgreSQL (08/10/2026)
 
 **Problema:** nada frenaba probar contraseñas contra el login ni pedir los datos de una tarjeta una y otra vez. Un contador en memoria no sirve en serverless (cada instancia tiene el suyo) y sumar Redis agregaba un servicio más para la demo.
@@ -1066,6 +1070,14 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 **Tests sin tropezar con los límites:** los límites no se apagan con una variable de entorno. Los e2e vacían todos los contadores al empezar y los de cada usuario al iniciar sesión. Un primer intento vaciaba **todos** los contadores en cada login y falló: los archivos de e2e corren en paralelo y uno borraba lo que otro estaba contando. Por eso el reseteo quedó acotado al usuario de cada escenario.
 
 **Cómo se verificó:** test primero. Rojo antes de implementar: el 11.º revelado respondía 200 en vez de 429, 6 tests del login (el 6.º intento fallido, por IP, email normalizado, éxito que no cuenta) fallaban y la ruta REST del login fallaba sin el límite. Verde después. Integración contra PostgreSQL: de 25 pedidos en paralelo pasan exactamente 10, ventanas, devolución, limpieza, el 6.º login fallido bloqueado y 10 filas de auditoría para 10 revelados. E2E: el 6.º intento en el formulario muestra el aviso y, con el cupo gastado, el ojo de la tarjeta muestra cuánto esperar y la API responde 429.
+
+#### T36c — Login sin bloqueo por terceros y observaciones de la revisión (08/10/2026)
+
+**Problema:** la revisión de T36 (aprobada, con advertencias) encontró que el límite de 5 intentos fallidos **por email** se contaba igual para todos: cualquiera que conociera un email podía bloquear al dueño de la cuenta durante 15 minutos, incluso con la contraseña correcta. Además, la limpieza de ventanas viejas se esperaba dentro del pedido (y un error ahí lo convertía en 500), una devolución que fallaba hacía fallar un login correcto y la devolución recalculaba la ventana en lugar de usar la del intento.
+
+**Solución:** el límite ajustado pasa a ser **por email + IP** (5 cada 15 minutos): quien lo agota se bloquea a sí mismo. Se suma un tope por email de 50 cada 15 minutos para frenar a quien reparte intentos entre muchas IP, y se mantiene el de 20 por IP. Sin IP, todos esos pedidos comparten un cupo de 5 por email. Un login correcto devuelve cada intento en la ventana en la que se contó; si la devolución falla, se registra y el login sigue. La limpieza corre después de la respuesta con `after()` de Next (en Vercel extiende la invocación con `waitUntil`), nunca rechaza y solo registra el error; fuera de un pedido corre en segundo plano. Limpieza menor: se borró `combineDecisions` (sin uso), la tarjeta usa la ventana de la política en lugar de un 600 escrito a mano y las dos rutas comparten `rateLimitedError` para el 429 con `Retry-After`. En e2e, el reseteo por usuario también vacía los contadores por email + IP y por IP, y el escenario del 429 usa un usuario propio, creado y borrado por el test, en vez del segundo usuario de la demo.
+
+**Cómo se verificó:** test primero. Rojo antes de implementar: 5 tests unitarios del login (un atacante desde otra IP bloqueaba al dueño, el tope de 50, la devolución en su ventana, la devolución que falla, sin IP) y 2 de la limpieza (el pedido esperaba la limpieza; un error en ella lo hacía fallar). Verde después. Integración: un atacante agota el cupo desde una IP y el mismo email desde otra IP sigue verificando la contraseña; la devolución resta en la ventana del intento aunque ya haya empezado la siguiente. Una corrida e2e falló una vez en "el 6.º intento" porque el escenario cruzó el borde de una ventana de 15 minutos (4 intentos en una, 2 en la otra): es el costo conocido de la ventana fija, y la corrida siguiente pasó completa.
 
 #### T5 — Deploy (pendiente)
 
@@ -1084,7 +1096,7 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 - **Tipografía:** Rokkitt reemplaza a la tipografía comercial del club, que no estuvo disponible en un formato utilizable.
 - **Rojo de error:** es una excepción de accesibilidad a la paleta institucional (granate, oro y Cool Gray).
 - **Datos de tarjeta ficticios:** PAN inventado y CVV derivado en el servidor solo para la demo; en un sistema real el PAN va cifrado o tokenizado.
-- **Límites de intentos de ventana fija:** en el borde entre dos ventanas pueden pasar hasta el doble de intentos en poco tiempo; el límite por IP confía en los headers del proxy (Vercel).
+- **Límites de intentos de ventana fija:** en el borde entre dos ventanas pueden pasar hasta el doble de intentos en poco tiempo (y un e2e que cruza ese borde puede fallar, muy de vez en cuando); el límite por IP confía en los headers del proxy (Vercel). Quien reparte 50 intentos fallidos entre muchas IP sí bloquea la cuenta hasta que termina la ventana.
 - **Sesiones no revocables:** el JWT no se puede invalidar antes de su vencimiento; se mitiga verificando el usuario en cada lectura.
 - **Desktop:** se muestra la columna móvil centrada; el Figma es solo mobile y la alternativa responsive quedó archivada.
 - **Tests bajo carga extrema:** "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que el CI); en condiciones normales pasa siempre.

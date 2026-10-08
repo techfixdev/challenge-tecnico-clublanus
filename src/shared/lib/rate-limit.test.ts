@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   CARD_REVEAL_POLICY,
-  combineDecisions,
   decide,
   LOGIN_EMAIL_CLIENT_POLICY,
   LOGIN_EMAIL_POLICY,
@@ -77,27 +76,6 @@ describe("decide", () => {
       allowed: false,
       retryAfterSeconds: 600,
     });
-  });
-});
-
-describe("combineDecisions", () => {
-  it("is allowed only when every decision is, with the smallest remaining budget", () => {
-    expect(
-      combineDecisions([
-        { allowed: true, remaining: 3 },
-        { allowed: true, remaining: 12 },
-      ]),
-    ).toEqual({ allowed: true, remaining: 3 });
-  });
-
-  it("is refused when any decision is, waiting for the longest one", () => {
-    expect(
-      combineDecisions([
-        { allowed: false, retryAfterSeconds: 60 },
-        { allowed: true, remaining: 2 },
-        { allowed: false, retryAfterSeconds: 300 },
-      ]),
-    ).toEqual({ allowed: false, retryAfterSeconds: 300 });
   });
 });
 

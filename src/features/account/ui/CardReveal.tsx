@@ -9,7 +9,10 @@ import {
   type ReactNode,
 } from "react";
 
-import { tooManyAttemptsMessage } from "@/shared/lib/rate-limit";
+import {
+  CARD_REVEAL_POLICY,
+  tooManyAttemptsMessage,
+} from "@/shared/lib/rate-limit";
 import { EyeIcon, EyeOffIcon } from "@/shared/ui/icons";
 
 import {
@@ -63,10 +66,15 @@ class RevealRateLimitedError extends Error {
   }
 }
 
+/** The reveal policy's whole window, in seconds: the longest a refusal can last. */
+const REVEAL_WINDOW_SECONDS = CARD_REVEAL_POLICY.windowMs / 1000;
+
 /** `Retry-After` in seconds; the policy's whole window when it is missing or odd. */
 function retryAfterSeconds(response: Response): number {
   const seconds = Number(response.headers.get("Retry-After"));
-  return Number.isInteger(seconds) && seconds > 0 ? seconds : 600;
+  return Number.isInteger(seconds) && seconds > 0
+    ? seconds
+    : REVEAL_WINDOW_SECONDS;
 }
 
 /** One request per reveal, never cached (the server also answers `no-store`). */

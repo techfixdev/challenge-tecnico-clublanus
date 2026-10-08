@@ -6,9 +6,9 @@ import {
   API_MESSAGES,
   apiError,
   isJsonContentType,
+  rateLimitedError,
   withApiErrorHandling,
 } from "@/shared/lib/api-response";
-import { tooManyAttemptsMessage } from "@/shared/lib/rate-limit";
 import { clientIpFrom } from "@/shared/server/client-ip";
 
 /**
@@ -49,12 +49,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest) => {
     return apiError("INVALID_INPUT", API_MESSAGES.invalidInput, result.details);
   }
   if (result.reason === "rate_limited") {
-    const response = apiError(
-      "RATE_LIMITED",
-      tooManyAttemptsMessage(result.retryAfterSeconds),
-    );
-    response.headers.set("Retry-After", String(result.retryAfterSeconds));
-    return response;
+    return rateLimitedError(result.retryAfterSeconds);
   }
   return apiError("INVALID_CREDENTIALS", LOGIN_MESSAGES.invalidCredentials);
 });

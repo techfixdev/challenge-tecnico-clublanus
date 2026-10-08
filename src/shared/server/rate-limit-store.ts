@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+
 import {
   decide,
   windowStartFor,
@@ -23,7 +25,37 @@ const STALE_AFTER_MS = 24 * 60 * 60_000;
 /** Share of hits that also sweep stale buckets: cheap, and no cron job is needed. */
 const SWEEP_PROBABILITY = 0.01;
 
-type Options = { now?: Date; random?: () => number };
+type Options = {
+  now?: Date;
+  random?: () => number;
+  /** Schedules work after the response; defaults to Next's `after` (tests inject one). */
+  runAfterResponse?: (task: () => Promise<void>) => void;
+};
+
+/**
+ * Runs `task` once the response has been sent, via Next's `after`: on Vercel it extends
+ * the invocation (`waitUntil`) until the task settles, so the work is not cut off when
+ * the function freezes. Outside a request (scripts, integration tests) `after` throws,
+ * and the task simply runs in the background instead.
+ */
+function runAfterResponseDefault(task: () => Promise<void>) {
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
+}
+
+/** The sweep as a background task: it never rejects, a failure is only logged. */
+function sweepInBackground(now: Date): () => Promise<void> {
+  return async () => {
+    try {
+      await sweepStaleBuckets(now);
+    } catch (error) {
+      console.error("Sweeping stale rate-limit buckets failed", error);
+    }
+  };
+}
 
 /**
  * The Prisma client, loaded on first use rather than at import: modules that merely sit
@@ -44,7 +76,11 @@ export async function consumeRateLimit(
   scope: RateLimitScope,
   key: string,
   policy: RateLimitPolicy,
-  { now = new Date(), random = Math.random }: Options = {},
+  {
+    now = new Date(),
+    random = Math.random,
+    runAfterResponse = runAfterResponseDefault,
+  }: Options = {},
 ): Promise<RateLimitHit> {
   const windowStart = windowStartFor(now, policy);
   const db = await database();
@@ -54,7 +90,9 @@ export async function consumeRateLimit(
     ON CONFLICT ("scope", "key", "windowStart")
     DO UPDATE SET "count" = "RateLimitBucket"."count" + 1
     RETURNING "count"`;
-  if (random() < SWEEP_PROBABILITY) await sweepStaleBuckets(now);
+  // Housekeeping, not part of the verdict: off the request path, and it cannot turn a
+  // counted hit into an error.
+  if (random() < SWEEP_PROBABILITY) runAfterResponse(sweepInBackground(now));
   return { ...decide(count, windowStart, now, policy), windowStart };
 }
 

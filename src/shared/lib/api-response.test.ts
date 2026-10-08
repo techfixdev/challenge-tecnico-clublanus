@@ -13,6 +13,7 @@ import {
   API_MESSAGES,
   apiError,
   isJsonContentType,
+  rateLimitedError,
   withApiErrorHandling,
 } from "./api-response";
 import { validationDetails } from "./validation";
@@ -35,6 +36,21 @@ describe("isJsonContentType", () => {
     expect(isJsonContentType("multipart/form-data")).toBe(false);
     expect(isJsonContentType(null)).toBe(false);
     expect(isJsonContentType("")).toBe(false);
+  });
+});
+
+describe("rateLimitedError", () => {
+  it("answers 429 RATE_LIMITED with Retry-After and the wait in whole minutes", async () => {
+    const response = rateLimitedError(61);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("61");
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "RATE_LIMITED",
+        message: "Demasiados intentos. Probá de nuevo en 2 minutos.",
+      },
+    });
   });
 });
 

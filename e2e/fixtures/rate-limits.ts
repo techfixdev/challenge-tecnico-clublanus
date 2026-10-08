@@ -32,12 +32,21 @@ export function resetAllRateLimits(): Promise<void> {
   });
 }
 
-/** Empties `email`'s counters: its failed logins and, if it is a user, its reveals. */
+/**
+ * Empties `email`'s counters: its failed logins (per email, and per email from each
+ * client), the per-IP login counters and, if it is a user, its reveals. Every spec signs
+ * in from the same local address, so the per-IP counter is shared by the whole run: it is
+ * emptied with any user's, or a run's worth of failed-login scenarios would trip it.
+ */
 export function resetRateLimitsFor(email: string): Promise<void> {
   return withClient(async (client) => {
     await client.query(
       `DELETE FROM "RateLimitBucket"
-        WHERE "key" = $1 OR "key" IN (SELECT id FROM "User" WHERE email = $1)`,
+        WHERE "key" = $1
+           OR ("scope" = 'login:email-client' AND starts_with("key", $1 || '|'))
+           OR "scope" = 'login:ip'
+           OR ("scope" = 'card:reveal'
+               AND "key" IN (SELECT id FROM "User" WHERE email = $1))`,
       [email],
     );
   });

@@ -91,33 +91,6 @@ export function decide(
   };
 }
 
-/** The most restrictive of several decisions: refused if any is, waiting the longest. */
-export function combineDecisions(
-  decisions: readonly RateLimitDecision[],
-): RateLimitDecision {
-  let combined: RateLimitDecision = {
-    allowed: true,
-    remaining: Number.POSITIVE_INFINITY,
-  };
-  for (const decision of decisions) {
-    if (!decision.allowed) {
-      combined = {
-        allowed: false,
-        retryAfterSeconds: Math.max(
-          decision.retryAfterSeconds,
-          combined.allowed ? 0 : combined.retryAfterSeconds,
-        ),
-      };
-    } else if (combined.allowed) {
-      combined = {
-        allowed: true,
-        remaining: Math.min(combined.remaining, decision.remaining),
-      };
-    }
-  }
-  return combined;
-}
-
 /** "Demasiados intentos. Probá de nuevo en 3 minutos." (whole minutes, rounded up). */
 export function tooManyAttemptsMessage(retryAfterSeconds: number): string {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));

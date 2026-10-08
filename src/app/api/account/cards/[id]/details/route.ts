@@ -5,9 +5,9 @@ import { getCurrentUser } from "@/features/auth/server/current-user";
 import {
   API_MESSAGES,
   apiError,
+  rateLimitedError,
   withApiErrorHandling,
 } from "@/shared/lib/api-response";
-import { tooManyAttemptsMessage } from "@/shared/lib/rate-limit";
 import { clientIpFrom } from "@/shared/server/client-ip";
 
 type Context = RouteContext<"/api/account/cards/[id]/details">;
@@ -24,12 +24,7 @@ const handle = withApiErrorHandling(
     if (result.ok) return NextResponse.json({ data: result.details });
 
     if (result.reason === "rate_limited") {
-      const response = apiError(
-        "RATE_LIMITED",
-        tooManyAttemptsMessage(result.retryAfterSeconds),
-      );
-      response.headers.set("Retry-After", String(result.retryAfterSeconds));
-      return response;
+      return rateLimitedError(result.retryAfterSeconds);
     }
     return apiError("CARD_NOT_FOUND", "No encontramos esa tarjeta");
   },

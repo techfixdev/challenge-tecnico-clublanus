@@ -2,6 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 
 import { classifyDatabaseError } from "./db-errors";
+import { tooManyAttemptsMessage } from "./rate-limit";
 import type { ValidationDetails } from "./validation";
 
 /**
@@ -56,6 +57,21 @@ export function apiError(
     { error: details ? { code, message, details } : { code, message } },
     { status: STATUS_BY_CODE[code] },
   );
+}
+
+/**
+ * 429 `RATE_LIMITED`: "Demasiados intentos. Probá de nuevo en N minutos." with a
+ * `Retry-After` header carrying the seconds until the refusing window ends.
+ */
+export function rateLimitedError(
+  retryAfterSeconds: number,
+): NextResponse<ApiErrorBody> {
+  const response = apiError(
+    "RATE_LIMITED",
+    tooManyAttemptsMessage(retryAfterSeconds),
+  );
+  response.headers.set("Retry-After", String(retryAfterSeconds));
+  return response;
 }
 
 /**

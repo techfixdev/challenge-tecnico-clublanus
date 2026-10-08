@@ -177,17 +177,21 @@ describe("sweepStaleBuckets", () => {
     expect(left).toEqual([{ key: recent }]);
   });
 
-  it("runs on a small share of hits, decided by the injected random source", async () => {
+  it("runs after the response on a small share of hits, decided by the injected random source", async () => {
     const old = key("stale-swept-by-hit");
     await consumeRateLimit("card:reveal", old, POLICY, {
       now: new Date("2026-10-06T08:00:00.000Z"),
       random: () => 1,
     });
 
+    const deferred: Array<() => Promise<void>> = [];
     await consumeRateLimit("card:reveal", key("sweeper"), POLICY, {
       now: NOW,
       random: () => 0,
+      runAfterResponse: (task) => deferred.push(task),
     });
+    expect(deferred).toHaveLength(1);
+    await deferred[0]();
 
     expect(await db.rateLimitBucket.count({ where: { key: old } })).toBe(0);
   });

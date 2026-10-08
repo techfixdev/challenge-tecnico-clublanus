@@ -8,6 +8,7 @@ import {
 import { exhaustRevealBudget } from "./fixtures/rate-limits";
 import { bringCardForward, primaryCard } from "./fixtures/screens";
 import { login, loginUntilHomeSettles, SECOND_USER } from "./fixtures/session";
+import { createThrowawayUser } from "./fixtures/throwaway-user";
 
 /*
  * Per-card reveal: every card is masked on load (balance, full number, CVV), each eye
@@ -194,45 +195,55 @@ test("the details endpoint needs a session and only serves the owner's cards", a
   expect(await foreign.text()).not.toMatch(/\d{16}/);
 });
 
-test("past 10 reveals in 10 minutes, the eye says how long to wait and the API answers 429", async ({
-  page,
-}) => {
-  // The second demo user: no spec running in parallel signs in as them (a login resets
-  // that user's counters), so the spent budget stays spent for this scenario.
-  await loginUntilHomeSettles(page, SECOND_USER);
-  await exhaustRevealBudget(SECOND_USER.email);
-  const firstCard = page
-    .getByRole("list", { name: "Tus tarjetas" })
-    .getByRole("region")
-    .first();
+test.describe("past the reveal limit", () => {
+  let removeThrowawayUser: (() => Promise<void>) | undefined;
+  test.afterEach(async () => {
+    await removeThrowawayUser?.();
+    removeThrowawayUser = undefined;
+  });
 
-  await firstCard
-    .getByRole("button", { name: /^Mostrar datos de la tarjeta/ })
-    .click();
+  test("past 10 reveals in 10 minutes, the eye says how long to wait and the API answers 429", async ({
+    page,
+  }) => {
+    // A user of its own: a login resets that user's counters, and no spec running in
+    // parallel knows this one, so the spent budget stays spent for the whole scenario.
+    const user = await createThrowawayUser();
+    removeThrowawayUser = user.remove;
+    await loginUntilHomeSettles(page, user);
+    await exhaustRevealBudget(user.email);
+    const firstCard = page
+      .getByRole("list", { name: "Tus tarjetas" })
+      .getByRole("region")
+      .first();
 
-  await expect(firstCard.getByTestId("card-reveal-notice")).toContainText(
-    /^Demasiados intentos\. Probá de nuevo en \d+ minutos?\.$/,
-  );
-  await expect(
-    firstCard.getByRole("button", { name: /^Mostrar datos de la tarjeta/ }),
-  ).toHaveAttribute("aria-pressed", "false");
-  await expect(firstCard).toContainText("Saldo oculto");
+    await firstCard
+      .getByRole("button", { name: /^Mostrar datos de la tarjeta/ })
+      .click();
 
-  const cards = (await (
-    await page.request.get("/api/account/cards")
-  ).json()) as {
-    data: { id: string }[];
-  };
-  const refused = await page.request.get(
-    `/api/account/cards/${cards.data[0].id}/details`,
-  );
-  expect(refused.status()).toBe(429);
-  expect(Number(refused.headers()["retry-after"])).toBeGreaterThan(0);
-  expect(refused.headers()["cache-control"]).toBe("no-store");
-  expect(
-    ((await refused.json()) as { error: { code: string } }).error.code,
-  ).toBe("RATE_LIMITED");
-  expect(await refused.text()).not.toMatch(/\d{16}/);
+    await expect(firstCard.getByTestId("card-reveal-notice")).toContainText(
+      /^Demasiados intentos\. Probá de nuevo en \d+ minutos?\.$/,
+    );
+    await expect(
+      firstCard.getByRole("button", { name: /^Mostrar datos de la tarjeta/ }),
+    ).toHaveAttribute("aria-pressed", "false");
+    await expect(firstCard).toContainText("Saldo oculto");
+
+    const cards = (await (
+      await page.request.get("/api/account/cards")
+    ).json()) as {
+      data: { id: string }[];
+    };
+    const refused = await page.request.get(
+      `/api/account/cards/${cards.data[0].id}/details`,
+    );
+    expect(refused.status()).toBe(429);
+    expect(Number(refused.headers()["retry-after"])).toBeGreaterThan(0);
+    expect(refused.headers()["cache-control"]).toBe("no-store");
+    expect(
+      ((await refused.json()) as { error: { code: string } }).error.code,
+    ).toBe("RATE_LIMITED");
+    expect(await refused.text()).not.toMatch(/\d{16}/);
+  });
 });
 
 function shownMasks(page: Page) {
