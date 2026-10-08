@@ -47,14 +47,19 @@ export function testDatabaseUrl(
   return testUrl;
 }
 
+/** The server's `postgres` database, which exists before the test database does. */
+function maintenanceUrl(testUrl: string): string {
+  const maintenance = new URL(testUrl);
+  maintenance.pathname = "/postgres";
+  maintenance.search = "";
+  return maintenance.toString();
+}
+
 /** Creates the database if missing, connecting to the server's `postgres` database. */
 async function createIfMissing(testUrl: string): Promise<void> {
   const name = databaseName(new URL(testUrl));
   if (!SAFE_NAME.test(name)) throw new Error(`Unsafe database name: ${name}`);
-  const maintenance = new URL(testUrl);
-  maintenance.pathname = "/postgres";
-  maintenance.search = "";
-  const client = new Client({ connectionString: maintenance.toString() });
+  const client = new Client({ connectionString: maintenanceUrl(testUrl) });
   await client.connect();
   try {
     const { rowCount } = await client.query(
@@ -116,4 +121,36 @@ export async function prepareTestDatabase({
   prisma(["migrate", "deploy"], testUrl);
   if (seed) prisma(["db", "seed"], testUrl);
   return testUrl;
+}
+
+/**
+ * Claims the test database for one run that reseeds it (an e2e run, `pnpm db:test`) and
+ * returns the release. Two such runs at once seed it under each other: the second one's
+ * seed recreates the demo users' data mid-run, so the first one's signed-in pages lose
+ * their balances and searches and fail in ways that look like app races. The claim is a
+ * PostgreSQL advisory lock held by its own connection, so it spans worktrees (they share
+ * the server) and ends with the process even if it crashes. A second claim fails at once
+ * instead of waiting: a run that waited would still find the seed facts changed.
+ */
+export async function claimTestDatabase(
+  testUrl = testDatabaseUrl(),
+): Promise<() => Promise<void>> {
+  const name = databaseName(new URL(testUrl));
+  const client = new Client({ connectionString: maintenanceUrl(testUrl) });
+  await client.connect();
+  const lock = [`granabank:${name}`];
+  const { rows } = await client.query<{ claimed: boolean }>(
+    "SELECT pg_try_advisory_lock(hashtext($1)) AS claimed",
+    lock,
+  );
+  if (!rows[0]?.claimed) {
+    await client.end();
+    throw new Error(
+      `${name} is in use by another run (an e2e run or \`pnpm db:test\`): wait for it to finish, since both reseed it`,
+    );
+  }
+  return async () => {
+    await client.query("SELECT pg_advisory_unlock(hashtext($1))", lock);
+    await client.end();
+  };
 }
