@@ -40,9 +40,12 @@ function VisaLogo() {
   );
 }
 
+/** The 24px slot the mark sits in, for layouts that keep room for it. */
+export const BRAND_LOGO_SLOT = "h-6";
+
 export function CardBrandLogo({ brand }: { brand: CardBrand }) {
   return (
-    <span className="flex h-6 items-center">
+    <span className={`flex ${BRAND_LOGO_SLOT} items-center`}>
       {brand === "VISA" ? <VisaLogo /> : <MastercardLogo />}
     </span>
   );

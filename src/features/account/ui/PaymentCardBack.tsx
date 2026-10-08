@@ -1,10 +1,13 @@
 import { cardPhrase, type CardFace } from "../domain/card";
-import { CardBrandLogo } from "./CardBrandLogo";
+import { BRAND_LOGO_SLOT, CardBrandLogo } from "./CardBrandLogo";
 import { CardRevealToggle, RevealedCvv } from "./CardReveal";
 import { BRAND_THEME, CARD_EDGE } from "./card-theme";
 
 /** Card-pixel length: 1px at the 390px design width, scaling with the card. */
 const px = (value: number) => `calc(var(--card-px,1px)*${value})`;
+
+/** The magnetic stripe, in card pixels: drawn on the art, kept clear on the text layer. */
+const STRIPE = { top: 18, height: 34 } as const;
 
 /**
  * The back's art: the surface, the magnetic stripe and the brand mark, the decorative
@@ -19,7 +22,7 @@ export function PaymentCardBackArt({ card }: { card: CardFace }) {
     >
       <div
         data-testid="card-stripe"
-        style={{ top: px(18), height: px(34) }}
+        style={{ top: px(STRIPE.top), height: px(STRIPE.height) }}
         className="absolute inset-x-0 bg-[linear-gradient(180deg,var(--color-card-stripe-edge),var(--color-card-stripe)_70%,var(--color-card-stripe-low))]"
       />
       <span className="absolute right-5 bottom-5">
@@ -31,9 +34,10 @@ export function PaymentCardBackArt({ card }: { card: CardFace }) {
 
 /**
  * The back of a payment card, shown by flipping it: signature panel with the holder's
- * name, CVV box (masked until the card is revealed; its own eye reveals it
- * too), over the art (PaymentCardBackArt: stripe and brand mark). Same size, tone and scaling as the front. The stripe runs
- * edge to edge, so the face has no side padding; its rows carry it instead.
+ * name and the CVV box (masked until the card is revealed; its own eye reveals it too),
+ * over the art (PaymentCardBackArt: stripe and brand mark). Same size, tone and scaling
+ * as the front. The stripe on the art runs edge to edge, so this face has no side
+ * padding; its rows carry it instead.
  */
 export function PaymentCardBack({ card }: { card: CardFace }) {
   const theme = BRAND_THEME[card.brand];
@@ -43,14 +47,14 @@ export function PaymentCardBack({ card }: { card: CardFace }) {
         aria-label={`Reverso de la ${cardPhrase(card)}`}
         data-brand={card.brand}
         data-face="back"
-        style={{ height: px(180), paddingTop: px(18) }}
+        style={{ height: px(180), paddingTop: px(STRIPE.top) }}
         // Small labels unhinted, as the scaled front does (hinting opens gaps in words).
         className={`flex flex-col rounded-3xl pb-5 [text-rendering:geometricPrecision] ${theme.ink}`}
       >
         {/* Room for the magnetic stripe, which lies on the art. */}
         <div
           aria-hidden="true"
-          style={{ height: px(34) }}
+          style={{ height: px(STRIPE.height) }}
           className="shrink-0"
         />
 
@@ -83,7 +87,7 @@ export function PaymentCardBack({ card }: { card: CardFace }) {
             Tocá para volver
           </p>
           {/* Room for the brand mark, which lies on the art. */}
-          <span aria-hidden="true" className="h-6" />
+          <span aria-hidden="true" className={BRAND_LOGO_SLOT} />
         </div>
       </section>
     </div>

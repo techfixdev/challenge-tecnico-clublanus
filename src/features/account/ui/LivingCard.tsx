@@ -52,6 +52,17 @@ type Press = {
 /** How far, in px, the flat text layer slides at full tilt (the parallax). */
 const TEXT_PARALLAX = 5;
 
+/*
+ * During a flip, each face's text is read off the cosine of the turn: fully shown while
+ * its face is within ~18° of the viewer (cos 0.95) and gone by ~53° (cos 0.6), well before
+ * the face goes edge-on. The back mirrors it around 180°: it appears from ~127° and is
+ * whole from ~162°.
+ */
+const TEXT_SHOWN_COS = 0.95;
+const TEXT_GONE_COS = 0.6;
+/** The text's horizontal scale never reaches 0, which would make its transform singular. */
+const MIN_TEXT_SCALE_X = 0.001;
+
 /** The shadow the faces cast on the page, the same on both. */
 const FACE =
   "overflow-hidden rounded-3xl shadow-[0_1px_2px_color-mix(in_srgb,var(--color-primary-dark)_18%,transparent),0_10px_20px_-12px_color-mix(in_srgb,var(--color-primary-dark)_45%,transparent)] [backface-visibility:hidden]";
@@ -72,8 +83,9 @@ function flipAnnouncement({
  * A card that reacts like a physical object: only while pressed, it tilts towards the
  * finger in 3D, a faint gloss follows the light and its shadow shifts; on release it
  * settles back flat. Inside the carousel, a press that turns into a sideways drag belongs
- * to the carousel: the card lets go of the tilt (and of the tap) as the deck moves. Every turn uses the one critically damped spring
- * (springs.ts): it follows the finger closely and never wobbles past its rest.
+ * to the carousel: the card lets go of the tilt (and of the tap) as the deck moves. Every
+ * turn uses the one critically damped spring (springs.ts): it follows the finger closely
+ * and never wobbles past its rest.
  *
  * With a `back`, a tap flips it over (rotateY with the spring; it dips slightly while it
  * turns so its near edge stays inside the carousel). The whole card is a toggle button
@@ -158,6 +170,12 @@ export function LivingCard({
     else flipAngle.set(flipped ? 180 : 0);
   }, [flipped, reduced, flipAngle]);
   const fade = reduced && flippedOnce ? FADE : INSTANT;
+  // Under reduced motion the flip is a crossfade: the face that is not turned up fades out.
+  const crossfade = (face: "front" | "back") => ({
+    initial: false,
+    animate: { opacity: reduced && flipped === (face === "front") ? 0 : 1 },
+    transition: fade,
+  });
 
   // The flat text layer follows the art without rotating: a small parallax slide (the
   // way a layer just above a tilted surface moves), never a skew that would blur glyphs.
@@ -177,10 +195,18 @@ export function LivingCard({
     Math.cos((angle * Math.PI) / 180),
   );
   const textScaleX = useTransform(flipCos, (cos) =>
-    Math.max(Math.abs(cos), 0.001),
+    Math.max(Math.abs(cos), MIN_TEXT_SCALE_X),
   );
-  const frontTextOpacity = useTransform(flipCos, [0.6, 0.95], [0, 1]);
-  const backTextOpacity = useTransform(flipCos, [-0.95, -0.6], [1, 0]);
+  const frontTextOpacity = useTransform(
+    flipCos,
+    [TEXT_GONE_COS, TEXT_SHOWN_COS],
+    [0, 1],
+  );
+  const backTextOpacity = useTransform(
+    flipCos,
+    [-TEXT_SHOWN_COS, -TEXT_GONE_COS],
+    [1, 0],
+  );
   // One gloss layer per face, so it turns with the face it lies on.
   const sheen = (
     <m.div
@@ -291,9 +317,7 @@ export function LivingCard({
         <m.div
           data-art="front"
           className={`absolute inset-0 ${FACE}`}
-          initial={false}
-          animate={{ opacity: reduced && flipped ? 0 : 1 }}
-          transition={fade}
+          {...crossfade("front")}
         >
           {art}
           {sheen}
@@ -304,9 +328,7 @@ export function LivingCard({
             className={`absolute inset-0 ${FACE}`}
             // Under reduced motion both faces lie flat and the back fades over the front.
             style={{ rotateY: reduced ? 0 : 180 }}
-            initial={false}
-            animate={{ opacity: reduced && !flipped ? 0 : 1 }}
-            transition={fade}
+            {...crossfade("back")}
           >
             {backArt}
             {sheen}
@@ -327,9 +349,7 @@ export function LivingCard({
           inert={back && flipped ? true : undefined}
           aria-hidden={back && flipped ? true : undefined}
           style={{ scaleX: textScaleX }}
-          initial={false}
-          animate={{ opacity: reduced && flipped ? 0 : 1 }}
-          transition={fade}
+          {...crossfade("front")}
         >
           <m.div style={{ opacity: reduced ? 1 : frontTextOpacity }}>
             {children}
@@ -342,9 +362,7 @@ export function LivingCard({
             inert={!flipped || undefined}
             aria-hidden={!flipped || undefined}
             style={{ scaleX: textScaleX }}
-            initial={false}
-            animate={{ opacity: reduced && !flipped ? 0 : 1 }}
-            transition={fade}
+            {...crossfade("back")}
           >
             <m.div style={{ opacity: reduced ? 1 : backTextOpacity }}>
               {back}
