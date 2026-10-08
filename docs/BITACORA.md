@@ -81,7 +81,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T39](#t39--pase-final-de-código-limpio-08102026) | Pase final de código limpio | `d114c53`…`9412ae4` (7) + este commit |
 | | [T40](#t40--diagramas-de-arquitectura-08102026) | Diagramas de arquitectura (README) | `4c509fa` |
 | | [T41](#t41--videos-del-recorrido-y-antes-y-después-08102026) | Videos: recorrido con subtítulos y antes y después | este commit |
-| | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
+| | [T5](#t5--deploy-en-vercel-con-neon-08102026) | Deploy en Vercel con Neon | este commit |
 
 ---
 
@@ -1154,11 +1154,19 @@ El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es par
 
 **Cómo se verificó:** `ffprobe` de cada archivo (duración, resolución, tamaño), fotogramas extraídos y revisados de cada tramo, `prettier --check README.md` limpio y todos los enlaces relativos del README existen.
 
-#### T5 — Deploy (pendiente)
+#### T5 — Deploy en Vercel con Neon (08/10/2026)
 
 **Pedido:** repositorio en GitHub y deploy en Vercel con Neon.
 
-**Estado:** el repositorio ya está publicado ([techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)); el deploy sigue pendiente. Publicar es una decisión del candidato y no se hace sin su aprobación explícita. Los pasos de producción están en la tabla "Local vs. producción" (T7).
+**Qué se hizo:**
+
+- Proyecto `challenge-tecnico-clublanus` en Vercel, conectado al repositorio: cada push a `main` despliega producción y cada PR genera un preview.
+- PostgreSQL en **Neon**, creado desde el Marketplace de Vercel (región `iad1`, la misma de las funciones). La integración carga `DATABASE_URL` (con pooler) y `DATABASE_URL_UNPOOLED` en el proyecto; la app usa la primera y no necesitó cambios de código: Prisma usa el driver `pg`, que habla con Neon igual que con el Postgres local.
+- `SESSION_SECRET` y `DEMO_CVV_SECRET` generados al azar y guardados como variables sensibles (no se pueden leer después ni están en el repositorio).
+- Las 7 migraciones se aplicaron con `prisma migrate deploy` usando la conexión directa (sin pooler), y el seed de demo con `pnpm db:seed`.
+- Verificado en producción con Playwright: login, Home, búsqueda en Movimientos, detalle, Transferir hasta la revisión, Recibir con QR y `GET /api/movements`. Sin errores de página ni respuestas 5xx; la cookie de sesión sale `Secure`, `HttpOnly` y `SameSite=Lax`.
+
+**URL:** [challenge-tecnico-clublanus.vercel.app](https://challenge-tecnico-clublanus.vercel.app)
 
 ---
 
