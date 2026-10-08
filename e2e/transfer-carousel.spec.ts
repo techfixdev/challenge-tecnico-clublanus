@@ -11,6 +11,9 @@ import { settle } from "./fixtures/view-transitions";
  * Valentina Sosa, Matías Herrera, Camila Benítez, Nicolás Acosta and Florencia Ríos.
  */
 
+/** The recipient step's one search field. */
+const SEARCH = "Buscar por nombre, alias o CVU";
+
 async function centerX(target: Locator): Promise<number> {
   const box = await target.boundingBox();
   expect(box, "the element has a box").not.toBeNull();
@@ -76,9 +79,9 @@ test.describe("the transfer flow, by hand", () => {
 
     await page.mouse.up();
     await expect.poll(() => centerX(tile)).toBeCloseTo(rest, 0);
-    // Settling on the tile chose them: the field holds their alias.
+    // Settling on the tile chose them; the search above keeps what was typed (nothing).
     await expect(tile).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByLabel("Alias o CVU")).toHaveValue("hincha.granate");
+    await expect(page.getByRole("combobox", { name: SEARCH })).toHaveValue("");
     // A drag is not a tap: the flow is still on the first step.
     await expect(
       page.getByRole("heading", { level: 1, name: "¿A quién le enviás?" }),
@@ -102,7 +105,61 @@ test.describe("the transfer flow, by hand", () => {
     // The third person settles in the center and is the one chosen.
     await expect.poll(() => centerX(third)).toBeCloseTo(center, 0);
     await expect(third).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByLabel("Alias o CVU")).toHaveValue("mati.granate");
+    await expect(page.getByRole("button", { name: "Continuar" })).toBeEnabled();
+  });
+
+  test("the search narrows the strip as it is typed, centering the first match", async ({
+    page,
+  }) => {
+    const strip = page.getByRole("listbox", { name: "Recientes" });
+    const first = strip.getByRole("option").first();
+    await expect(first).toBeVisible();
+    const center = await centerX(first);
+    const search = page.getByRole("combobox", { name: SEARCH });
+
+    // Case and accents do not count.
+    await search.fill("MATIAS");
+    const matias = strip.getByRole("option", { name: /Matías Herrera/ });
+    await expect(strip.getByRole("option")).toHaveCount(1);
+    await expect(matias).toHaveAttribute("aria-selected", "true");
+    await expect.poll(() => centerX(matias)).toBeCloseTo(center, 0);
+
+    // Several matches keep the recents' order; the first one is chosen.
+    await search.fill("granate");
+    await expect(strip.getByRole("option")).not.toHaveCount(1);
+    await expect(strip.getByRole("option").first()).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await search.fill("zzzzzz");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(
+      page.getByText("Sin coincidencias en tus recientes", { exact: true }),
+    ).toHaveCount(2);
+
+    // The clear button brings every recent back.
+    await page.getByRole("button", { name: "Borrar búsqueda" }).click();
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    await expect(strip.getByRole("option")).toHaveCount(6);
+  });
+
+  test("a ?to= link fills the search and centers that recent when going back", async ({
+    page,
+  }) => {
+    await page.goto("/transferir?to=mati.granate");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "¿Cuánto le enviás?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Cambiar" }).click();
+
+    await expect(page.getByRole("combobox", { name: SEARCH })).toHaveValue(
+      "mati.granate",
+    );
+    const matias = page.getByRole("option", { name: /Matías Herrera/ });
+    await expect(matias).toHaveAttribute("aria-selected", "true");
+    await expect(matias).toBeInViewport();
   });
 
   test("rearranges in place from recipient to amount to review, and back", async ({
@@ -195,7 +252,9 @@ test.describe("the transfer flow, by hand", () => {
     const strip = page.getByRole("listbox", { name: "Recientes" });
     await strip.focus();
     await page.keyboard.press("End");
-    await expect(page.getByLabel("Alias o CVU")).toHaveValue("flor.granate");
+    await expect(
+      strip.getByRole("option", { name: /Florencia Ríos/ }),
+    ).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("Enter");
 
     const heading = page.getByRole("heading", {

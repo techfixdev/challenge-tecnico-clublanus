@@ -112,6 +112,8 @@ export function TransferFlow({
     prefilledRecipient?.query ??
       (prefill?.kind === "typed" ? prefill.text : ""),
   );
+  // What is typed in the recipient search (a `?to=` link types its alias there too).
+  const [recipientSearch, setRecipientSearch] = useState(recipientText);
   const [recipient, setRecipient] = useState<ConfirmedRecipient | null>(
     prefilledRecipient,
   );
@@ -279,6 +281,8 @@ export function TransferFlow({
     }
     return (
       <RecipientStep
+        search={recipientSearch}
+        onSearchChange={setRecipientSearch}
         value={recipientText}
         onChange={changeRecipientText}
         recentRecipients={recentRecipients}

@@ -102,7 +102,10 @@ function renderFlow({
 }
 
 async function toAmountStep(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText("Alias o CVU"), "hincha.granate");
+  await user.type(
+    screen.getByLabelText("Buscar por nombre, alias o CVU"),
+    "hincha.granate",
+  );
   await user.click(screen.getByRole("button", { name: "Continuar" }));
   await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
 }
@@ -136,7 +139,9 @@ describe("TransferFlow", () => {
     // Back a step keeps the alias typed, so the user can change it.
     await user.click(screen.getByRole("button", { name: "Volver" }));
     await screen.findByRole("heading", { name: "¿A quién le enviás?" });
-    expect(screen.getByLabelText("Alias o CVU")).toHaveValue("hincha.granate");
+    expect(screen.getByLabelText("Buscar por nombre, alias o CVU")).toHaveValue(
+      "hincha.granate",
+    );
   });
 
   it("only types an alias the server could not confirm, on the first step", () => {
@@ -145,7 +150,9 @@ describe("TransferFlow", () => {
     expect(
       screen.getByRole("heading", { name: "¿A quién le enviás?" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Alias o CVU")).toHaveValue("nadie.granate");
+    expect(screen.getByLabelText("Buscar por nombre, alias o CVU")).toHaveValue(
+      "nadie.granate",
+    );
   });
 
   it("sends pesos from the peso card, in the Argentine format", async () => {
@@ -198,7 +205,7 @@ describe("TransferFlow", () => {
 
   it("validates the alias or CVU live, with the server's messages", async () => {
     const { user, lookup } = renderFlow();
-    const field = screen.getByLabelText("Alias o CVU");
+    const field = screen.getByLabelText("Buscar por nombre, alias o CVU");
 
     await user.type(field, "corto");
     await user.tab();
@@ -230,7 +237,10 @@ describe("TransferFlow", () => {
       })),
     });
 
-    await user.type(screen.getByLabelText("Alias o CVU"), "nadie.granate");
+    await user.type(
+      screen.getByLabelText("Buscar por nombre, alias o CVU"),
+      "nadie.granate",
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -286,7 +296,9 @@ describe("TransferFlow", () => {
     expect(screen.getByText("8/60")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Volver" }));
-    expect(screen.getByLabelText("Alias o CVU")).toHaveValue("hincha.granate");
+    expect(screen.getByLabelText("Buscar por nombre, alias o CVU")).toHaveValue(
+      "hincha.granate",
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
 
@@ -493,11 +505,13 @@ describe("TransferFlow", () => {
   it("chooses a recent recipient from the carousel with the arrow keys", async () => {
     const { user, lookup } = renderFlow({ recent: [HINCHA, SOCIA] });
     const carousel = screen.getByRole("listbox", { name: "Recientes" });
-    const field = screen.getByLabelText("Alias o CVU");
+    const field = screen.getByLabelText("Buscar por nombre, alias o CVU");
+
+    const proceed = screen.getByRole("button", { name: "Continuar" });
 
     // Nobody is chosen until the user says so.
     expect(field).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(proceed).toBeDisabled();
 
     carousel.focus();
     await user.keyboard("{ArrowRight}");
@@ -508,26 +522,141 @@ describe("TransferFlow", () => {
       "aria-activedescendant",
       screen.getByRole("option", { name: /Socia Granate/ }).id,
     );
-    expect(field).toHaveValue("socia.granate");
+    // The strip holds the choice; the search keeps what was typed (nothing), so the
+    // strip is not narrowed down to the one tile.
+    expect(field).toHaveValue("");
+    expect(proceed).toBeEnabled();
 
     await user.keyboard("{Home}");
-    expect(field).toHaveValue("hincha.granate");
+    expect(
+      screen.getByRole("option", { name: /Hincha Granate/ }),
+    ).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{Enter}");
     expect(lookup).toHaveBeenCalledWith("hincha.granate");
     await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
   });
 
-  it("selects the recent whose alias is typed in the field", async () => {
+  it("selects the recent whose alias is typed in the search", async () => {
     const { user } = renderFlow({ recent: [HINCHA, SOCIA] });
 
-    await user.type(screen.getByLabelText("Alias o CVU"), "socia.granate");
+    await user.type(
+      screen.getByLabelText("Buscar por nombre, alias o CVU"),
+      "socia.granate",
+    );
 
     expect(
       screen.getByRole("option", { name: /Socia Granate/ }),
     ).toHaveAttribute("aria-selected", "true");
     expect(
+      screen.queryByRole("option", { name: /Hincha Granate/ }),
+    ).not.toBeInTheDocument();
+    // A recent's own alias: the tile is the answer, no lookup is offered.
+    expect(
+      screen.queryByRole("button", { name: /^Buscar «/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("narrows the recents while typing a name, choosing the first match", async () => {
+    const { user, lookup } = renderFlow({ recent: [HINCHA, SOCIA] });
+    const field = screen.getByRole("combobox", {
+      name: "Buscar por nombre, alias o CVU",
+    });
+    const carousel = screen.getByRole("listbox", { name: "Recientes" });
+    expect(field).toHaveAttribute("aria-controls", carousel.id);
+    expect(field).toHaveAttribute("enterkeyhint", "search");
+
+    await user.type(field, "SÓCIA");
+
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    expect(
+      screen.getByRole("option", { name: /Socia Granate/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("1 reciente coincide")).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
+    // The first match is the one "Continuar" goes on with.
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(lookup).toHaveBeenCalledWith("socia.granate");
+  });
+
+  it("says so when no recent matches, and offers to look up a well-formed alias", async () => {
+    const { user, lookup } = renderFlow({ recent: [HINCHA, SOCIA] });
+    const field = screen.getByLabelText("Buscar por nombre, alias o CVU");
+
+    await user.type(field, "Ramiro");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(field).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.getAllByText("Sin coincidencias en tus recientes").length,
+    ).toBeGreaterThan(0);
+
+    await user.type(field, ".Lanus");
+    await user.click(
+      screen.getByRole("button", { name: /Buscar «ramiro\.lanus»/ }),
+    );
+
+    expect(lookup).toHaveBeenCalledWith("ramiro.lanus");
+    await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
+  });
+
+  it("keeps an alias reachable when it only partly matches a recent", async () => {
+    const { user, lookup } = renderFlow({ recent: [HINCHA, SOCIA] });
+
+    await user.type(
+      screen.getByLabelText("Buscar por nombre, alias o CVU"),
+      "hincha",
+    );
+
+    expect(
       screen.getByRole("option", { name: /Hincha Granate/ }),
-    ).toHaveAttribute("aria-selected", "false");
+    ).toHaveAttribute("aria-selected", "true");
+    await user.click(screen.getByRole("button", { name: /Buscar «hincha»/ }));
+    expect(lookup).toHaveBeenCalledWith("hincha");
+  });
+
+  it("clears the search with its button, bringing every recent back", async () => {
+    const { user } = renderFlow({ recent: [HINCHA, SOCIA] });
+    const field = screen.getByLabelText("Buscar por nombre, alias o CVU");
+    expect(
+      screen.queryByRole("button", { name: "Borrar búsqueda" }),
+    ).not.toBeInTheDocument();
+
+    await user.type(field, "socia");
+    await user.click(screen.getByRole("button", { name: "Borrar búsqueda" }));
+
+    expect(field).toHaveValue("");
+    expect(field).toHaveFocus();
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+  });
+
+  it("offers no lookup while one is pending", async () => {
+    let answer: (
+      value: Awaited<ReturnType<LookupRecipientAction>>,
+    ) => void = () => {};
+    const lookup = vi.fn<LookupRecipientAction>(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    const { user } = renderFlow({ recent: [HINCHA], lookup });
+
+    await user.type(
+      screen.getByLabelText("Buscar por nombre, alias o CVU"),
+      "ramiro.lanus",
+    );
+    const offer = screen.getByRole("button", {
+      name: /Buscar «ramiro\.lanus»/,
+    });
+    await user.click(offer);
+
+    expect(offer).toBeDisabled();
+    expect(
+      screen.getByLabelText("Buscar por nombre, alias o CVU"),
+    ).toHaveAttribute("readonly");
+    await user.click(offer);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    answer({ ok: true, recipient: { ...HINCHA, query: "ramiro.lanus" } });
+    await screen.findByRole("heading", { name: "¿Cuánto le enviás?" });
   });
 
   it("types the amount on the flow's keypad, in the Argentine format", async () => {

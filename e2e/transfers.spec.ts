@@ -229,8 +229,16 @@ test("explains an unknown alias without leaving the first step", async ({
 }) => {
   await login(page, SENDER);
   await page.goto("/transferir");
-  await page.getByLabel("Alias o CVU").fill("nadie.en.granabank");
-  await page.getByRole("button", { name: "Continuar" }).click();
+  await page
+    .getByRole("combobox", { name: "Buscar por nombre, alias o CVU" })
+    .fill("nadie.en.granabank");
+  // No recent is called that: the search offers to look the alias up.
+  await expect(
+    page.getByText("Sin coincidencias en tus recientes", { exact: true }),
+  ).toHaveCount(2);
+  await page
+    .getByRole("button", { name: /Buscar «nadie\.en\.granabank»/ })
+    .click();
 
   // Scoped by text: Next's route announcer is a second role="alert" on the page.
   await expect(
