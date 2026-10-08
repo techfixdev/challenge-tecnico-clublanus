@@ -19,8 +19,9 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 - **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly`, Motion para la física de gestos, Vitest + Testing Library, Playwright.
 - **Diseño:** layout del Figma, paleta institucional del club (granate, oro y Cool Gray), Poppins para la interfaz y Rokkitt como tipografía de display.
 - **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos.
-- **Tests en HEAD (`3e8b928`):** 1017 unitarios (108 archivos) · 54 de integración contra PostgreSQL · 110 end-to-end.
-- **Pendiente:** T5, publicar el repositorio y desplegar en Vercel. Requiere la aprobación explícita del candidato; hasta entonces todo es local.
+- **Tests en `7c50a67`:** 1021 unitarios (108 archivos) · 54 de integración contra PostgreSQL · 113 end-to-end (16 archivos).
+- **Repositorio:** [github.com/techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus).
+- **Pendiente:** T5, el deploy en Vercel. Requiere la aprobación explícita del candidato.
 
 ## Índice
 
@@ -68,8 +69,9 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T29](#t29--vuelta-al-diseño-recibir-cerrar-sesión-y-escudo-del-login-07102026) | Vuelta al diseño: Recibir, cerrar sesión y escudo del login | `a32c541`, `3cc6c13`, `32e856b` |
 | | [T30](#t30--buscador-de-destinatario-07102026) | Buscador de destinatario | `2a4eeb6`…`3e8b928` (10) |
 | | [T31](#t31--pegar-en-el-buscador-durante-la-animación-08102026) | Pegar en el buscador durante la animación | `3a2a9fc` |
-| | [T32](#t32--texto-escrito-antes-de-hidratar-en-el-buscador-de-destinatario-08102026) | Texto escrito antes de hidratar en el buscador de destinatario | este commit |
-| | [T5](#t5--deploy-pendiente) | GitHub y deploy en Vercel | pendiente |
+| | [T32](#t32--texto-escrito-antes-de-hidratar-en-el-buscador-de-destinatario-08102026) | Texto escrito antes de hidratar en el buscador de destinatario | `7c50a67` |
+| | [T33](#t33--readme-con-la-marca-del-club-y-requerimientos-08102026) | README con la marca del club y requerimientos | este commit |
+| | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
 
@@ -195,7 +197,7 @@ Decisiones de producto tomadas explícitamente por el candidato. Las técnicas e
 | Estructura por features (`src/features/{auth,movements,account}`) | La carpeta "grita" qué hace la app, no qué framework usa; cada feature agrupa su UI, datos y lógica. |
 | Script `typecheck` = `next typegen && tsc --noEmit` | Next 16 genera tipos globales (`LayoutProps`) en build; sin ese paso, `tsc` falla en un checkout limpio. |
 | Sin modo oscuro | El diseño es solo claro; agregarlo sería alcance no pedido. |
-| Archivos de herramientas locales fuera del repo | `.atl/`, `odd/`, `AGENTS.md` y `CLAUDE.md` son del entorno de trabajo, no del proyecto. |
+| Archivos de herramientas locales fuera del repo | Las carpetas del entorno de trabajo local no forman parte del proyecto. |
 
 **Cómo se verificó:** lint ✅ · typecheck ✅ · tests 7/7 ✅ · build ✅ · seed corrido 3 veces sin duplicar ✅. Revisión automática (confiabilidad) aprobada, con 4 observaciones no bloqueantes; las dos importantes se corrigieron en T2:
 
@@ -1027,11 +1029,21 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Cómo se verificó:** test primero. Dos unitarios en `TransferFlow.test.tsx` (un `input` que React no ve y texto escrito antes de hidratar) y un e2e en `e2e/search-paste.spec.ts` que escribe "matias" con los scripts retenidos: rojos antes del arreglo (2 de 2 y 3 de 3, el campo con el texto y los 6 recientes sin filtrar), verdes después (el spec entero 30 de 30 con `--repeat-each=10 --workers=4`). 1021 unitarios y 109 e2e en dev; lint y typecheck limpios.
 
+#### T33 — README con la marca del club y requerimientos (08/10/2026)
+
+**Pedido:** que el README sea una buena primera impresión para los evaluadores: con la identidad del Club Atlético Lanús, completo frente a la app actual y con la prueba de que cada requerimiento de la consigna se cumple.
+
+**Decisión:** encabezado con el escudo oficial (`public/brand/escudo.svg`), el nombre, el lema del Figma y el link al repositorio; una tabla de requerimientos con dónde se cumple cada uno, enlazada a `docs/CHECKLIST.md`; un diagrama de flujo en Mermaid (se renderiza en GitHub y queda como texto revisable, sin imágenes aparte), armado desde las rutas reales y la protección de `proxy.ts`.
+
+**Qué se hizo:** capturas nuevas desde el build de producción a 390×844 @2x (login, Inicio, Movimientos, detalle, los tres pasos de Transferir sin enviar nada, Recibir, filtro y búsqueda vacía); se quitaron las capturas y el video que mostraban la paleta anterior y no tenían otra referencia. Instrucciones de clonado con el repositorio real, el teclado propio del monto en lugar de `inputMode="decimal"`, la búsqueda que no pierde lo escrito (T31, T32) y los conteos de tests al día. El checklist se verificó requerimiento por requerimiento contra el código, con la ruta de cada evidencia.
+
+**Cómo se verificó:** Prettier sobre los tres documentos, cada link relativo del README apunta a un archivo existente y el diagrama se renderizó con `@mermaid-js/mermaid-cli` sin errores de sintaxis.
+
 #### T5 — Deploy (pendiente)
 
 **Pedido:** repositorio en GitHub y deploy en Vercel con Neon.
 
-**Estado:** pendiente. Publicar es una decisión del candidato y no se hace sin su aprobación explícita. Los pasos de producción están en la tabla "Local vs. producción" (T7).
+**Estado:** el repositorio ya está publicado ([techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)); el deploy sigue pendiente. Publicar es una decisión del candidato y no se hace sin su aprobación explícita. Los pasos de producción están en la tabla "Local vs. producción" (T7).
 
 ---
 
@@ -1050,7 +1062,7 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 - **Tests bajo carga extrema:** "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que el CI); en condiciones normales pasa siempre.
 - **Observaciones menores abiertas tras T26:** tres, no bloqueantes, en `RecipientCarousel.tsx`, `RecipientCarousel.test.tsx` y `e2e/gestures.spec.ts` (esta última de nivel advertencia).
 - **Revisiones no registradas:** T6, T7b, T15 y T16 no tienen una revisión automática registrada.
-- **Deploy pendiente (T5):** todo es local hasta la aprobación del candidato.
+- **Deploy pendiente (T5):** el repositorio ya es público; el deploy espera la aprobación del candidato.
 
 ---
 

@@ -1,18 +1,134 @@
-# GranaBank
+<p align="center">
+  <img src="public/brand/escudo.svg" alt="Escudo del Club Atlético Lanús" width="112" height="112">
+</p>
 
-Home banking mobile-first para el challenge técnico del Club Atlético Lanús: login, saldo de tarjetas (que se puede ocultar), movimientos con búsqueda, filtros y resumen del mes, y detalle de cada movimiento, construido a partir del diseño de Figma.
+<h1 align="center">GranaBank</h1>
 
-| Login                                | Home                               | Saldo oculto                                              | Movimientos                                    | Detalle                                          |
-| ------------------------------------ | ---------------------------------- | --------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
-| ![Login](docs/screenshots/login.png) | ![Home](docs/screenshots/home.png) | ![Saldo oculto](docs/screenshots/home-balance-hidden.png) | ![Movimientos](docs/screenshots/movements.png) | ![Detalle](docs/screenshots/movement-detail.png) |
+<p align="center">
+  <strong>La billetera del Club Atlético Lanús.</strong><br>
+  Challenge técnico para el Club Atlético Lanús: home banking mobile-first construido a partir del diseño de Figma.<br>
+  <em>"Con cada compra, sumás orgullo granate"</em>
+</p>
 
-Animaciones en video (390×844, build de producción): [`docs/screenshots/premium-demo.webm`](docs/screenshots/premium-demo.webm) — tarjeta con inclinación 3D, saldo tipo odómetro, header y barra de vidrio. Capturas: [Home](docs/screenshots/premium-home.png), [Home con scroll](docs/screenshots/premium-home-scrolled.png), [Movimientos con scroll](docs/screenshots/premium-movements-scrolled.png). Video anterior: [`motion-demo.webm`](docs/screenshots/motion-demo.webm).
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-70192D" alt="Next.js 16">
+  <img src="https://img.shields.io/badge/TypeScript-estricto-70192D" alt="TypeScript estricto">
+  <img src="https://img.shields.io/badge/PostgreSQL-17-70192D" alt="PostgreSQL 17">
+  <img src="https://img.shields.io/badge/Prisma-7-70192D" alt="Prisma 7">
+  <img src="https://img.shields.io/badge/tests-1021%20%C2%B7%2054%20%C2%B7%20113-B4982F" alt="Tests: 1021 unitarios, 54 de integración, 113 end-to-end">
+</p>
+
+<p align="center">
+  <a href="https://github.com/techfixdev/challenge-tecnico-clublanus"><strong>Repositorio</strong></a> ·
+  <a href="#demo">Demo</a> ·
+  <a href="#flujo-de-la-app">Flujo</a> ·
+  <a href="#cómo-correrlo">Cómo correrlo</a> ·
+  <a href="#requerimientos-del-challenge">Requerimientos</a> ·
+  <a href="#decisiones-técnicas">Decisiones técnicas</a> ·
+  <a href="#qué-mejoraría-con-más-tiempo">Qué mejoraría</a>
+</p>
+
+Login, dos tarjetas (dólares y pesos) con sus datos ocultos por defecto, movimientos con búsqueda, filtros, agrupación por día y resumen del mes, detalle de cada movimiento, transferencias reales entre usuarios demo en tres pasos y una pantalla de Recibir con alias, CVU y QR. Todo con la paleta y el escudo oficiales del club.
+
+| Login                                | Inicio                               | Movimientos                                    | Detalle                                          |
+| ------------------------------------ | ------------------------------------ | ---------------------------------------------- | ------------------------------------------------ |
+| ![Login](docs/screenshots/login.png) | ![Inicio](docs/screenshots/home.png) | ![Movimientos](docs/screenshots/movements.png) | ![Detalle](docs/screenshots/movement-detail.png) |
+
+| Transferir: destinatario                                             | Transferir: monto                                          | Transferir: revisión                                          | Recibir                                  |
+| -------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------- |
+| ![Transferir: destinatario](docs/screenshots/transfer-recipient.png) | ![Transferir: monto](docs/screenshots/transfer-amount.png) | ![Transferir: revisión](docs/screenshots/transfer-review.png) | ![Recibir](docs/screenshots/receive.png) |
+
+Capturas del build de producción a 390×844 (@2x).
 
 ## Demo
 
-Deploy: _pendiente_
+- **Repositorio:** [github.com/techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)
+- **Deploy:** _pendiente_
+- **Credenciales de prueba:** `soygranate@clublanus.com` / `GRANATE1@`
 
-**Credenciales de prueba:** `soygranate@clublanus.com` / `GRANATE1@`
+## Requerimientos del challenge
+
+Cada requerimiento de la consigna, con dónde se cumple. El detalle con su evidencia está en [`docs/CHECKLIST.md`](docs/CHECKLIST.md).
+
+| Requerimiento                                     | Estado    | Dónde                                                                                                                                                                              |
+| ------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lista de elementos                                | Cumplido  | Movimientos ([`/movimientos`](<src/app/(app)/movimientos/(list)/page.tsx>)) y "Últimos movimientos" en Inicio                                                                      |
+| Detalle de un elemento                            | Cumplido  | [`/movimientos/[id]`](<src/app/(app)/movimientos/[id]/page.tsx>), con 404 real                                                                                                     |
+| Estados de carga, error y vacío                   | Cumplido  | `loading.tsx` y `error.tsx` por pantalla, [`MovementsEmptyState`](src/features/movements/ui/MovementsEmptyState.tsx) (ver [Cómo ver los estados](#cómo-ver-los-estados))           |
+| App funcional y navegable                         | Cumplido  | Login → Inicio → Movimientos → detalle → Transferir / Recibir → cerrar sesión, cubierto por los e2e                                                                                |
+| Next.js + TypeScript                              | Cumplido  | Next.js 16 (App Router) y TypeScript estricto                                                                                                                                      |
+| Backend con API routes de Next                    | Cumplido  | [`src/app/api`](src/app/api) (ver [API](#api))                                                                                                                                     |
+| Base relacional (PostgreSQL) + ORM                | Cumplido  | PostgreSQL 17 + Prisma 7 ([`prisma/schema.prisma`](prisma/schema.prisma), migraciones y seed)                                                                                      |
+| Validaciones, estructura, estados y datos, UX     | Cumplido  | zod en el servidor, features por capas, filtros en la URL y paginación por cursor, feedback y accesibilidad                                                                        |
+| Diseño de Figma (Login, Inicio, Movimientos)      | Cumplido  | Layout y textos del Figma ([`docs/design/`](docs/design)); desvíos deliberados y documentados en [Marca](#marca-club-atlético-lanús) y [Decisiones técnicas](#decisiones-técnicas) |
+| Repositorio en GitHub                             | Cumplido  | [techfixdev/challenge-tecnico-clublanus](https://github.com/techfixdev/challenge-tecnico-clublanus)                                                                                |
+| Deploy en Vercel                                  | Pendiente | —                                                                                                                                                                                  |
+| README: cómo correrlo, decisiones y qué mejoraría | Cumplido  | [Cómo correrlo](#cómo-correrlo), [Decisiones técnicas](#decisiones-técnicas), [Qué mejoraría](#qué-mejoraría-con-más-tiempo)                                                       |
+
+## Flujo de la app
+
+Recorrido entre pantallas según las rutas reales y la protección de `proxy.ts`; las flechas punteadas son caminos de error.
+
+```mermaid
+flowchart TD
+  Start(["Visita a una ruta privada"]) --> Proxy{"¿Sesión válida? (proxy.ts)"}
+
+  subgraph Autenticacion["Autenticación"]
+    Login["/login: email, contraseña y Recordarme"]
+    Valid{"¿Datos válidos?"}
+  end
+
+  subgraph Inicio["Inicio"]
+    Home["/ Inicio: tarjetas, saldo oculto y últimos movimientos"]
+    Nav["Barra inferior: Inicio, Movimientos, Cerrar sesión"]
+  end
+
+  subgraph Movimientos["Movimientos"]
+    List["/movimientos: búsqueda y filtros"]
+    Detail["/movimientos/[id]: detalle"]
+    NotFound["404"]
+  end
+
+  subgraph Transferir["Transferir"]
+    Step1["Paso 1: destinatario (buscador y Recientes)"]
+    Step2["Paso 2: monto y tarjeta"]
+    Step3["Paso 3: revisión"]
+    Sent["Comprobante: ¡Transferencia enviada!"]
+  end
+
+  subgraph Recibir["Recibir"]
+    Receive["/recibir: alias, CVU y QR"]
+    Share["Copiar o compartir"]
+  end
+
+  Proxy -- "sí" --> Home
+  Proxy -. "no o vencida" .-> Login
+  Login -- "Ingresar" --> Valid
+  Valid -. "no: error por campo o credenciales" .-> Login
+  Valid -- "sí: cookie de sesión (JWT)" --> Home
+
+  Home -- "lupa o Ver todos" --> List
+  Home -- "Enviar" --> Step1
+  Home -- "Recibir" --> Receive
+  Nav -- "Cerrar sesión" --> Login
+
+  List -- "tocar una fila" --> Detail
+  Detail -- "Volver o deslizar desde el borde" --> List
+  Detail -. "id inexistente o ajeno" .-> NotFound
+  Detail -- "Repetir transferencia (/transferir?to=alias)" --> Step2
+
+  Step1 -. "alias o CVU no encontrado" .-> Step1
+  Step1 -- "Continuar" --> Step2
+  Step2 -. "saldo insuficiente o tope" .-> Step2
+  Step2 -- "Continuar" --> Step3
+  Step3 -- "Confirmar y enviar" --> Sent
+  Step3 -. "rechazo del servidor" .-> Step2
+
+  Receive --> Share
+
+  classDef error fill:#F7EAEB,stroke:#B32D32,color:#1B1A1D
+  class NotFound error
+```
 
 ## Stack
 
@@ -28,6 +144,8 @@ Deploy: _pendiente_
 Requisitos: **Node 22+**, **pnpm**, **Docker**.
 
 ```bash
+git clone https://github.com/techfixdev/challenge-tecnico-clublanus.git
+cd challenge-tecnico-clublanus
 pnpm install              # también genera el cliente de Prisma
 cp .env.example .env      # en producción, generar SESSION_SECRET con: openssl rand -base64 32
 pnpm db:up                # PostgreSQL en Docker (puerto 5432)
@@ -91,7 +209,7 @@ Un recorrido corto para leerlo sin perderse. Cada feature tiene la misma forma: 
 | `src/shared/`                            | `lib/` (dinero, fechas, errores de API, db), `ui/` (botones, barras, motion)  |
 | `prisma/`, `e2e/`, `scripts/`, `design/` | Esquema y seed, Playwright, herramientas (base de tests, Figma), tokens       |
 
-**Tests:** al lado del código (`x.ts` + `x.test.ts`). Unitarios con `pnpm test` (1017 en 108 archivos, sin base), integración `*.integration.test.ts` con `pnpm test:integration` (54 en 5 archivos, PostgreSQL real) y e2e en `e2e/` con `pnpm test:e2e` (110 en Chromium móvil, en dos proyectos: solo lectura y con escrituras). Detalle en [Testing](#testing).
+**Tests:** al lado del código (`x.ts` + `x.test.ts`). Unitarios con `pnpm test` (1021 en 108 archivos, sin base), integración `*.integration.test.ts` con `pnpm test:integration` (54 en 5 archivos, PostgreSQL real) y e2e en `e2e/` con `pnpm test:e2e` (113 en 16 archivos, Chromium móvil, en dos proyectos: solo lectura y con escrituras). Detalle en [Testing](#testing).
 
 ## Scripts
 
@@ -143,7 +261,7 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 
 ## Decisiones técnicas
 
-- **App Router + Server Components.** Las páginas leen la base en el servidor: no hay credenciales ni consultas en el navegador y se envía menos JavaScript. Client Components solo para formularios, búsqueda, "Cargar más" y el saldo (contador y ocultar).
+- **App Router + Server Components.** Las páginas leen la base en el servidor: no hay credenciales ni consultas en el navegador y se envía menos JavaScript. Client Components solo donde hay interacción: formularios, búsqueda, "Cargar más", el flujo de Transferir, los gestos y el saldo (odómetro y ocultar).
 - **API routes en lugar de un backend separado.** La consigna lo permite: un proyecto, un deploy, tipos compartidos. Las rutas REST reutilizan los mismos casos de uso que las páginas.
 - **Prisma + PostgreSQL.** Tipos generados desde el schema y migraciones versionadas. Para la búsqueda se usa SQL parametrizado (`Prisma.sql`), probado contra una base real.
 - **Montos `Decimal(12,2)`**, que viajan como string (`"125.00"`): un `float` acumula errores de redondeo.
@@ -154,6 +272,7 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 - **Un schema zod por formulario/parámetro en el servidor** (la validación real). El feedback inmediato del navegador corre las mismas reglas como funciones puras (`*-rules.ts`), sin zod: el schema delega en ellas o las comparte, y un test compara ambos veredictos caso por caso. Así zod (~89 KB gzip) no viaja al navegador; "Cargar más" valida la respuesta con `zod/mini` (~16 KB), incluido en la página de movimientos: cargarlo bajo demanda ahorraba poco y agregaba dos fallas (una descarga colgada o un archivo borrado por un deploy dejaban el botón sin funcionar).
 - **Precarga completa de las pantallas probables** (`prefetch` en Enviar/Recibir, "Ver todos" y Movimientos de la barra): abren listas, sin pasar por su esqueleto. Cuesta un render en el servidor por destino cada vez que se precarga (la caché del router se limitó a 30 s con `staleTimes.static`, porque por defecto son 5 min y un ingreso enviado por otra persona tardaría eso en aparecer; una transferencia propia la invalida al instante).
 - **Filtros en la URL** (`?q=&type=`): se pueden compartir, sobreviven al recargar y funcionan con el botón atrás; el filtrado ocurre en la base. Búsqueda con debounce de 300 ms y `router.replace`.
+- **Búsqueda que no pierde lo escrito.** Los dos buscadores (Movimientos y destinatario de Transferir) escuchan el evento `input` nativo del campo, además de `onChange`, y al montar adoptan el texto que difiera del valor del servidor. Así funcionan aunque se pegue un texto justo mientras arranca una transición de vista (React no recibe ese evento) o se escriba antes de que la página hidrate. Cada caso tiene un test unitario y un e2e (`e2e/search-paste.spec.ts`).
 - **Montos con signo por dirección** (desvío del Figma, que los muestra sin signo): lo que sale lleva `−` (U+2212, el signo menos tipográfico) y lo que entra `+`: `−US$ 125`, `+US$ 95`. Entra solo lo **recibido**; salen lo **enviado** y los **débitos automáticos**. El color del monto también sigue la dirección y no el tipo: granate (`received`) para lo que entra, tinta (`foreground`) para lo que sale; el color de cada tipo queda en su ícono. Los lectores de pantalla escuchan "más 95 dólares" / "menos 125 dólares" y el tipo ("Recibido", "Débito automático"). El detalle usa la misma convención.
 - **Lista agrupada:** las filas comparten una sola superficie blanca con separadores finos que arrancan después del ícono (lista agrupada de iOS / Monzo), en lugar de una tarjeta con sombra por fila: entran más filas en pantalla y se leen como una lista. En Movimientos se agrupan **por día** con encabezados que quedan pegados debajo del buscador y los chips ("Hoy", "Ayer", "5 de octubre"; el año solo si no es el actual), con el día calendario de Buenos Aires. El servidor decide "hoy" una vez y lo pasa a la lista, así servidor y navegador nombran igual los días. "Cargar más" suma la página siguiente al mismo grupo si continúa un día. En Home los cinco últimos van en un solo grupo, sin encabezados: partidos en dos o tres días se leerían como fragmentos.
 - **Paginación por cursor** (`occurredAt` + `id`): estable aunque entren movimientos nuevos y aprovecha el índice `(userId, occurredAt)`.
@@ -172,13 +291,14 @@ Los tests viven al lado del código (`x.ts` + `x.test.ts`). Las dependencias van
 - **Vuelta de tarjeta:** tocar la tarjeta la da vuelta (ver "Movimiento y accesibilidad"); el reverso tiene banda magnética, panel de firma con el titular, CVV y la marca.
 - **Resumen del mes en Movimientos:** "Octubre · Ingresos +US$ X · Egresos −US$ Y", **una línea por moneda** (dólares primero, la de la tarjeta principal; después pesos): nunca suma monedas distintas. Ingresos = recibidos; egresos = enviados + débitos automáticos; solo movimientos **completados** (un pendiente todavía puede fallar). Mes calendario de Buenos Aires (empieza a las 03:00 UTC). No depende de la búsqueda ni del filtro: describe el mes. La base suma los `Decimal` (`groupBy`) y la app solo los combina como centavos enteros, nunca como `float`.
 - **Transferencias entre usuarios** (`src/features/transfers`): por alias o CVU (el CVU se valida con sus dígitos verificadores, como un CBU). Todo ocurre en **una sola transacción**: se reclama la clave de idempotencia, se debita, se acredita en la tarjeta del destinatario **en la misma moneda** que la de origen (la principal si hay varias; sin conversión) y se crean los dos movimientos (`SENT` y `RECEIVED`, enlazados a un `Transfer`); si algo falla, no queda nada a medias.
+  - **Tres pasos en una sola superficie:** destinatario (buscador "Buscar por nombre, alias o CVU" y carrusel de Recientes), monto (teclado numérico propio y elección de la tarjeta de origen) y revisión ("Confirmar y enviar"), seguidos del comprobante. El débito es condicional: si el saldo no alcanza, la transferencia se rechaza (`INSUFFICIENT_FUNDS`) y no hay sobregiro.
   - **Buscador de destinatario:** el primer paso tiene un solo campo, "Buscar por nombre, alias o CVU". Mientras se escribe filtra el carrusel de Recientes en el navegador (sin mayúsculas ni tildes que importen; un CVU por sus últimos dígitos visibles, con o sin espacios) y elige la primera coincidencia; si no queda ninguna, lo dice ("Sin coincidencias en tus recientes"). Si lo escrito es un alias o CVU válido que no es de un reciente, ofrece "Buscar «…»", que lo resuelve en el servidor como "Continuar" (también junto a coincidencias parciales: el alias `hincha` sigue siendo alcanzable aunque exista `hincha.granate`). Arrastrar el carrusel elige sin reescribir la búsqueda. `?to=<alias>` escribe el alias en el campo.
   - **Sin sobregiro con concurrencia:** el débito es un `UPDATE` condicional (`WHERE balance >= monto`). PostgreSQL bloquea la fila y reevalúa la condición con el saldo ya confirmado, así que de N transferencias simultáneas solo pasan las que alcanzan. Se eligió esto en lugar de `SERIALIZABLE`, que obligaría a reintentar ante cada conflicto sin dar más garantías para una invariante de una sola fila. Un `CHECK (balance >= 0)` en la base es la red de seguridad. Las dos tarjetas se actualizan siempre en el mismo orden (por id) para que A→B y B→A simultáneas no se bloqueen entre sí.
   - **Idempotencia:** el cliente manda un UUID por intento (`idempotencyKey`, único por emisor). Un reintento o doble toque con la misma clave devuelve la transferencia original (200, `replayed: true`) sin mover plata dos veces, incluso si las dos requests llegan a la vez; la misma clave con otros datos responde 409.
   - **Referencia legible:** cada transferencia recibe un código corto al azar en base32 de Crockford (`7Q4K-92XA`: 40 bits, sin `I`, `L` ni `O`, que se confunden con `1` y `0`, y sin `U`, para no formar palabras ofensivas por accidente). Los dos movimientos lo comparten con el lado como prefijo (`ENV-7Q4K-92XA` para quien envía, `REC-7Q4K-92XA` para quien recibe): cada referencia sigue siendo única en la base (índice único) y las dos personas citan el mismo código. Si un código ya existe, la transacción se repite con otro.
   - **Moneda:** pesos desde la Visa llegan a una tarjeta en pesos del destinatario (el seed le da una a `hincha`); si no tiene ninguna en esa moneda, se rechaza con `CURRENCY_MISMATCH` ("La cuenta de destino no opera en la moneda de esta tarjeta") y el usuario vuelve al paso del monto para elegir otra tarjeta.
   - **Monto:** el campo muestra el símbolo de la tarjeta elegida y acepta el formato argentino. Reglas de lo que escribe una persona (`parseAmount` en `src/shared/lib/money.ts`): una sola coma es el separador decimal (`12,30`, `1.234,56`); sin coma, los puntos seguidos de 3 dígitos agrupan miles (`1.234` = 1234) y un punto seguido de 1 o 2 dígitos es el decimal (`12.30`); lo ambiguo se rechaza (`1,234`, `1.2345`, `0.123`). Hasta 2 decimales y 10 dígitos enteros.
-  - **Al tipear:** el campo agrupa los miles mientras se escribe (`12.500,5`) sin que salte el cursor, con teclado decimal (`inputMode="decimal"`). Solo cambia cómo se ve: lo que muestra se lee con las mismas reglas de arriba y da el mismo monto (`editAmount` en `src/features/transfers/domain/amount-editing.ts`). Un punto tipeado después de los dígitos queda abierto hasta que los dígitos siguientes deciden (2 → decimal, 3 → miles); después de miles, es la coma decimal.
+  - **Al tipear:** el campo agrupa los miles mientras se escribe (`12.500,5`) sin que salte el cursor, sin abrir el teclado del sistema (`inputMode="none"`): el teclado numérico propio del paso escribe en el campo, y un teclado físico o un pegado también funcionan. Solo cambia cómo se ve: lo que muestra se lee con las mismas reglas de arriba y da el mismo monto (`editAmount` en `src/features/transfers/domain/amount-editing.ts`). Un punto tipeado después de los dígitos queda abierto hasta que los dígitos siguientes deciden (2 → decimal, 3 → miles); después de miles, es la coma decimal.
   - **Tarea enfocada:** dentro de `/transferir` (pasos y comprobante) no hay barra inferior, y el botón principal de cada paso queda fijo abajo, siempre visible, con el margen del área segura y por encima del teclado (`visualViewport`). Deshabilitado se ve gris plano, no granate desvaído. La transferencia sale por defecto de la cuenta en **pesos** (la de todos los días), aunque la principal de Home sea la de dólares.
   - **Frontera humano / máquina:** esas reglas viven solo del lado del formulario. El formulario (y la Server Action, por ser un endpoint público) convierte lo escrito al **monto canónico** (`1.234,56` → `"1234.56"`) antes de llegar al dominio; el dominio, el schema del servidor y la API REST solo aceptan montos canónicos (`parseCanonicalAmount`), donde un punto es siempre el decimal. Así un cliente de la API que manda `"12.500"` queriendo decir 12,5 recibe un 400, en vez de mover 12.500. Los límites y los mensajes son los mismos en los dos lados (`checkAmountLimits` en `transfer-rules.ts`).
   - **Tope por transferencia, por moneda:** US$ 100.000 y $ 100.000.000 (del mismo orden una vez convertidos). El servidor valida el tope más alto antes de leer la tarjeta y el de su moneda dentro de la transacción (`AMOUNT_OVER_LIMIT`); el formulario ya conoce la tarjeta y avisa al tipear.
@@ -220,11 +340,11 @@ Hay un segundo usuario demo para probar transferencias en los dos sentidos: `hin
 
 ## Testing
 
-| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Cantidad |
-| ----------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes, transferencias: alias/CVU, montos exactos, reglas e idempotencia), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación), física de los gestos (banda elástica, velocidad al soltar, proyección, asentamiento) y teclado del monto                                                                                                                                                                                      | 1017     |
-| Integración | `pnpm test:integration` | SQL real: transferencias (atomicidad, sin sobregiro con N transferencias en paralelo, idempotencia, sin deadlock A↔B); búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes                                                                                                                                                                                                                                   | 54       |
-| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda, filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones, navegación tipo iOS (push, pop, pestañas, cromo fijo, intro) y CLS < 0.05 en Home (con y sin movimiento reducido), gestos (carrusel de Recientes, teclado del monto, tarjetas empujadas con el dedo, deslizar para volver, un arrastre sobre "Cerrar sesión" que no la cierra, construcción de Home), transferencias (con el buscador de destinatario) y ninguna pantalla con scroll lateral ni texto cortado de 180 a 1024 px, en Chromium móvil | 110      |
+| Tipo        | Comando                 | Qué cubre                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Cantidad |
+| ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Unitarios   | `pnpm test`             | Dominio (validación, cursor, filtros, login, resumen mensual y límites del mes, transferencias: alias/CVU, montos exactos, reglas e idempotencia), rutas REST con repositorios en memoria, componentes desde lo que ve el usuario (odómetro del saldo, ocultar saldo, carrusel, header, navegación), física de los gestos (banda elástica, velocidad al soltar, proyección, asentamiento) y teclado del monto                                                                                                                                                                                                                                                             | 1021     |
+| Integración | `pnpm test:integration` | SQL real: transferencias (atomicidad, sin sobregiro con N transferencias en paralelo, idempotencia, sin deadlock A↔B); búsqueda sin acentos, escape de `%`/`_`, filtro por tipo, aislamiento por usuario, paginación completa y desempates; errores reales de la base (credenciales, base inexistente, sin conexión); sumas del resumen mensual y bordes del mes                                                                                                                                                                                                                                                                                                          | 54       |
+| End-to-end  | `pnpm test:e2e`         | Login/logout, cookie y "Recordarme", búsqueda (también al pegar durante una transición o escribir antes de hidratar), filtros, "Cargar más", detalle, 404, estados vacíos, ocultar saldo, resumen del mes, animaciones, navegación tipo iOS (push, pop, pestañas, cromo fijo, intro) y CLS < 0.05 en Home (con y sin movimiento reducido), gestos (carrusel de Recientes, teclado del monto, tarjetas empujadas con el dedo, deslizar para volver, un arrastre sobre "Cerrar sesión" que no la cierra, construcción de Home), transferencias (con el buscador de destinatario) y ninguna pantalla con scroll lateral ni texto cortado de 180 a 1024 px, en Chromium móvil | 113      |
 
 **Base de datos de los tests.** Integración y e2e corren contra su propia base, `granabank_test`, en el mismo PostgreSQL: así una transferencia de un test nunca mueve los saldos demo con los que alguien está probando la app a mano. Solo hace falta `pnpm db:up`; cada corrida crea la base si no existe y aplica las migraciones (`scripts/test-database.ts`).
 
@@ -337,8 +457,8 @@ Con la app corriendo e iniciada la sesión:
 
 | Estado                      | Cómo verlo                                                                                                                                                                                                                                                         |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sin resultados (búsqueda)   | En Movimientos, buscar `zzz`. Aparece "No encontramos movimientos para “zzz”" con "Limpiar filtros".                                                                                                                                                               |
-| Sin resultados (con filtro) | Combinar búsqueda y filtro sin coincidencias, por ejemplo `/movimientos?q=adobe&type=recibido`.                                                                                                                                                                    |
+| Sin resultados (búsqueda)   | En Movimientos, buscar `zzz`. Aparece "No encontramos movimientos para “zzz”" con "Limpiar filtros". ([captura](docs/screenshots/movements-empty.png))                                                                                                             |
+| Sin resultados (con filtro) | Combinar búsqueda y filtro sin coincidencias, por ejemplo `/movimientos?q=adobe&type=recibido`. Un filtro solo: [captura](docs/screenshots/movements-filtered.png).                                                                                                |
 | Sin movimientos             | Es el mensaje de una cuenta sin movimientos ("Todavía no tenés movimientos"). El usuario demo tiene 28, así que se prueba en `MovementsEmptyState.test.tsx`.                                                                                                       |
 | Carga                       | DevTools → Network → throttling "Slow 4G". Desde Inicio, tocar Movimientos en la barra inferior: se ven los esqueletos. "Cargar más" muestra "Cargando…".                                                                                                          |
 | Error                       | `docker stop granabank-db` y abrir Movimientos: aparece "No pudimos cargar tus movimientos" con "Reintentar". Después `docker start granabank-db` y tocar "Reintentar". Iniciar sesión antes de detener la base. ([captura](docs/screenshots/movements-error.png)) |
