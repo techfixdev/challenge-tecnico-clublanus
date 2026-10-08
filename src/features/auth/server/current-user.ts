@@ -14,8 +14,8 @@ import { readSessionUser } from "./session";
  * loading the user in the same query. Memoized per request with React `cache`, so a page
  * and its components share one lookup.
  */
-export const getCurrentUser = cache(
-  async (): Promise<SessionUser | null> => readSessionUser(),
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> =>
+  readSessionUser(),
 );
 
 /** Returns the signed-in user or redirects to the login page. */

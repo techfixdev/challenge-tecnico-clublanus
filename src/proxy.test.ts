@@ -22,10 +22,13 @@ function request(path: string, cookie?: string): NextRequest {
 }
 
 async function validToken(): Promise<string> {
-  return signSessionToken({ userId: "user_1", sessionId: "session_1" }, {
-    key: getSessionKey(SECRET),
-    expiresAt: getSessionExpiry(false),
-  });
+  return signSessionToken(
+    { userId: "user_1", sessionId: "session_1" },
+    {
+      key: getSessionKey(SECRET),
+      expiresAt: getSessionExpiry(false),
+    },
+  );
 }
 
 function clearsSessionCookie(response: Response): boolean {
