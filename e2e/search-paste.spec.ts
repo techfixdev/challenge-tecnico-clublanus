@@ -139,11 +139,25 @@ test("a recipient typed before the transfer screen hydrates still narrows the re
   await search.fill("matias");
   releaseScripts();
 
-  // The seed gives the demo user six recents; only Matías Herrera matches, and is chosen.
+  // Matías Herrera matches and is chosen, and every recent left on the strip matches too.
+  // No exact count: a mutating project shares this database and may add recents.
   const strip = page.getByRole("listbox", { name: "Recientes" });
-  await expect(strip.getByRole("option")).toHaveCount(1);
+  const options = strip.getByRole("option");
+  const matching = strip.getByRole("option", { name: /mat[ií]as/i });
   await expect(
     strip.getByRole("option", { name: /Matías Herrera/ }),
   ).toHaveAttribute("aria-selected", "true");
+  await expect
+    .poll(async () => {
+      const shown = await options.count();
+      return shown > 0 && shown === (await matching.count());
+    })
+    .toBe(true);
   await expect(search).toHaveValue("matias");
+
+  // Proof the text narrowed the strip: without it there are more recents. Had the text
+  // typed before hydration been ignored, the poll above would never see only matches.
+  const narrowed = await options.count();
+  await search.fill("");
+  await expect.poll(() => options.count()).toBeGreaterThan(narrowed);
 });
