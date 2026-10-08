@@ -68,10 +68,13 @@ function byCurrencyOrder(a: string, b: string): number {
  * Owner scope + type + accent- and case-insensitive search (counterparty OR description).
  *
  * Written in SQL because Prisma's `contains`/`mode: "insensitive"` cannot ignore accents.
+ * `immutable_unaccent` (see its migration) is the exact expression of the trigram indexes on
+ * both columns: any other spelling of the predicate would leave them unused.
  * Every value is a bound parameter of the `Prisma.sql` tagged template (never string
  * concatenation), and the term is LIKE-escaped so "%" or "_" match literally.
+ * Exported for the integration test that explains the search plan.
  */
-function whereClause(
+export function whereClause(
   userId: string,
   { query, type }: MovementFilters,
   after?: MovementCursor,
@@ -81,8 +84,8 @@ function whereClause(
   if (query) {
     const pattern = containsPattern(query);
     conditions.push(
-      Prisma.sql`(unaccent(m."counterparty") ILIKE unaccent(${pattern}) ESCAPE ${LIKE_ESCAPE_CHAR}
-        OR unaccent(m."description") ILIKE unaccent(${pattern}) ESCAPE ${LIKE_ESCAPE_CHAR})`,
+      Prisma.sql`(immutable_unaccent(m."counterparty") ILIKE immutable_unaccent(${pattern}) ESCAPE ${LIKE_ESCAPE_CHAR}
+        OR immutable_unaccent(m."description") ILIKE immutable_unaccent(${pattern}) ESCAPE ${LIKE_ESCAPE_CHAR})`,
     );
   }
   if (after) {

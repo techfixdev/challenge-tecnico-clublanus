@@ -70,7 +70,9 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T30](#t30--buscador-de-destinatario-07102026) | Buscador de destinatario | `2a4eeb6`…`3e8b928` (10) |
 | | [T31](#t31--pegar-en-el-buscador-durante-la-animación-08102026) | Pegar en el buscador durante la animación | `3a2a9fc` |
 | | [T32](#t32--texto-escrito-antes-de-hidratar-en-el-buscador-de-destinatario-08102026) | Texto escrito antes de hidratar en el buscador de destinatario | `7c50a67` |
-| | [T33](#t33--readme-con-la-marca-del-club-y-requerimientos-08102026) | README con la marca del club y requerimientos | este commit |
+| | [T33](#t33--readme-con-la-marca-del-club-y-requerimientos-08102026) | README con la marca del club y requerimientos | `7a5feb1` |
+| | [T34](#t34--e2e-del-destinatario-sin-contar-recientes-08102026) | E2E del destinatario sin contar recientes | `a4c7ade` |
+| | [T35](#t35--índice-trigram-para-la-búsqueda-de-movimientos-08102026) | Índice trigram para la búsqueda de movimientos | este commit |
 | | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
@@ -291,7 +293,7 @@ Decisiones de producto tomadas explícitamente por el candidato. Las técnicas e
 
 **Correcciones antes del commit** (detectadas al revisar juntos):
 
-- **Búsqueda sin distinguir acentos:** "jose" encuentra "José". Se activó la extensión `unaccent` de Postgres con una migración. La consulta usa parámetros (`Prisma.sql`), nunca concatenación, así que no hay inyección SQL; además se escapan `%` y `_`, y buscar "%" no devuelve todo. No se normalizó en la app (habría que traer todas las filas) ni con una columna duplicada (dato a mantener sincronizado). Mejora futura: índice trigram (GIN) sobre una función `unaccent` inmutable.
+- **Búsqueda sin distinguir acentos:** "jose" encuentra "José". Se activó la extensión `unaccent` de Postgres con una migración. La consulta usa parámetros (`Prisma.sql`), nunca concatenación, así que no hay inyección SQL; además se escapan `%` y `_`, y buscar "%" no devuelve todo. No se normalizó en la app (habría que traer todas las filas) ni con una columna duplicada (dato a mantener sincronizado). Desde T35, la búsqueda tiene un índice trigram (GIN) sobre una función `unaccent` inmutable.
 - **404 real en el detalle:** con un `loading.tsx` por encima, Next empieza a transmitir la respuesta y el status queda fijo en 200 antes de saber si el movimiento existe. Los esqueletos de Home y lista se movieron a *route groups* (`(home)`, `(list)`) para que no envuelvan al detalle; las URLs no cambian. Trade-off: el detalle no muestra esqueleto mientras carga, pero es una sola consulta indexada.
 
 **Historial de commits:** T3 se hizo primero como un solo commit (95 archivos, ~4.500 líneas). La revisión automática no pudo procesarlo por tamaño, y un commit así es difícil de revisar para cualquier persona. Se partió en 14 commits temáticos de ~400 líneas, cada uno con sus tests, y se verificó que cada uno compile y pase los tests por sí solo. El código final quedó idéntico byte a byte (mismo hash de árbol de git).
@@ -1038,6 +1040,22 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 **Qué se hizo:** capturas nuevas desde el build de producción a 390×844 @2x (login, Inicio, Movimientos, detalle, los tres pasos de Transferir sin enviar nada, Recibir, filtro y búsqueda vacía); se quitaron las capturas y el video que mostraban la paleta anterior y no tenían otra referencia. Instrucciones de clonado con el repositorio real, el teclado propio del monto en lugar de `inputMode="decimal"`, la búsqueda que no pierde lo escrito (T31, T32) y los conteos de tests al día. El checklist se verificó requerimiento por requerimiento contra el código, con la ruta de cada evidencia.
 
 **Cómo se verificó:** Prettier sobre los tres documentos, cada link relativo del README apunta a un archivo existente y el diagrama se renderizó con `@mermaid-js/mermaid-cli` sin errores de sintaxis.
+
+#### T34 — E2E del destinatario sin contar recientes (08/10/2026)
+
+**Problema:** el e2e de T32 esperaba exactamente un reciente después de escribir "matias". Eso dependía de los datos: el proyecto e2e con escrituras comparte la base y puede sumar recientes.
+
+**Solución:** el test exige que Matías Herrera quede elegido, que todo reciente visible coincida con "matías" y que, al borrar el texto, haya más recientes que antes. Sigue fallando si se ignora lo escrito antes de hidratar: se comprobó quitando esa lectura en `RecipientStep` (Matías Herrera no queda elegido).
+
+**Cómo se verificó:** `--repeat-each=5` en Chromium móvil, 15 de 15.
+
+#### T35 — Índice trigram para la búsqueda de movimientos (08/10/2026)
+
+**Problema:** la búsqueda (`unaccent(columna) ILIKE unaccent('%texto%')` sobre contraparte y descripción) no podía usar ningún índice: un B-tree no sirve para un término en el medio del texto, y `unaccent()` es `STABLE`, así que no se puede indexar su resultado. Con muchos movimientos por usuario, cada búsqueda recorre todas sus filas.
+
+**Solución:** una migración activa `pg_trgm`, crea `immutable_unaccent(text)` (llama a `public.unaccent` con el diccionario explícito, por eso puede declararse `IMMUTABLE`) y dos índices GIN `gin_trgm_ops` sobre `immutable_unaccent("counterparty")` y `immutable_unaccent("description")`. La consulta del repositorio usa la misma función: Postgres solo usa un índice de expresión si la consulta repite esa expresión. El resultado de la búsqueda no cambia (ya ignoraba acentos y mayúsculas). Prisma no describe índices de expresión en el schema; `prisma migrate diff` contra el schema queda vacío, así que no intenta borrarlos. Ambas extensiones están disponibles en Neon.
+
+**Cómo se verificó:** test primero. Un test de integración crea 20 000 movimientos de un usuario dentro de una transacción que siempre se revierte, corre `EXPLAIN` sobre el `WHERE` real del repositorio y exige los dos índices: rojo antes de la migración (`Seq Scan`), verde después (`BitmapOr` sobre `Movement_counterparty_search_idx` y `Movement_description_search_idx`). En la base de desarrollo, con `enable_seqscan = off`, la consulta real muestra `Bitmap Index Scan on "Movement_counterparty_search_idx"`. Términos de menos de 3 letras no generan trigramas y no aprovechan el índice.
 
 #### T5 — Deploy (pendiente)
 
