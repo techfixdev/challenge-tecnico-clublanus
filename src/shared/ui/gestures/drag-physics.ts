@@ -2,7 +2,7 @@ import { SPRING_PHYSICS } from "../motion/springs";
 
 /*
  * The physics every drag in the app shares (the transfer's recipient carousel, the card
- * deck, the edge swipe back, a sheet dragged down), kept free of the DOM so each decision
+ * deck, the edge swipe back), kept free of the DOM so each decision
  * a release makes is unit-tested on its own. Offsets are in pixels along the gesture's
  * axis, velocities in pixels per second. The feel is one model throughout:
  * - while dragging, the surface follows the finger 1:1 and, past its limit, stretches
@@ -28,9 +28,6 @@ export const AXIS_LOCK_SLOP_PX = 8;
 
 /** Share of the screen's width past which releasing the swipe back completes it. */
 export const BACK_COMPLETE_FRACTION = 0.35;
-
-/** Share of the sheet's height past which releasing the drag dismisses it. */
-export const SHEET_DISMISS_FRACTION = 0.3;
 
 /**
  * A release this fast decides on its own, whatever the distance: a flick toward the
@@ -171,15 +168,6 @@ export function shouldCompleteBack(
   width: number,
 ): boolean {
   return releaseCompletes(offset, velocity, width * BACK_COMPLETE_FRACTION);
-}
-
-/** Whether releasing a sheet dragged down by `offset` (moving at `velocity`) closes it. */
-export function shouldDismissSheet(
-  offset: number,
-  velocity: number,
-  height: number,
-): boolean {
-  return releaseCompletes(offset, velocity, height * SHEET_DISMISS_FRACTION);
 }
 
 /** The share of `extent` an `offset` has covered, from 0 (at rest) to 1. */

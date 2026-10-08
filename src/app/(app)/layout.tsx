@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
 
+import { logout } from "@/features/auth/server/actions";
 import { BottomNav } from "@/shared/ui/BottomNav";
 import { BrandIntro } from "@/shared/ui/BrandIntro";
 import { Escudo } from "@/shared/ui/brand/Escudo";
 import { MotionProvider } from "@/shared/ui/motion/MotionProvider";
 
 /**
- * Layout of the signed-in area (route group: it adds no URL segment). The bottom nav lives
- * here so it persists across Home, Movements and the detail, and is not re-rendered on
+ * Layout of the signed-in area (route group: it adds no URL segment). The bottom nav (the
+ * two sections and signing out) lives here so it persists across Home, Movements and the
+ * detail, and is not re-rendered on
  * navigation; the bottom padding (nav height + breathing room + the device's bottom safe
  * area) keeps the fixed nav from covering the last rows. A focused task (the send flow)
  * has no nav, and the padding drops to zero with it. `MotionProvider` loads Motion's
@@ -24,7 +26,7 @@ export default function AuthenticatedLayout({
       <div className="flex flex-1 flex-col pb-(--nav-clearance)">
         {children}
       </div>
-      <BottomNav />
+      <BottomNav logoutAction={logout} />
       <BrandIntro>
         <Escudo className="brand-intro-shield" />
       </BrandIntro>

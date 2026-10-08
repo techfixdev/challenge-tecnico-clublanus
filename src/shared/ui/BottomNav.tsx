@@ -11,7 +11,7 @@ import {
 
 import { ROUTES } from "@/shared/lib/routes";
 
-import { HomeIcon, ListIcon } from "./icons";
+import { HomeIcon, ListIcon, LogoutIcon } from "./icons";
 import { MotionLink } from "./motion/MotionLink";
 import { PINNED_CHROME, TAB_SWITCH } from "./motion/navigation";
 import { installPinnedChromeTaps } from "./motion/pinned-chrome-taps";
@@ -88,11 +88,14 @@ function TapIcon({
 }
 
 /**
- * App navigation: the two sections, Home and Movements, fixed to the bottom of the
- * phone-width column. Signing out is not a tab (a destructive action has no place in the
- * thumb zone): it lives in the profile sheet on Home, behind a confirmation. Sending and
- * receiving are Home's quick actions. Inside a focused task (the send flow) the nav
- * steps aside entirely; `--nav-clearance` drops to zero without it (globals.css).
+ * App navigation, as in the design: the two sections, Home and Movements, and on the
+ * right "Cerrar sesión", fixed to the bottom of the phone-width column. Signing out is
+ * a plain submit button of the logout Server Action (injected by the signed-in layout,
+ * so this shared component does not depend on the auth feature; tests pass a fake). It
+ * has no confirmation, like the design, but it only fires on a press: a button submits
+ * on a pointer released on it, so a drag that starts or ends elsewhere never signs out.
+ * Sending and receiving are Home's quick actions. Inside a focused task (the send flow)
+ * the nav steps aside entirely; `--nav-clearance` drops to zero without it (globals.css).
  *
  * The bar is frosted glass, and the current section sits on a soft granate pill. The
  * pill is one shared element (`layoutId`): when the section changes, Motion measures
@@ -103,7 +106,11 @@ function TapIcon({
  * the bar has its own view-transition name, so it stays put above the moving screens.
  * A tap on it while a transition runs still reaches its item (see pinned-chrome-taps.ts).
  */
-export function BottomNav() {
+export function BottomNav({
+  logoutAction,
+}: {
+  logoutAction: () => Promise<void>;
+}) {
   const pathname = usePathname();
   const reduced = useReducedMotionPreference();
   // The nav lives in the signed-in layout: one guard for all of its pinned chrome.
@@ -149,6 +156,19 @@ export function BottomNav() {
             </li>
           );
         })}
+        <li>
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              aria-label="Cerrar sesión"
+              className={`${ITEM_CLASSES} text-foreground hover:text-primary`}
+            >
+              <TapIcon reduced={reduced}>
+                <LogoutIcon className="size-[26px]" />
+              </TapIcon>
+            </button>
+          </form>
+        </li>
       </ul>
     </nav>
   );

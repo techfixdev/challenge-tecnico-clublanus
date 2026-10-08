@@ -15,7 +15,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 - [x] Estado de carga → `loading.tsx` por pantalla y skeletons con brillo por sección (`<Suspense>`).
 - [x] Estado de error → `error.tsx` con reintento (`RouteError`) en la app, Movimientos, Transferir y Recibir.
 - [x] Estado vacío → `MovementsEmptyState` (búsqueda o filtro sin resultados).
-- [x] App funcional y navegable → login → Home → lista → detalle → volver → cerrar sesión (desde el perfil), cubierto por los e2e.
+- [x] App funcional y navegable → login → Home → lista → detalle → volver → cerrar sesión (desde la barra inferior), cubierto por los e2e.
 
 ## Requerimientos técnicos
 
@@ -34,7 +34,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 ## Qué se evalúa (cómo lo cubrimos)
 
 - [x] Claridad del código → lint y typecheck limpios, tests al lado del código (994 unitarios, 54 de integración, 106 e2e).
-- [x] Seguir el diseño → layout y pantallas del Figma (`docs/design/`); los desvíos son deliberados y documentados: colores institucionales del club, formato argentino, montos con signo y cierre de sesión en el perfil. Ver README, "Marca" y "Decisiones técnicas".
+- [x] Seguir el diseño → layout y pantallas del Figma (`docs/design/`); los desvíos son deliberados y documentados: colores institucionales del club, formato argentino y montos con signo. Ver README, "Marca" y "Decisiones técnicas".
 - [x] Organización del proyecto → estructura documentada en el README y en la bitácora.
 - [x] Criterio técnico → decisiones con su porqué en el README ("Decisiones técnicas") y en la bitácora.
 - [x] Uso de herramientas → Prisma, zod, Vitest, Playwright, CI, revisiones por commit.
@@ -56,7 +56,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 
 - [x] Colores solo de la marca (T12a): cada rol de la UI usa granate, oro o Cool Gray 7C; el rojo de error queda como excepción documentada (`ab2c023`).
 - [x] Marca del club (T21): paleta oficial como tokens, escudo oficial en vector y login rediseñado (`61a425f`, `e9126b1`, `2c11f24`).
-- [x] UX móvil (T12b-A): Transferir sin barra inferior, cierre de sesión en una hoja de perfil, separador de miles al tipear y cuenta en pesos por defecto (`a4d3c6a`, `e93d4c3`, `8f218f9`).
+- [x] UX móvil (T12b-A): Transferir sin barra inferior, cierre de sesión en una hoja de perfil (revertido en T29: vuelve a la barra inferior, como el diseño), separador de miles al tipear y cuenta en pesos por defecto (`a4d3c6a`, `e93d4c3`, `8f218f9`).
 - [x] Movimiento (T12b-B): un solo lenguaje de animación sobrio, con tokens compartidos (`38508a5`).
 - [x] Lista tipo billetera (T12b-D): agrupada por día, montos con `+`/`−` y color por dirección (`1ea74a5`, `3befcc6`).
 - [x] Pulido (T12b-C): barra de navegación tipo iOS en lugar de "Volver", acciones en el detalle con `/transferir?to=`, tarjetas en español con segunda tarjeta dorada, QR en Recibir y alerta del login sobre granate (`7c70f56`, `df99739`, `b8ce6ed`, `65dda61`, `18fac3a`).

@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import { ROUTES } from "@/shared/lib/routes";
 import { GlassHeader } from "@/shared/ui/GlassHeader";
 import { MotionLink } from "@/shared/ui/motion/MotionLink";
@@ -12,16 +10,10 @@ import { NotificationsButton } from "./NotificationsButton";
 const SEARCH_FROM_HOME_HREF = `${ROUTES.movements}?focus=1`;
 
 /**
- * Home's header: the greeting, search, notifications and, last, the profile entry point
- * (passed in by the page, so this feature does not depend on the auth one).
+ * Home's header, as in the design: the greeting, search and notifications. Signing out
+ * is the bottom nav's last item.
  */
-export function HomeHeader({
-  firstName,
-  profile,
-}: {
-  firstName: string;
-  profile?: ReactNode;
-}) {
+export function HomeHeader({ firstName }: { firstName: string }) {
   return (
     <GlassHeader
       eyebrow="Hola"
@@ -37,7 +29,6 @@ export function HomeHeader({
             <SearchIcon className="size-[22px]" />
           </MotionLink>
           <NotificationsButton />
-          {profile}
         </>
       }
     />

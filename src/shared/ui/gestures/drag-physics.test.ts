@@ -10,9 +10,7 @@ import {
   releaseVelocity,
   rubberBand,
   settleVelocity,
-  SHEET_DISMISS_FRACTION,
   shouldCompleteBack,
-  shouldDismissSheet,
   snapToStep,
   withEdgeResistance,
 } from "./drag-physics";
@@ -105,32 +103,6 @@ describe("shouldCompleteBack", () => {
 
   it("never goes back without having moved right", () => {
     expect(shouldCompleteBack(0, FLICK_VELOCITY * 2, WIDTH)).toBe(false);
-  });
-});
-
-describe("shouldDismissSheet", () => {
-  it("dismisses when dragged down past the threshold", () => {
-    const past = HEIGHT * SHEET_DISMISS_FRACTION + 1;
-    expect(shouldDismissSheet(past, 0, HEIGHT)).toBe(true);
-  });
-
-  it("settles back when released short of it, slowly", () => {
-    const short = HEIGHT * SHEET_DISMISS_FRACTION - 1;
-    expect(shouldDismissSheet(short, 0, HEIGHT)).toBe(false);
-  });
-
-  it("dismisses on a downward flick, however short", () => {
-    expect(shouldDismissSheet(20, FLICK_VELOCITY + 1, HEIGHT)).toBe(true);
-  });
-
-  it("stays when flicked back up, even past the threshold", () => {
-    expect(shouldDismissSheet(HEIGHT * 0.5, -FLICK_VELOCITY - 1, HEIGHT)).toBe(
-      false,
-    );
-  });
-
-  it("stays when pulled up", () => {
-    expect(shouldDismissSheet(-40, FLICK_VELOCITY * 2, HEIGHT)).toBe(false);
   });
 });
 

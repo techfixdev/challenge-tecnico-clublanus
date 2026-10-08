@@ -1,13 +1,13 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { DEMO_USER, login } from "./fixtures/session";
+import { login } from "./fixtures/session";
 import { settle } from "./fixtures/view-transitions";
 
 /*
  * Sending money is a focused task: no bottom nav inside it, and each step's primary
  * action stays pinned to the bottom of the screen, fully visible and tappable without
  * scrolling. Nothing here confirms a transfer (read-only for the shared test database).
- * Signing out moved off the nav into the profile sheet on Home, behind a confirmation.
+ * Outside it, the nav is the design's: the two sections and, last, signing out.
  */
 
 /**
@@ -99,38 +99,29 @@ test.describe("the transfer flow is a focused task", () => {
   });
 });
 
-test("the bottom nav holds the sections only, no sign-out", async ({
+test("the bottom nav holds the design's items: the sections and signing out", async ({
   page,
 }) => {
   await login(page);
   const nav = page.getByRole("navigation", { name: "Principal" });
-  await expect(nav.getByRole("link")).toHaveCount(2);
+  await expect(nav.getByRole("listitem")).toHaveCount(3);
   await expect(nav.getByRole("link", { name: "Inicio" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Movimientos" })).toBeVisible();
-  await expect(nav.getByRole("button")).toHaveCount(0);
+  await expect(
+    nav.getByRole("listitem").last().getByRole("button", {
+      name: "Cerrar sesión",
+    }),
+  ).toBeVisible();
+  // Home's header is the design's: no avatar, no profile sheet.
+  await expect(page.getByRole("button", { name: "Tu perfil" })).toHaveCount(0);
 });
 
-test("signs out from the profile sheet, after confirming", async ({ page }) => {
+test("signs out from the bottom nav with one press", async ({ page }) => {
   await login(page);
-  await page.getByRole("button", { name: "Tu perfil" }).click();
-  const sheet = page.getByRole("dialog", { name: "Tu perfil" });
-  await expect(sheet).toBeVisible();
-  await expect(sheet).toContainText(DEMO_USER.email);
-
-  // A first tap only asks; cancelling keeps the session.
-  await sheet.getByRole("button", { name: "Cerrar sesión" }).click();
-  await expect(sheet).toContainText("¿Cerrar sesión?");
-  await sheet.getByRole("button", { name: "Cancelar" }).click();
-  await expect(
-    sheet.getByRole("button", { name: "Cerrar sesión" }),
-  ).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(sheet).toBeHidden();
-  await expect(page).toHaveURL(/\/$/);
-
-  await page.getByRole("button", { name: "Tu perfil" }).click();
-  await sheet.getByRole("button", { name: "Cerrar sesión" }).click();
-  await sheet.getByRole("button", { name: "Sí, cerrar sesión" }).click();
+  await page
+    .getByRole("navigation", { name: "Principal" })
+    .getByRole("button", { name: "Cerrar sesión" })
+    .click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
