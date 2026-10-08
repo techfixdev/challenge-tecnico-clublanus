@@ -627,7 +627,6 @@ Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → 
 - **`color-mix()` sin normalizar** (exportación a Figma): dos porcentajes que no suman 100 % se escalan como dice CSS Color 5, y el faltante pasa a transparencia; sumas en cero o fuera de 0–100 % se rechazan.
 - **QR de Recibir con identificadores inválidos:** un alias o CVU guardado que no pasa las reglas rompía la pantalla. Ahora no hay QR (la pantalla sigue con los datos) y un valor guardado nunca puede agregar ni falsificar una línea del contenido.
 
-
 ---
 
 ### T23–T25 — Motion v2, limpieza de referencias y tipografía (07/10/2026)
@@ -640,7 +639,7 @@ Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → 
 - **Home se construye una vez** detrás de la disolución del escudo, y las tarjetas se empujan con el dedo con inercia.
 - **Integración:** un solo conflicto, en `e2e/fixtures/layout-audit.ts` (las dos ramas agregaron una excepción para contenido que sale de la pantalla a propósito); se conservaron las dos: la tira arrastrable (`data-gesture-viewport`) y la fila que se desplaza desde el código (overflow oculto solo en x).
 - **Una sola física** en `shared/ui/gestures/drag-physics.ts`: seguimiento 1:1, banda elástica de iOS (0,55), velocidad del dedo en sus últimos 100 ms, proyección con la desaceleración de un scroll de iOS y asentamiento críticamente amortiguado que nunca se pasa de su lugar. Antes había tres copias (carrusel, tarjetas y gestos); el asentamiento sin pasarse, que solo tenían las tarjetas, ahora lo tienen también el carrusel, las hojas y el deslizar para volver. Las tarjetas conservan lo suyo: el lanzamiento que gira una sola tarjeta y una resistencia de borde más tenue.
-- **Seed con destinatarios:** cinco personas ficticias con tarjeta en dólares y en pesos, y transferencias pasadas hacia ellas, más viejas que todo lo demás, para que "Recientes" tenga seis fichas para recorrer. Los saldos del seed no cambian (ya incluyen esas transferencias). La pantalla ofrece hasta seis recientes.
+- **Seed con destinatarios:** cinco personas ficticias con tarjeta en dólares y en pesos, y transferencias pasadas hacia ellas, más viejas que todo lo demás, para que "Recientes" tenga seis fichas para recorrer. Los saldos del seed no cambian: son datos fijos que los e2e verifican, no la suma de los movimientos, y las transferencias pasadas son historial que no mueve dinero al sembrar. La pantalla ofrece hasta seis recientes.
 
 **T24 — Sin referencias externas:** comentarios, tests y tokens exportados a Figma describen los colores como los institucionales del club y el escudo como su vector oficial, sin nombrar documentos ni páginas.
 
@@ -649,6 +648,7 @@ Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → 
 **Tests primero (rojo → verde):** hasta seis recientes por defecto; la familia de display exportada es Rokkitt; una pausa antes de soltar frena el lanzamiento en lugar de anularlo; un lanzamiento lento de las tarjetas proyecta con la desaceleración compartida. Un e2e nuevo registra cuadro a cuadro la posición y el ancho de cada columna del odómetro y exige que no cambien mientras rueda.
 
 **Tests inestables bajo carga:** corriendo en paralelo, algunos e2e perdían su primer toque. Las causas y los arreglos, sin aflojar ninguna aserción: tocar Home antes de que terminara de llegar y construirse (ahora un fixture compartido espera eso), tocar el ojo de una tarjeta fuera de pantalla (el navegador desplazaba el carrusel y la tarjeta se deslizaba bajo el toque; ahora se trae al frente con su punto), comprobar el botón fijo mientras la pantalla todavía aparecía (ahora se espera a que se asiente), y lanzamientos que la latencia del runner convertía en arrastres lentos (ahora se envían con marcas de tiempo propias, un cuadro entre eventos). En la física, la velocidad al soltar dejaba de valer cero de golpe a los 50 ms de reposo; ahora decae con la pausa, como ya lo hacían las tarjetas.
+
 ---
 
 ## 6. Estructura del proyecto
