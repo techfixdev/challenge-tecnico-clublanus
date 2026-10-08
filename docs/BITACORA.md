@@ -16,7 +16,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 ## Estado final
 
 - **Qué es:** GranaBank, billetera móvil del Club Atlético Lanús. Login con un usuario demo, Home con dos tarjetas (dólares y pesos), lista de movimientos con búsqueda, filtros y agrupación por día, detalle de cada movimiento, transferencias reales entre usuarios demo y pantalla de Recibir con QR.
-- **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly`, Motion para la física de gestos, Vitest + Testing Library, Playwright.
+- **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly` respaldada por una tabla de sesiones revocables, Motion para la física de gestos, Vitest + Testing Library, Playwright.
 - **Diseño:** layout del Figma, paleta institucional del club (granate, oro y Cool Gray), Poppins para la interfaz y Rokkitt como tipografía de display.
 - **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos (10 revelados por usuario cada 10 minutos, cada uno registrado). El login admite 5 intentos fallidos por email y 20 por IP cada 15 minutos.
 - **Tests en `7c50a67`:** 1021 unitarios (108 archivos) · 54 de integración contra PostgreSQL · 113 end-to-end (16 archivos).
@@ -1087,6 +1087,23 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Cómo se verificó:** test primero. Rojo antes de implementar: el test que pide que la superficie que rota no contenga el texto fallaba (no había capa de texto). Verde después. Playwright contra el servidor de desarrollo, a escala 2: capturas en reposo, inclinación máxima (con y sin el número revelado), media vuelta, reverso inclinado y con un dedo en el celular; `getComputedStyle` confirma que la capa de texto tiene solo traslación (`matrix(1, 0, 0, 1, 4.7, -4.6)`) mientras el arte tiene una `matrix3d` con rotación. Los e2e de la tarjeta pasan.
 
+#### T37 — Sesiones revocables (08/10/2026)
+
+**Problema:** la sesión era un JWT firmado sin estado. Cerrar sesión solo borraba la cookie: una copia del token (robada o guardada) seguía sirviendo hasta vencer, hasta 30 días con "Recordarme". Era la limitación de la decisión de T2 (JWT en lugar de sesiones en base).
+
+**Decisión del usuario:** solo del lado del servidor, **sin interfaz nueva**. "Cerrar sesión en todos los dispositivos" queda disponible en la capa de datos y documentado.
+
+**Solución:** una tabla `Session` (id opaco de 256 bits al azar, usuario con `ON DELETE CASCADE`, creación, vencimiento y `revokedAt`). Al iniciar sesión se inserta la fila y el JWT pasa a llevar su id (`jti`) además del usuario; se conserva la firma, que permite descartar un token falsificado sin consultar la base. El reparto de responsabilidades sigue la guía de autenticación de Next:
+
+| Dónde | Qué verifica | Por qué |
+| ----- | ------------ | ------- |
+| `proxy.ts` | Firma y vencimiento del token, sin base | Corre en cada pedido, incluidas las precargas; la guía pide evitar consultas a la base ahí. Es un filtro optimista. |
+| `getCurrentUser()` / `requireUser()` | Además, que la sesión exista, no esté revocada ni vencida y sea del usuario del token | Es la autoridad: la usan páginas, Server Actions y rutas de la API. Una sola consulta (sesión + usuario), memorizada por pedido con `cache()`. |
+
+Cerrar sesión (Server Action o `POST /api/auth/logout`) revoca la fila y después borra la cookie. `revokeAllSessionsForUser(userId)` revoca todas las sesiones vivas de un usuario. Las filas revocadas o vencidas de un usuario se borran cuando vuelve a iniciar sesión: no hace falta un cron. Los tokens emitidos antes de este cambio (sin `jti`) dejan de valer y piden iniciar sesión de nuevo. "Recordarme" no cambia.
+
+**Cómo se verificó:** test primero. Rojo antes de implementar: 7 tests unitarios del token (payload con `jti`, rechazo de un token sin id de sesión, generador de ids) y 6 de integración (token con sesión revocada, vencida o borrada; logout que revoca en el servidor; cierre en todos los dispositivos sin tocar a otro usuario; limpieza al volver a entrar). Verde después. Un e2e nuevo cierra sesión, vuelve a poner la cookie copiada y comprueba que la API responde 401 y la página manda a `/login`. El seed (`pnpm db:seed`) sigue funcionando y `prisma migrate diff` queda vacío.
+
 #### T5 — Deploy (pendiente)
 
 **Pedido:** repositorio en GitHub y deploy en Vercel con Neon.
@@ -1105,7 +1122,7 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 - **Rojo de error:** es una excepción de accesibilidad a la paleta institucional (granate, oro y Cool Gray).
 - **Datos de tarjeta ficticios:** PAN inventado y CVV derivado en el servidor solo para la demo; en un sistema real el PAN va cifrado o tokenizado.
 - **Límites de intentos de ventana fija:** en el borde entre dos ventanas pueden pasar hasta el doble de intentos en poco tiempo (y un e2e que cruza ese borde puede fallar, muy de vez en cuando); el límite por IP confía en los headers del proxy (Vercel). Quien reparte 50 intentos fallidos entre muchas IP sí bloquea la cuenta hasta que termina la ventana.
-- **Sesiones no revocables:** el JWT no se puede invalidar antes de su vencimiento; se mitiga verificando el usuario en cada lectura.
+- **Cerrar sesión en todos los dispositivos sin interfaz:** existe en la capa de datos (`revokeAllSessionsForUser`), pero por decisión de producto no tiene botón ni ruta (T37).
 - **Desktop:** se muestra la columna móvil centrada; el Figma es solo mobile y la alternativa responsive quedó archivada.
 - **Tests bajo carga extrema:** "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que el CI); en condiciones normales pasa siempre.
 - **Observaciones menores abiertas tras T26:** tres, no bloqueantes, en `RecipientCarousel.tsx`, `RecipientCarousel.test.tsx` y `e2e/gestures.spec.ts` (esta última de nivel advertencia).
