@@ -4,7 +4,7 @@ Estado de cada requerimiento del enunciado, con la evidencia que lo respalda. Se
 
 Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 
-Última actualización: 07/10/2026 (verificado contra `32fcfd2`)
+Última actualización: 08/10/2026 (verificado contra `3e8b928`)
 
 ---
 
@@ -33,7 +33,7 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 
 ## Qué se evalúa (cómo lo cubrimos)
 
-- [x] Claridad del código → lint y typecheck limpios, tests al lado del código (998 unitarios, 54 de integración, 108 e2e).
+- [x] Claridad del código → lint y typecheck limpios, tests al lado del código (1017 unitarios, 54 de integración, 110 e2e).
 - [x] Seguir el diseño → layout y pantallas del Figma (`docs/design/`); los desvíos son deliberados y documentados: colores institucionales del club, formato argentino y montos con signo. Ver README, "Marca" y "Decisiones técnicas".
 - [x] Organización del proyecto → estructura documentada en el README y en la bitácora.
 - [x] Criterio técnico → decisiones con su porqué en el README ("Decisiones técnicas") y en la bitácora.

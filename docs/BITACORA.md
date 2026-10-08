@@ -19,7 +19,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 - **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly`, Motion para la física de gestos, Vitest + Testing Library, Playwright.
 - **Diseño:** layout del Figma, paleta institucional del club (granate, oro y Cool Gray), Poppins para la interfaz y Rokkitt como tipografía de display.
 - **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos.
-- **Tests en HEAD (`6df589f`):** 998 unitarios (107 archivos) · 54 de integración contra PostgreSQL · 108 end-to-end.
+- **Tests en HEAD (`3e8b928`):** 1017 unitarios (108 archivos) · 54 de integración contra PostgreSQL · 110 end-to-end.
 - **Pendiente:** T5, publicar el repositorio y desplegar en Vercel. Requiere la aprobación explícita del candidato; hasta entonces todo es local.
 
 ## Índice
@@ -65,7 +65,8 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T24](#t24--sin-referencias-a-documentos-externos-07102026) | Sin referencias a documentos externos | `b639361`, `d0d3f21` |
 | | [T25](#t25--tipografía-de-display-rokkitt-07102026) | Tipografía de display: Rokkitt | `ee3e709`, `01020cf`, `93a853c` |
 | | [T26](#t26--pase-sobre-las-observaciones-de-t23-07102026) | Pase sobre las observaciones de T23 | `28cc013`…`ff12385` (13) |
-| | [T29](#t29--vuelta-al-diseño-recibir-cerrar-sesión-y-escudo-del-login-07102026) | Vuelta al diseño: Recibir, cerrar sesión y escudo del login | `66404a2`, `59728fd`, `6df589f` |
+| | [T29](#t29--vuelta-al-diseño-recibir-cerrar-sesión-y-escudo-del-login-07102026) | Vuelta al diseño: Recibir, cerrar sesión y escudo del login | `a32c541`, `3cc6c13`, `32e856b` |
+| | [T30](#t30--buscador-de-destinatario-07102026) | Buscador de destinatario | `2a4eeb6`…`3e8b928` (10) |
 | | [T5](#t5--deploy-pendiente) | GitHub y deploy en Vercel | pendiente |
 
 ---
@@ -633,7 +634,7 @@ El build de producción no se podía probar desde el celular por `http://` en la
 
 - **Paleta:** granate `#70192D` (Pantone 188 C, reemplaza al `#7A1D2D` del Figma), oro `#B4982F` (Pantone 618 C: chip de moneda y acentos) y Cool Gray 7C `#9A999D`, con el contraste AA medido.
 - **Escudo:** el vector oficial del club, sin redibujarlo, modificarlo ni estirarlo; relleno granate sobre fondo claro e iniciales blancas. El efecto 3D sale solo de filtros CSS (sombras teñidas, luz desde arriba a la izquierda, un brillo especular sutil), con el vector intacto.
-- **Login:** degradé radial en granate (más claro alrededor del escudo, casi `#3A0D18` abajo), el escudo con estrellas, logotipo "GranaBank" en una slab serif libre (Arvo, reemplazada por Rokkitt en T25), controles adaptados al fondo oscuro y foco en oro.
+- **Login:** degradé radial en granate (más claro alrededor del escudo, casi `#3A0D18` abajo), el escudo con estrellas (desde T29, sin estrellas), logotipo "GranaBank" en una slab serif libre (Arvo, reemplazada por Rokkitt en T25), controles adaptados al fondo oscuro y foco en oro.
 - Todos los colores escritos a mano pasaron a tokens. El README aclara que los recursos de marca pertenecen al club.
 
 **Cómo se verificó:** typecheck y unitarios en verde commit por commit (703/707/707), lint en verde y 70/70 e2e. Revisión con 4 enfoques aprobada, con 6 observaciones no bloqueantes (entre ellas el contraste del rojo de error) que se cerraron en T12a y T22.
@@ -668,7 +669,7 @@ El build de producción no se podía probar desde el celular por `http://` en la
 - **Botón fijo abajo (`StepActions`):** la acción principal de cada paso es `sticky` al fondo con `mt-auto`. Se eligió `sticky` y no `fixed` para que el botón siga en el flujo del documento (orden de foco y lectura naturales). Sube por encima del teclado con `visualViewport`.
 - **Deshabilitado claro:** gris plano con texto apagado; antes era el granate al 70 % y parecía tocable.
 - **Barra inferior = secciones:** Inicio · Movimientos. "Transferir" no es pestaña: abriría una pantalla sin barra y Enviar/Recibir ya están a un toque en Home.
-- **Perfil:** las iniciales en el header de Home abren una hoja inferior (`<dialog>` modal nativo: foco atrapado, Escape, devuelve el foco) con nombre, email y "Cerrar sesión", que pide confirmación. Se reutiliza la misma Server Action `logout`.
+- **Perfil:** las iniciales en el header de Home abren una hoja inferior (`<dialog>` modal nativo: foco atrapado, Escape, devuelve el foco) con nombre, email y "Cerrar sesión", que pide confirmación. Se reutiliza la misma Server Action `logout`. _Revertido en T29 por decisión del candidato: la hoja y el avatar se quitaron y "Cerrar sesión" volvió a la barra inferior._
 - **Monto con miles al escribir:** `editAmount` reescribe el texto en cada tecla y recalcula el cursor; solo cambia la vista, lo que muestra se parsea igual con `parseAmount`.
 - **Tarjeta por defecto:** la de pesos, la de todos los días.
 
@@ -846,7 +847,7 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 
 - Se quitaron: el barrido de luz de 1,2 s sobre la primera tarjeta; el `blur` en transiciones (ahora opacidad + 4 px); los rebotes (todo pasa al resorte crítico; el check de éxito se dibuja en ~280 ms); el fundido + escalado al cambiar de pestaña; las filas que volvían a entrar con cada filtro (ahora solo la primera lista, hasta 6 filas).
 - Se mantuvieron: push/pop con paralaje, rodillo del saldo, píldora, vuelta de tarjeta, presión a 0,97, esqueleto → contenido y todos los modos de movimiento reducido.
-- La hoja de perfil y los pasos de transferir usan los tokens compartidos.
+- La hoja de perfil (quitada en T29) y los pasos de transferir usan los tokens compartidos.
 - La intro de marca se desmonta aunque su disolución termine antes de hidratar (`5937865`).
 
 **Cómo se verificó:** rojo → verde en `tokens.test.ts` (3 duraciones, 1 curva, sin tiempos sueltos, sin `blur` en keyframes), `springs.test.ts` (ζ ≥ 1 salvo el rodillo), `row-entrance.test.ts` y el saldo sin desenfoque. Los e2e que fijaban el comportamiento viejo se reescribieron para el nuevo. Revisado en los tramos de T12b (ver T12b-D).
@@ -862,7 +863,7 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 **Qué se hizo** (tres ramas en paralelo, integradas en orden transferencia → gestos → Home):
 
 - **Transferir en una sola superficie:** "Recientes" es una tira que se arrastra (la ficha centrada crece, las vecinas asoman), la ficha elegida viaja al encabezado, sube un teclado numérico propio y el botón fijo cambia de texto sin ser reemplazado. Con teclado: flechas, Inicio/Fin, Enter y dígitos.
-- **Gestos compartidos:** deslizar desde el borde izquierdo para volver (detalle, Recibir) y bajar las hojas inferiores con el dedo para cerrarlas.
+- **Gestos compartidos:** deslizar desde el borde izquierdo para volver (detalle, Recibir) y bajar las hojas inferiores con el dedo para cerrarlas. _La única hoja era la de perfil; en T29, por decisión del candidato, se quitó junto con su gesto de arrastre._
 - **Home se construye una vez** detrás de la disolución del escudo, y las tarjetas se empujan con el dedo con inercia.
 - **Una sola física** en `shared/ui/gestures/drag-physics.ts`: seguimiento 1:1, banda elástica de iOS (0,55), velocidad del dedo en sus últimos 100 ms, proyección con la desaceleración de un scroll de iOS y asentamiento críticamente amortiguado que nunca se pasa de su lugar. Antes había tres copias; las tarjetas conservan lo suyo (el lanzamiento que gira una sola tarjeta y una resistencia de borde más tenue).
 - **Seed con destinatarios:** cinco personas ficticias con tarjeta en dólares y en pesos, y transferencias pasadas hacia ellas, para que "Recientes" tenga seis fichas. Los saldos del seed no cambian: son datos fijos que los e2e verifican, no la suma de los movimientos.
@@ -959,7 +960,7 @@ No son duraciones (y se documentan así): el escalonado de filas (40 ms), el per
 - **Auditoría de layout de los e2e:** `overflow-x: hidden` solo hace que `overflow-y` sea `auto`, así que la excepción pensada para las tarjetas eximía cualquier contenedor que ocultara un desborde, justo lo que la auditoría busca. Ahora las tarjetas se declaran explícitamente (`47bb605`).
 - **Seed:** los movimientos del segundo usuario y de los destinatarios se cuentan desde los datos en lugar de un número fijo, y la transacción tiene más tiempo que los 5 s por defecto de Prisma (`28cc013`).
 
-Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de borde de las tarjetas, la prueba de que un arrastre vertical nunca las mueve, reabrir una hoja después de bajarla, y la lista de excepciones de las tarjetas al modelo compartido de gestos.
+Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de borde de las tarjetas, la prueba de que un arrastre vertical nunca las mueve, reabrir una hoja después de bajarla (test quitado en T29 con la hoja), y la lista de excepciones de las tarjetas al modelo compartido de gestos.
 
 **Cómo se verificó:** 1007 unitarios, 54 de integración y 113/113 e2e. Revisión de alto riesgo aprobada. Quedan 3 observaciones menores abiertas (ver Limitaciones conocidas).
 
@@ -973,13 +974,36 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Qué se hizo:**
 
-- **Recibir:** el QR pasa justo debajo del alias y el CVU que codifica, antes de "Compartir mis datos", y se ajustaron los espacios (y el QR a 192 px), así que entra entero sobre la barra sin scroll; queda a 18 px de ella (`66404a2`).
-- **Cerrar sesión:** botón de la barra inferior que envía la Server Action `logout` (la inyecta el layout). Se quitaron el avatar del header de Home, la hoja de perfil, el componente de hoja inferior (no quedaba otro uso), su CSS y su regla de arrastre (`59728fd`).
-- **Escudo del login:** `escudo.svg` sobre un disco blanco con sombras teñidas de granate; se borraron los dos SVG con estrellas y sus entradas y tests (`6df589f`).
+- **Recibir:** el QR pasa justo debajo del alias y el CVU que codifica, antes de "Compartir mis datos", y se ajustaron los espacios (y el QR a 192 px), así que entra entero sobre la barra sin scroll; queda a 18 px de ella (`a32c541`).
+- **Cerrar sesión:** botón de la barra inferior que envía la Server Action `logout` (la inyecta el layout). Se quitaron el avatar del header de Home, la hoja de perfil, el componente de hoja inferior (no quedaba otro uso), su CSS y su regla de arrastre (`3cc6c13`).
+- **Escudo del login:** `escudo.svg` sobre un disco blanco con sombras teñidas de granate; se borraron los dos SVG con estrellas y sus entradas y tests (`32e856b`).
 
 **Cómo se verificó:** rojo → verde en el e2e del QR (su borde inferior estaba en 917 px con la barra en 764), en `BottomNav` (tres ítems, el último "Cerrar sesión", que llama a la acción) y en el escudo del login. E2E nuevos: cerrar sesión desde la barra con un toque, un arrastre que sale del botón no cierra la sesión, y Home sin avatar; se quitaron los de la hoja de perfil. 998 unitarios y 108/108 e2e sobre el build de producción; formato, lint y typecheck limpios. Capturas a 390×844 de login, Home y Recibir revisadas.
 
-**Commits:** `66404a2`, `59728fd`, `6df589f`
+**Commits:** `a32c541`, `3cc6c13`, `32e856b`, `1166ddf`
+
+#### T30 — Buscador de destinatario (07/10/2026)
+
+**Pedido:** en el primer paso de Transferir, buscar al destinatario por nombre, alias o CVU en un solo campo, en lugar de un campo de alias o CVU separado de los recientes.
+
+**Decisión:** un solo campo, "Buscar por nombre, alias o CVU", que filtra el carrusel de Recientes en el navegador y elige la primera coincidencia. Si lo escrito es un alias o CVU válido que no es de un reciente, ofrece buscarlo en el servidor ("Buscar «…»"), también junto a coincidencias parciales. Arrastrar el carrusel elige sin reescribir la búsqueda.
+
+**Qué se hizo:**
+
+- **Búsqueda:** coincidencia sin mayúsculas ni tildes, un CVU por sus últimos dígitos visibles (con o sin espacios), y la detección de cuándo lo escrito merece una búsqueda en el servidor, con las reglas del servidor (`2a4eeb6`).
+- **Carrusel:** se recentra cuando la búsqueda achica la lista (`f90d971`).
+- **Paso 1:** el campo es un combobox sobre el carrusel; sin coincidencias lo dice ("Sin coincidencias en tus recientes") y el lector de pantalla escucha cuántos recientes quedan (`bbf75dc`). El subtítulo pasa a "Buscá por nombre, alias o CVU, o elegí de tus recientes." (`ed62b15`).
+
+**Integración con T29:** las dos ramas se aplicaron sin conflictos. Al juntarlas:
+
+- **Base de tests reservada:** dos corridas de e2e a la vez (o una corrida y `pnpm db:test`) se recargaban el seed una a la otra: la primera perdía saldos y búsquedas a mitad de los tests, y eso parecía una carrera de la app. Reproducido recargando el seed durante una corrida (5 de 16 fallaron: el saldo seguía oculto o faltaba un elemento); ahora cada corrida toma un lock de PostgreSQL y la segunda falla enseguida (`789f8a4`).
+- **Tests inestables:** dos toques llegaban mientras la pantalla todavía se revelaba (una transición de vista no recibe toques): la fila del movimiento enviado (4 de 8 con la CPU saturada) y el ojo de la tarjeta después de volver a Home (`a7d5478`). Y pegar "adobe" en el buscador de Movimientos mientras el resumen y la lista se revelan deja el texto en el campo sin que React reciba el cambio, así que la búsqueda nunca sale (2 de 220 corridas, visto con una sonda instrumentada); el test espera a que la pantalla se asiente: 0 de 200 (`3e8b928`).
+- **Tests explícitos:** los e2e encuentran el buscador por su rol y nombre completo, no por "Alias o CVU" como subcadena (`d502f18`).
+- **Capturas:** `pnpm screens:capture` ya no abre la hoja de perfil (quitada en T29) y suma la búsqueda filtrada y la oferta de buscar un alias: 18 pantallas, verificadas contra la base de tests (`b15276b`).
+
+**Cómo se verificó:** test primero en el subtítulo del paso 1. 1017 unitarios, 54 de integración y 110 e2e sobre el build de producción; formato, lint, typecheck y `tokens:figma --check` limpios.
+
+**Commits:** `2a4eeb6`, `f90d971`, `bbf75dc`, `789f8a4`, `d502f18`, `a7d5478`, `ed62b15`, `b15276b`, `f94c728`, `3e8b928`
 
 #### T5 — Deploy (pendiente)
 
