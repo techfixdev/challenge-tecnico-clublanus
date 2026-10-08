@@ -19,7 +19,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 - **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly`, Motion para la física de gestos, Vitest + Testing Library, Playwright.
 - **Diseño:** layout del Figma, paleta institucional del club (granate, oro y Cool Gray), Poppins para la interfaz y Rokkitt como tipografía de display.
 - **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos.
-- **Tests en HEAD (`ff12385`):** 1007 unitarios (107 archivos) · 54 de integración contra PostgreSQL · 113 end-to-end.
+- **Tests en HEAD (`6df589f`):** 998 unitarios (107 archivos) · 54 de integración contra PostgreSQL · 108 end-to-end.
 - **Pendiente:** T5, publicar el repositorio y desplegar en Vercel. Requiere la aprobación explícita del candidato; hasta entonces todo es local.
 
 ## Índice
@@ -65,6 +65,7 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T24](#t24--sin-referencias-a-documentos-externos-07102026) | Sin referencias a documentos externos | `b639361`, `d0d3f21` |
 | | [T25](#t25--tipografía-de-display-rokkitt-07102026) | Tipografía de display: Rokkitt | `ee3e709`, `01020cf`, `93a853c` |
 | | [T26](#t26--pase-sobre-las-observaciones-de-t23-07102026) | Pase sobre las observaciones de T23 | `28cc013`…`ff12385` (13) |
+| | [T29](#t29--vuelta-al-diseño-recibir-cerrar-sesión-y-escudo-del-login-07102026) | Vuelta al diseño: Recibir, cerrar sesión y escudo del login | `66404a2`, `59728fd`, `6df589f` |
 | | [T5](#t5--deploy-pendiente) | GitHub y deploy en Vercel | pendiente |
 
 ---
@@ -142,6 +143,8 @@ Decisiones de producto tomadas explícitamente por el candidato. Las técnicas e
 | 07/10 | Ninguna referencia a documentos externos de marca, ni en el código ni en la documentación. | T24 |
 | 07/10 | **Rokkitt como tipografía de display** (logotipo, títulos y montos grandes); Poppins sigue en la interfaz. | T25 |
 | 07/10 | Revisar una por una las observaciones no bloqueantes de T23 antes de la entrega. | T26 |
+| 07/10 | **Se revierte T12b-A en el cierre de sesión:** vuelve a ser el tercer ícono de la barra inferior, sin confirmación, y Home pierde el avatar, como el diseño original. | T29 |
+| 07/10 | El login muestra el escudo sin estrellas; las versiones con estrellas se quitan de la app. | T29 |
 
 ---
 
@@ -961,6 +964,22 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 **Cómo se verificó:** 1007 unitarios, 54 de integración y 113/113 e2e. Revisión de alto riesgo aprobada. Quedan 3 observaciones menores abiertas (ver Limitaciones conocidas).
 
 **Commits:** `28cc013`, `bdeb9b6`, `cc772aa`, `b46ec73`, `4ea8e5f`, `b4ed103`, `43a58ee`, `47bb605`, `20a0053`, `9cd0ff1`, `81f2985`, `b462d26`, `ff12385`
+
+#### T29 — Vuelta al diseño: Recibir, cerrar sesión y escudo del login (07/10/2026)
+
+**Pedido:** en un iPhone (390×844) la barra inferior tapaba la mitad del QR de Recibir hasta hacer scroll; "Cerrar sesión" tenía que volver a donde estaba en el diseño original, no en los datos del cliente; y sacar las estrellas del escudo del login.
+
+**Decisión:** seguir el diseño original. El cierre de sesión vuelve a la barra inferior como tercer ícono, sin confirmación (el diseño no tiene); como es un botón, solo se activa con un toque, nunca con un arrastre. El escudo del login es el oficial sin estrellas, sin recolorear: sobre el fondo granate se apoya en un disco blanco.
+
+**Qué se hizo:**
+
+- **Recibir:** el QR pasa justo debajo del alias y el CVU que codifica, antes de "Compartir mis datos", y se ajustaron los espacios (y el QR a 192 px), así que entra entero sobre la barra sin scroll; queda a 18 px de ella (`66404a2`).
+- **Cerrar sesión:** botón de la barra inferior que envía la Server Action `logout` (la inyecta el layout). Se quitaron el avatar del header de Home, la hoja de perfil, el componente de hoja inferior (no quedaba otro uso), su CSS y su regla de arrastre (`59728fd`).
+- **Escudo del login:** `escudo.svg` sobre un disco blanco con sombras teñidas de granate; se borraron los dos SVG con estrellas y sus entradas y tests (`6df589f`).
+
+**Cómo se verificó:** rojo → verde en el e2e del QR (su borde inferior estaba en 917 px con la barra en 764), en `BottomNav` (tres ítems, el último "Cerrar sesión", que llama a la acción) y en el escudo del login. E2E nuevos: cerrar sesión desde la barra con un toque, un arrastre que sale del botón no cierra la sesión, y Home sin avatar; se quitaron los de la hoja de perfil. 998 unitarios y 108/108 e2e sobre el build de producción; formato, lint y typecheck limpios. Capturas a 390×844 de login, Home y Recibir revisadas.
+
+**Commits:** `66404a2`, `59728fd`, `6df589f`
 
 #### T5 — Deploy (pendiente)
 
