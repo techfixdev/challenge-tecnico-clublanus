@@ -7,12 +7,7 @@ import {
 
 import { exhaustRevealBudget } from "./fixtures/rate-limits";
 import { bringCardForward, primaryCard } from "./fixtures/screens";
-import {
-  DEMO_USER,
-  login,
-  loginUntilHomeSettles,
-  SECOND_USER,
-} from "./fixtures/session";
+import { login, loginUntilHomeSettles, SECOND_USER } from "./fixtures/session";
 
 /*
  * Per-card reveal: every card is masked on load (balance, full number, CVV), each eye
@@ -202,19 +197,26 @@ test("the details endpoint needs a session and only serves the owner's cards", a
 test("past 10 reveals in 10 minutes, the eye says how long to wait and the API answers 429", async ({
   page,
 }) => {
-  await loginUntilHomeSettles(page);
-  await exhaustRevealBudget(DEMO_USER.email);
+  // The second demo user: no spec running in parallel signs in as them (a login resets
+  // that user's counters), so the spent budget stays spent for this scenario.
+  await loginUntilHomeSettles(page, SECOND_USER);
+  await exhaustRevealBudget(SECOND_USER.email);
+  const firstCard = page
+    .getByRole("list", { name: "Tus tarjetas" })
+    .getByRole("region")
+    .first();
 
-  await eye(page, "Mastercard terminada en 1234").click();
+  await firstCard
+    .getByRole("button", { name: /^Mostrar datos de la tarjeta/ })
+    .click();
 
-  await expect(
-    primaryCard(page).getByTestId("card-reveal-notice"),
-  ).toContainText(/^Demasiados intentos\. Probá de nuevo en \d+ minutos?\.$/);
-  await expect(eye(page, "Mastercard terminada en 1234")).toHaveAttribute(
-    "aria-pressed",
-    "false",
+  await expect(firstCard.getByTestId("card-reveal-notice")).toContainText(
+    /^Demasiados intentos\. Probá de nuevo en \d+ minutos?\.$/,
   );
-  await expect(primaryCard(page)).toContainText("Saldo oculto");
+  await expect(
+    firstCard.getByRole("button", { name: /^Mostrar datos de la tarjeta/ }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await expect(firstCard).toContainText("Saldo oculto");
 
   const cards = (await (
     await page.request.get("/api/account/cards")

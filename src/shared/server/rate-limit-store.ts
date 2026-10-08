@@ -1,6 +1,5 @@
 import "server-only";
 
-import { db } from "@/shared/lib/db";
 import {
   decide,
   windowStartFor,
@@ -23,6 +22,15 @@ const SWEEP_PROBABILITY = 0.01;
 type Options = { now?: Date; random?: () => number };
 
 /**
+ * The Prisma client, loaded on first use rather than at import: modules that merely sit
+ * next to the limiter (e.g. `signOut` in the login service, used by the logout route) can
+ * be imported without a configured database.
+ */
+async function database() {
+  return (await import("@/shared/lib/db")).db;
+}
+
+/**
  * Counts one hit for `key` in `scope` and returns the verdict. The increment is a single
  * statement (`INSERT … ON CONFLICT DO UPDATE … RETURNING`): PostgreSQL locks the row for
  * the update, so N concurrent hits get the counts 1..N and exactly `limit` are allowed.
@@ -35,6 +43,7 @@ export async function consumeRateLimit(
   { now = new Date(), random = Math.random }: Options = {},
 ): Promise<RateLimitDecision> {
   const windowStart = windowStartFor(now, policy);
+  const db = await database();
   const [{ count }] = await db.$queryRaw<[{ count: number }]>`
     INSERT INTO "RateLimitBucket" ("scope", "key", "windowStart", "count")
     VALUES (${scope}, ${key}, ${windowStart}::timestamp, 1)
@@ -56,13 +65,15 @@ export async function refundRateLimit(
   { now = new Date() }: Pick<Options, "now"> = {},
 ): Promise<void> {
   const windowStart = windowStartFor(now, policy);
+  const db = await database();
   await db.$executeRaw`
     UPDATE "RateLimitBucket" SET "count" = GREATEST("count" - 1, 0)
     WHERE "scope" = ${scope} AND "key" = ${key} AND "windowStart" = ${windowStart}::timestamp`;
 }
 
 /** Deletes buckets whose window is long over. Returns how many rows went. */
-export function sweepStaleBuckets(now = new Date()): Promise<number> {
+export async function sweepStaleBuckets(now = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - STALE_AFTER_MS);
+  const db = await database();
   return db.$executeRaw`DELETE FROM "RateLimitBucket" WHERE "windowStart" < ${cutoff}::timestamp`;
 }

@@ -33,6 +33,53 @@ test("shows a generic error for wrong credentials and keeps the email", async ({
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("after 5 failed attempts for an email, the 6th is refused with how long to wait", async ({
+  page,
+}) => {
+  // An email nobody registered (and no other spec uses): the limit treats it exactly like
+  // a real one.
+  await fillLoginForm(page, {
+    email: "nadie@clublanus.com",
+    password: "wrong-password",
+  });
+  const submit = page.getByRole("button", { name: "Ingresar" });
+  const password = page.getByLabel("Contraseña", { exact: true });
+  // Submits once and waits for the Server Action's answer: the previous attempt's alert
+  // is still on screen, so waiting for the alert alone would not wait for this attempt
+  // (and typing during the form's post-action reset would lose the password).
+  async function submitWrongPassword() {
+    await password.fill("wrong-password");
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/login",
+      ),
+      submit.click(),
+    ]);
+    await expect(submit).toBeEnabled();
+  }
+
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    await submitWrongPassword();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Email o contraseña incorrectos" }),
+    ).toBeVisible();
+  }
+
+  await submitWrongPassword();
+
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: /^Demasiados intentos\. Probá de nuevo en \d+ minutos?\.$/,
+    }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Email")).toHaveValue("nadie@clublanus.com");
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test("validates fields on the client before submitting", async ({ page }) => {
   await page.goto("/login");
   await page.getByRole("button", { name: "Ingresar" }).click();

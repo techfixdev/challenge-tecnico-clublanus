@@ -1,8 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { tooManyAttemptsMessage } from "@/shared/lib/rate-limit";
 import { ROUTES } from "@/shared/lib/routes";
+import { clientIpFrom } from "@/shared/server/client-ip";
 
 import { LOGIN_MESSAGES, parseLoginFormData } from "../domain/login-schema";
 import type { LoginFormState } from "../domain/login-form-state";
@@ -17,7 +20,7 @@ export async function login(
 
   let result: SignInResult;
   try {
-    result = await signIn(input);
+    result = await signIn(input, { clientIp: clientIpFrom(await headers()) });
   } catch (error) {
     // Infrastructure failure (DB down, missing secret): log it, show a neutral message.
     console.error("Login failed unexpectedly", error);
@@ -25,9 +28,18 @@ export async function login(
   }
 
   if (!result.ok) {
-    return result.reason === "invalid_input"
-      ? { fieldErrors: result.fieldErrors, values }
-      : { formError: LOGIN_MESSAGES.invalidCredentials, values };
+    switch (result.reason) {
+      case "invalid_input":
+        return { fieldErrors: result.fieldErrors, values };
+      case "invalid_credentials":
+        return { formError: LOGIN_MESSAGES.invalidCredentials, values };
+      case "rate_limited":
+        // Same place and shape as a wrong password: says nothing about the account.
+        return {
+          formError: tooManyAttemptsMessage(result.retryAfterSeconds),
+          values,
+        };
+    }
   }
 
   // Outside try/catch: `redirect` works by throwing.

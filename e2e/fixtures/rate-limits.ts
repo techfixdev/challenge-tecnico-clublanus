@@ -8,9 +8,11 @@ import { testDatabaseUrl } from "../../scripts/test-database";
 
 /*
  * The rate-limit counters (`RateLimitBucket`) as the e2e specs need them. The limits stay
- * on in the app under test (no env flag turns them off); instead every scenario starts
- * from empty counters, like a new visitor, so a full run (which logs in and reveals cards
- * many times as the same demo users) never trips them by accident.
+ * on in the app under test (no env flag turns them off); instead every scenario that signs
+ * in starts with empty counters for its user, like a new visitor, so a full run (which
+ * logs in and reveals cards many times as the same demo users) never trips them by
+ * accident. Resets are scoped to one user's keys: spec files run in parallel workers, and
+ * a global reset in one would wipe the counters another spec is building up.
  */
 
 async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
@@ -23,10 +25,21 @@ async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
   }
 }
 
-/** Empties every counter (failed logins per email/IP, reveals per user). */
-export function resetRateLimits(): Promise<void> {
+/** Empties every counter (failed logins per email/IP, reveals per user): before a run only. */
+export function resetAllRateLimits(): Promise<void> {
   return withClient(async (client) => {
     await client.query(`DELETE FROM "RateLimitBucket"`);
+  });
+}
+
+/** Empties `email`'s counters: its failed logins and, if it is a user, its reveals. */
+export function resetRateLimitsFor(email: string): Promise<void> {
+  return withClient(async (client) => {
+    await client.query(
+      `DELETE FROM "RateLimitBucket"
+        WHERE "key" = $1 OR "key" IN (SELECT id FROM "User" WHERE email = $1)`,
+      [email],
+    );
   });
 }
 
