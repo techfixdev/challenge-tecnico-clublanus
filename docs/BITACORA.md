@@ -75,6 +75,9 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T35](#t35--índice-trigram-para-la-búsqueda-de-movimientos-08102026) | Índice trigram para la búsqueda de movimientos | `95f0f43` |
 | | [T36](#t36--límites-de-intentos-en-postgresql-08102026) | Límites de intentos en PostgreSQL | `f790d9a`…`b706c14` (3) |
 | | [T36c](#t36c--login-sin-bloqueo-por-terceros-y-observaciones-de-la-revisión-08102026) | Login sin bloqueo por terceros y observaciones de la revisión | `e609b97` + este commit |
+| | [T36b](#t36b--texto-de-la-tarjeta-derecho-mientras-se-inclina-08102026) | Texto de la tarjeta derecho mientras se inclina | `165d8d6` |
+| | [T37](#t37--sesiones-revocables-08102026) | Sesiones revocables | `08aaa0f`, `26e198a` |
+| | [T39](#t39--pase-final-de-código-limpio-08102026) | Pase final de código limpio | `d114c53`…`3b17ea2` (6) + este commit |
 | | [T5](#t5--deploy-pendiente) | Deploy en Vercel | pendiente |
 
 ---
@@ -1083,7 +1086,7 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 
 **Problema:** al inclinar la tarjeta de Home, todo el texto (saldo, número, también revelado, titular y vencimiento) giraba en 3D con la superficie y se veía torcido y con bordes dentados.
 
-**Solución:** la tarjeta pasa a tener dos capas. El arte (degradé, brillo, sombra, banda magnética y logo de la marca) sigue inclinándose y girando en 3D igual que antes. El texto y los controles van en una capa plana encima que nunca rota: con la inclinación solo se desplaza hasta 5 px (paralaje, de los mismos _motion values_), así que se ve nítido. En la vuelta, el texto de cada cara se angosta con la cara y se desvanece antes de que quede de canto (el frente se va antes de ~55°, el reverso aparece después de ~125°), así nunca se ve espejado ni despegado. El orden del DOM, las etiquetas, el botón de vuelta, los ojos y el modo de movimiento reducido no cambian.
+**Solución:** la tarjeta pasa a tener dos capas. El arte (degradé, brillo, sombra, banda magnética y logo de la marca) sigue inclinándose y girando en 3D igual que antes. El texto y los controles van en una capa plana encima que nunca rota: con la inclinación solo se desplaza hasta 5 px (paralaje, de los mismos _motion values_), así que se ve nítido. En la vuelta, el texto de cada cara se angosta con la cara y se desvanece antes de que quede de canto (el frente se va antes de ~53°, el reverso aparece después de ~127°), así nunca se ve espejado ni despegado. El orden del DOM, las etiquetas, el botón de vuelta, los ojos y el modo de movimiento reducido no cambian.
 
 **Cómo se verificó:** test primero. Rojo antes de implementar: el test que pide que la superficie que rota no contenga el texto fallaba (no había capa de texto). Verde después. Playwright contra el servidor de desarrollo, a escala 2: capturas en reposo, inclinación máxima (con y sin el número revelado), media vuelta, reverso inclinado y con un dedo en el celular; `getComputedStyle` confirma que la capa de texto tiene solo traslación (`matrix(1, 0, 0, 1, 4.7, -4.6)`) mientras el arte tiene una `matrix3d` con rotación. Los e2e de la tarjeta pasan.
 
@@ -1103,6 +1106,22 @@ Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de 
 Cerrar sesión (Server Action o `POST /api/auth/logout`) revoca la fila y después borra la cookie. `revokeAllSessionsForUser(userId)` revoca todas las sesiones vivas de un usuario. Las filas revocadas o vencidas de un usuario se borran cuando vuelve a iniciar sesión: no hace falta un cron. Los tokens emitidos antes de este cambio (sin `jti`) dejan de valer y piden iniciar sesión de nuevo. "Recordarme" no cambia.
 
 **Cómo se verificó:** test primero. Rojo antes de implementar: 7 tests unitarios del token (payload con `jti`, rechazo de un token sin id de sesión, generador de ids) y 6 de integración (token con sesión revocada, vencida o borrada; logout que revoca en el servidor; cierre en todos los dispositivos sin tocar a otro usuario; limpieza al volver a entrar). Verde después. Un e2e nuevo cierra sesión, vuelve a poner la cookie copiada y comprueba que la API responde 401 y la página manda a `/login`. El seed (`pnpm db:seed`) sigue funcionando y `prisma migrate diff` queda vacío.
+
+#### T39 — Pase final de código limpio (08/10/2026)
+
+**Pedido:** antes de cerrar, un pase de nombres, código muerto, comentarios y consistencia, sin cambiar el comportamiento: ni funciones nuevas, ni UI, ni textos, ni dependencias, ni API, ni esquema.
+
+**Qué se limpió:**
+
+- **Tarjeta (`LivingCard`):** el fundido de movimiento reducido estaba repetido en cuatro capas; ahora es un solo helper. Los umbrales del coseno de la vuelta tienen nombre y su ángulo en el código (texto completo hasta ~18°, desaparece a ~53°; el reverso, simétrico entre ~127° y ~162°).
+- **Reverso (`PaymentCardBack`):** la posición y el alto de la banda magnética se definían dos veces (arte y capa de texto); ahora son una constante. El espacio que se reserva para el logo usa la misma clase que el logo (`BRAND_LOGO_SLOT`). Comentario de la banda corregido.
+- **Sesiones:** la función del repositorio `revokeAllUserSessions` se parecía demasiado a la del servidor `revokeAllSessionsForUser`. Pasa a llamarse `revokeSessionsByUserId`, junto a `revokeSessionById`; `revokeAllSessionsForUser` sigue siendo la capacidad del servidor que documenta el README.
+- **E2E:** tres fixtures abrían y cerraban su propia conexión a la base; ahora comparten `withTestDb`. El reseteo por usuario se llama `resetRateLimitsBeforeSignIn` y su comentario aclara que también vacía todos los contadores por IP del login.
+- **Código muerto:** se borró `ChevronRightIcon` (sin uso). `initialsOf` y las listas de anchos del audit de layout dejaron de exportarse (solo se usan en su archivo). El formato del monto reutiliza `groupThousands` de `format.ts` en lugar de una copia de la misma expresión regular.
+- **Formato:** dos archivos que `prettier --check` marcaba quedaron formateados.
+- **Test más estricto:** "una fila de sesión por inicio de sesión" ahora cuenta las sesiones vivas antes y después y exige exactamente una más (antes solo pedía que hubiera alguna).
+
+**Cómo se verificó:** typecheck, lint y Prettier limpios; 1065 unitarios, 72 de integración y la suite e2e completa (112 pasan, 4 omitidos) sin cambios en su resultado. Ningún test se borró ni se relajó.
 
 #### T5 — Deploy (pendiente)
 
