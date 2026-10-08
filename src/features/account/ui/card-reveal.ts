@@ -18,14 +18,20 @@ export type CardSecrets = {
 };
 
 export type RevealState =
-  | { status: "hidden"; request: number; error?: true }
+  | {
+      status: "hidden";
+      request: number;
+      error?: true;
+      /** Set when the server refused for too many reveals (429 `Retry-After`). */
+      retryAfterSeconds?: number;
+    }
   | { status: "revealing"; request: number }
   | { status: "revealed"; request: number; secrets: CardSecrets };
 
 export type RevealEvent =
   | { type: "toggle" }
   | { type: "loaded"; request: number; secrets: CardSecrets }
-  | { type: "failed"; request: number }
+  | { type: "failed"; request: number; retryAfterSeconds?: number }
   | { type: "expired" }
   | { type: "pageHidden" };
 
@@ -49,7 +55,14 @@ export function revealReducer(
         : state;
     case "failed":
       return state.status === "revealing" && event.request === state.request
-        ? { status: "hidden", request: state.request, error: true }
+        ? {
+            status: "hidden",
+            request: state.request,
+            error: true,
+            ...(event.retryAfterSeconds === undefined
+              ? {}
+              : { retryAfterSeconds: event.retryAfterSeconds }),
+          }
         : state;
     case "expired":
     case "pageHidden":

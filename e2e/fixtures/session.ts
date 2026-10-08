@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
+import { resetRateLimits } from "./rate-limits";
 import { waitForScreenToSettle } from "./view-transitions";
 
 /*
@@ -21,8 +22,12 @@ export const SECOND_USER: Credentials = {
   password: "GRANATE2@",
 };
 
-/** Opens /login and fills it in for `user`, without submitting it. */
+/**
+ * Opens /login and fills it in for `user`, without submitting it. Every scenario that
+ * signs in starts with empty rate-limit counters (see fixtures/rate-limits.ts).
+ */
 export async function fillLoginForm(page: Page, user = DEMO_USER) {
+  await resetRateLimits();
   await page.goto("/login");
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Contraseña", { exact: true }).fill(user.password);

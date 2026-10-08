@@ -25,43 +25,45 @@ enum MovementStatus {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
+  id                String              @id @default(cuid())
+  email             String              @unique
   passwordHash      String
   firstName         String
   lastName          String
   /// Account identifiers for transfers, issued when the account opens (the seed assigns
   /// them; there is no sign-up flow). Nullable: a user without them simply cannot be found
   /// as a recipient. Format checks live in the migration (CHECK constraints).
-  alias             String?    @unique @db.VarChar(20)
-  cvu               String?    @unique @db.Char(22)
-  createdAt         DateTime   @default(now())
+  alias             String?             @unique @db.VarChar(20)
+  cvu               String?             @unique @db.Char(22)
+  createdAt         DateTime            @default(now())
   cards             Card[]
   movements         Movement[]
-  transfersSent     Transfer[] @relation("TransferSender")
-  transfersReceived Transfer[] @relation("TransferRecipient")
+  transfersSent     Transfer[]          @relation("TransferSender")
+  transfersReceived Transfer[]          @relation("TransferRecipient")
+  cardReveals       CardDetailsReveal[]
 }
 
 model Card {
-  id           String     @id @default(cuid())
+  id           String              @id @default(cuid())
   userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   brand        CardBrand
-  last4        String     @db.VarChar(4)
+  last4        String              @db.VarChar(4)
   /// Full card number (PAN) of a fictitious demo card: Luhn-valid, ending in `last4`
   /// (CHECK constraint in the migration). Only sent to the client on an explicit reveal.
   /// A real issuer keeps PANs encrypted or tokenized (PCI DSS req. 3), and never stores
   /// the CVV: the demo derives a display-only CVV on the server instead.
-  pan          String?    @db.Char(16)
+  pan          String?             @db.Char(16)
   holderName   String
   expMonth     Int
   expYear      Int
-  balance      Decimal    @db.Decimal(12, 2)
-  currency     String     @default("USD") @db.VarChar(3)
-  isPrimary    Boolean    @default(false)
+  balance      Decimal             @db.Decimal(12, 2)
+  currency     String              @default("USD") @db.VarChar(3)
+  isPrimary    Boolean             @default(false)
   movements    Movement[]
-  transfersOut Transfer[] @relation("TransferSourceCard")
-  transfersIn  Transfer[] @relation("TransferDestinationCard")
+  transfersOut Transfer[]          @relation("TransferSourceCard")
+  transfersIn  Transfer[]          @relation("TransferDestinationCard")
+  reveals      CardDetailsReveal[]
 
   @@index([userId])
 }
@@ -113,4 +115,37 @@ model Transfer {
   @@unique([senderId, idempotencyKey])
   @@index([recipientId, createdAt(sort: Desc)])
   @@index([senderId, createdAt(sort: Desc)])
+}
+
+/// One fixed-window rate-limit counter (src/shared/lib/rate-limit.ts): how many hits
+/// `key` (a normalized email, a client IP, a user id) made in `scope` (e.g. "login:email")
+/// during the window that starts at `windowStart`. Incremented atomically with a single
+/// `INSERT … ON CONFLICT DO UPDATE` (src/shared/server/rate-limit-store.ts); windows that
+/// ended are deleted opportunistically, so the table only holds recent rows.
+model RateLimitBucket {
+  scope       String   @db.VarChar(32)
+  key         String   @db.VarChar(320)
+  windowStart DateTime
+  count       Int
+
+  @@id([scope, key, windowStart])
+  @@index([windowStart])
+}
+
+/// Audit log: one row per successful card-details reveal (full number, CVV, balance).
+/// Cascades with the user and the card: the demo seed recreates the demo cards, and a
+/// real issuer would keep this log in an append-only store instead.
+model CardDetailsReveal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  /// Client IP as the platform reported it (see src/shared/server/client-ip.ts); null
+  /// when the request carried none.
+  ip        String?  @db.VarChar(45)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([cardId])
 }

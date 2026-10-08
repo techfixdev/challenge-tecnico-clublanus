@@ -234,4 +234,34 @@ describe("card reveal", () => {
       "•••",
     );
   });
+
+  it("shows how long to wait when the server rate-limits the reveal (429)", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: { code: "RATE_LIMITED", message: "Demasiados intentos." },
+        }),
+        { status: 429, headers: { "Retry-After": "420" } },
+      ),
+    );
+    const user = userEvent.setup();
+    renderBoth();
+
+    await user.click(eye(mastercard()));
+
+    const message = "Demasiados intentos. Probá de nuevo en 7 minutos.";
+    // Visible on the card, in place of the masked number...
+    expect(
+      await within(mastercard()).findByTestId("card-reveal-notice"),
+    ).toHaveTextContent(message);
+    // ...and announced once through the card's status region.
+    expect(within(mastercard()).getByRole("status")).toHaveTextContent(message);
+    expect(eye(mastercard())).toHaveAttribute("aria-pressed", "false");
+    expect(within(visa()).queryByTestId("card-reveal-notice")).toBeNull();
+
+    // Trying again clears the notice while the new request runs.
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    await user.click(eye(mastercard()));
+    expect(within(mastercard()).queryByTestId("card-reveal-notice")).toBeNull();
+  });
 });

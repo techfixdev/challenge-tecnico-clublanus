@@ -27,6 +27,8 @@ const STATUS_BY_CODE = {
   INSUFFICIENT_FUNDS: 422,
   CURRENCY_MISMATCH: 422,
   AMOUNT_OVER_LIMIT: 422,
+  // Too many requests in the current window; the response carries `Retry-After`.
+  RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
 } as const;

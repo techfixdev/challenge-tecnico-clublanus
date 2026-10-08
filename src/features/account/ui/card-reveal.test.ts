@@ -74,6 +74,19 @@ describe("revealReducer", () => {
     });
   });
 
+  it("keeps the wait the server asked for when the reveal is rate-limited", () => {
+    const state = run(
+      { type: "toggle" },
+      { type: "failed", request: 1, retryAfterSeconds: 420 },
+    );
+    expect(state).toEqual({
+      status: "hidden",
+      request: 1,
+      error: true,
+      retryAfterSeconds: 420,
+    });
+  });
+
   it.each(["expired", "pageHidden"] as const)(
     "re-hides a revealed card on %s",
     (type) => {

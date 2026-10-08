@@ -5,8 +5,14 @@ import {
   type Page,
 } from "@playwright/test";
 
+import { exhaustRevealBudget } from "./fixtures/rate-limits";
 import { bringCardForward, primaryCard } from "./fixtures/screens";
-import { login, loginUntilHomeSettles, SECOND_USER } from "./fixtures/session";
+import {
+  DEMO_USER,
+  login,
+  loginUntilHomeSettles,
+  SECOND_USER,
+} from "./fixtures/session";
 
 /*
  * Per-card reveal: every card is masked on load (balance, full number, CVV), each eye
@@ -191,6 +197,40 @@ test("the details endpoint needs a session and only serves the owner's cards", a
   expect(foreign.status()).toBe(404);
   expect(foreign.headers()["cache-control"]).toBe("no-store");
   expect(await foreign.text()).not.toMatch(/\d{16}/);
+});
+
+test("past 10 reveals in 10 minutes, the eye says how long to wait and the API answers 429", async ({
+  page,
+}) => {
+  await loginUntilHomeSettles(page);
+  await exhaustRevealBudget(DEMO_USER.email);
+
+  await eye(page, "Mastercard terminada en 1234").click();
+
+  await expect(
+    primaryCard(page).getByTestId("card-reveal-notice"),
+  ).toContainText(/^Demasiados intentos\. Probá de nuevo en \d+ minutos?\.$/);
+  await expect(eye(page, "Mastercard terminada en 1234")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(primaryCard(page)).toContainText("Saldo oculto");
+
+  const cards = (await (
+    await page.request.get("/api/account/cards")
+  ).json()) as {
+    data: { id: string }[];
+  };
+  const refused = await page.request.get(
+    `/api/account/cards/${cards.data[0].id}/details`,
+  );
+  expect(refused.status()).toBe(429);
+  expect(Number(refused.headers()["retry-after"])).toBeGreaterThan(0);
+  expect(refused.headers()["cache-control"]).toBe("no-store");
+  expect(
+    ((await refused.json()) as { error: { code: string } }).error.code,
+  ).toBe("RATE_LIMITED");
+  expect(await refused.text()).not.toMatch(/\d{16}/);
 });
 
 function shownMasks(page: Page) {

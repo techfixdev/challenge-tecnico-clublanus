@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { tooManyAttemptsMessage } from "@/shared/lib/rate-limit";
 import { EyeIcon, EyeOffIcon } from "@/shared/ui/icons";
 
 import {
@@ -55,6 +56,19 @@ function isCardSecrets(data: unknown): data is CardSecrets {
   );
 }
 
+/** The server refused the reveal for now: too many in its window (HTTP 429). */
+class RevealRateLimitedError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super("Card details: rate limited");
+  }
+}
+
+/** `Retry-After` in seconds; the policy's whole window when it is missing or odd. */
+function retryAfterSeconds(response: Response): number {
+  const seconds = Number(response.headers.get("Retry-After"));
+  return Number.isInteger(seconds) && seconds > 0 ? seconds : 600;
+}
+
 /** One request per reveal, never cached (the server also answers `no-store`). */
 async function fetchCardSecrets(
   cardId: string,
@@ -64,10 +78,20 @@ async function fetchCardSecrets(
     `/api/account/cards/${encodeURIComponent(cardId)}/details`,
     { cache: "no-store", signal, headers: { Accept: "application/json" } },
   );
+  if (response.status === 429) {
+    throw new RevealRateLimitedError(retryAfterSeconds(response));
+  }
   if (!response.ok) throw new Error(`Card details: HTTP ${response.status}`);
   const { data } = (await response.json()) as { data?: unknown };
   if (!isCardSecrets(data)) throw new Error("Card details: unexpected shape");
   return { number: data.number, cvv: data.cvv, balance: data.balance };
+}
+
+/** The rate-limit notice for a refused reveal, or null. */
+function rateLimitNotice(state: RevealState): string | null {
+  return state.status === "hidden" && state.retryAfterSeconds !== undefined
+    ? tooManyAttemptsMessage(state.retryAfterSeconds)
+    : null;
 }
 
 function announcement(state: RevealState): string {
@@ -77,6 +101,7 @@ function announcement(state: RevealState): string {
     case "revealed":
       return `Datos visibles. Se ocultan en ${REVEAL_TIMEOUT_MS / 1000} segundos.`;
     case "hidden":
+      if (state.retryAfterSeconds !== undefined) return rateLimitNotice(state)!;
       if (state.error) return "No pudimos mostrar los datos. Probá de nuevo.";
       // Silent on load; after a reveal, say it is masked again.
       return state.request > 0 ? "Datos de la tarjeta ocultos." : "";
@@ -107,8 +132,15 @@ export function CardRevealProvider({
     const controller = new AbortController();
     fetchCardSecrets(cardId, controller.signal).then(
       (secrets) => dispatch({ type: "loaded", request, secrets }),
-      () => {
-        if (!controller.signal.aborted) dispatch({ type: "failed", request });
+      (error: unknown) => {
+        if (controller.signal.aborted) return;
+        dispatch({
+          type: "failed",
+          request,
+          ...(error instanceof RevealRateLimitedError
+            ? { retryAfterSeconds: error.retryAfterSeconds }
+            : {}),
+        });
       },
     );
     return () => controller.abort();
@@ -189,7 +221,22 @@ export function RevealedBalance({ currency }: { currency: string }) {
  * 4); revealed, screen readers get the whole number from a visually hidden text.
  */
 export function RevealedCardNumber({ last4 }: { last4: string }) {
+  const { state } = useCardReveal();
   const number = useSecrets()?.number;
+  // A refused reveal (too many in a row) says how long to wait where the number goes;
+  // hidden from screen readers, which hear the same text from the status region.
+  const notice = rateLimitNotice(state);
+  if (notice) {
+    return (
+      <p
+        aria-hidden="true"
+        data-testid="card-reveal-notice"
+        className="text-xs leading-snug"
+      >
+        {notice}
+      </p>
+    );
+  }
   // Masked until revealed, and also when the card has no stored number: the balance
   // and CVV are still revealed, the number keeps showing only its last 4.
   if (!number) {
