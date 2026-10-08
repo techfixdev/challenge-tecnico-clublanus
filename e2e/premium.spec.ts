@@ -281,16 +281,39 @@ test.describe("with motion allowed", () => {
     );
   });
 
+  test("a mostly vertical drag is the page's, never the deck's", async ({
+    page,
+  }) => {
+    await loginUntilHomeSettles(page);
+    const box = (await page.getByTestId("living-card").first().boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    // Sideways too, but less than downwards: the axis locks vertical.
+    await page.mouse.move(x - 40, y + 60, { steps: 10 });
+    // The card tilts under the finger, so this press is still the card's...
+    await expect.poll(() => surfaceTransform(page)).toContain("matrix3d");
+    // ...and the deck, which scrolls in the very event a sideways lock happens, never moved.
+    expect(await deckOffset(page)).toBe(0);
+    await expect(currentDot(page)).toHaveAttribute(
+      "aria-label",
+      "Tarjeta 1 de 2",
+    );
+    await page.mouse.up();
+  });
+
   test("past the first card the deck resists, then returns", async ({
     page,
   }) => {
     await loginUntilHomeSettles(page);
 
     await pressAndDragDeck(page, 150);
+    // The row cannot scroll before the first card, so the pull shows only in the cards'
+    // own shift, which Motion writes on its next frame.
+    await expect.poll(() => deckOffset(page)).toBeLessThan(0);
     // A faint pull, far less than the finger's travel.
-    const pulled = await deckOffset(page);
-    expect(pulled).toBeLessThan(0);
-    expect(pulled).toBeGreaterThan(-40);
+    expect(await deckOffset(page)).toBeGreaterThan(-40);
     await page.mouse.up();
 
     await expect.poll(() => deckOffset(page)).toBe(0);
