@@ -20,6 +20,9 @@ export const LOGIN_MESSAGES = {
 // bcrypt only uses the first 72 bytes; the cap just stops absurd payloads early.
 export const PASSWORD_MAX_LENGTH = 128;
 
+// The longest address SMTP allows (RFC 5321); also keeps rate-limit keys within their column.
+export const EMAIL_MAX_LENGTH = 254;
+
 /** zod's own email pattern, passed to `z.email()` on the server so the two cannot drift. */
 export const EMAIL_PATTERN =
   /^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
@@ -41,7 +44,10 @@ export function validateLoginFields({
   const errors: LoginFieldErrors = {};
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) errors.email = LOGIN_MESSAGES.emailRequired;
-  else if (!EMAIL_PATTERN.test(normalizedEmail)) {
+  else if (
+    normalizedEmail.length > EMAIL_MAX_LENGTH ||
+    !EMAIL_PATTERN.test(normalizedEmail)
+  ) {
     errors.email = LOGIN_MESSAGES.emailInvalid;
   }
   // Never trimmed: spaces are part of a password.

@@ -49,6 +49,15 @@ describe("loginSchema", () => {
     });
   });
 
+  it("rejects an email longer than an address can be", () => {
+    // 64-char local part + 250-char domain: matches the pattern, but no address is that long.
+    const email = `${"a".repeat(64)}@${"b".repeat(246)}.com`;
+    const result = loginSchema.safeParse({ email, password: "x" });
+    expect(getLoginFieldErrors(result.error!)).toEqual({
+      email: LOGIN_MESSAGES.emailInvalid,
+    });
+  });
+
   it("requires the password and does not trim it", () => {
     const empty = loginSchema.safeParse({ email: "a@b.co", password: "" });
     expect(getLoginFieldErrors(empty.error!)).toEqual({

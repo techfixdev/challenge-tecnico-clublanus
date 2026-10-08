@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  EMAIL_MAX_LENGTH,
   EMAIL_PATTERN,
   LOGIN_MESSAGES,
   PASSWORD_MAX_LENGTH,
@@ -29,6 +30,7 @@ export const loginSchema = z.object(
       .trim()
       .toLowerCase()
       .min(1, LOGIN_MESSAGES.emailRequired)
+      .max(EMAIL_MAX_LENGTH, LOGIN_MESSAGES.emailInvalid)
       .pipe(
         z.email({ pattern: EMAIL_PATTERN, error: LOGIN_MESSAGES.emailInvalid }),
       ),
