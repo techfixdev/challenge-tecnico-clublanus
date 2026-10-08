@@ -20,6 +20,11 @@ export function primaryCard(page: Page) {
   });
 }
 
+/** The send flow's one search field (step 1): a combobox over the recents carousel. */
+export function recipientSearch(page: Page) {
+  return page.getByRole("combobox", { name: "Buscar por nombre, alias o CVU" });
+}
+
 /**
  * Brings Home's card number `position` (of `count`) forward with its dot, as a user does
  * before touching anything on it, and waits until the deck rests there. A card further

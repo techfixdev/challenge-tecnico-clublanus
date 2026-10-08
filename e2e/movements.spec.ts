@@ -1,6 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { bringCardForward, movementRows } from "./fixtures/screens";
+import {
+  bringCardForward,
+  movementRows,
+  recipientSearch,
+} from "./fixtures/screens";
 import { login, waitForHomeToSettle } from "./fixtures/session";
 
 /**
@@ -165,7 +169,7 @@ test("the send flow ignores a ?to= it cannot use", async ({ page }) => {
       page.getByRole("heading", { level: 1, name: "¿A quién le enviás?" }),
     ).toBeVisible();
   }
-  await expect(page.getByLabel("Alias o CVU")).toHaveValue("soy.granate.lanus");
+  await expect(recipientSearch(page)).toHaveValue("soy.granate.lanus");
 });
 
 test("the search box is at least 16px so iOS does not zoom on focus", async ({

@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { recipientSearch } from "./fixtures/screens";
 import { login } from "./fixtures/session";
 import { settle } from "./fixtures/view-transitions";
 
@@ -10,9 +11,6 @@ import { settle } from "./fixtures/view-transitions";
  * gives the demo user six recent recipients, newest first: the other demo user, then
  * Valentina Sosa, Matías Herrera, Camila Benítez, Nicolás Acosta and Florencia Ríos.
  */
-
-/** The recipient step's one search field. */
-const SEARCH = "Buscar por nombre, alias o CVU";
 
 async function centerX(target: Locator): Promise<number> {
   const box = await target.boundingBox();
@@ -81,7 +79,7 @@ test.describe("the transfer flow, by hand", () => {
     await expect.poll(() => centerX(tile)).toBeCloseTo(rest, 0);
     // Settling on the tile chose them; the search above keeps what was typed (nothing).
     await expect(tile).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("combobox", { name: SEARCH })).toHaveValue("");
+    await expect(recipientSearch(page)).toHaveValue("");
     // A drag is not a tap: the flow is still on the first step.
     await expect(
       page.getByRole("heading", { level: 1, name: "¿A quién le enviás?" }),
@@ -115,7 +113,7 @@ test.describe("the transfer flow, by hand", () => {
     const first = strip.getByRole("option").first();
     await expect(first).toBeVisible();
     const center = await centerX(first);
-    const search = page.getByRole("combobox", { name: SEARCH });
+    const search = recipientSearch(page);
 
     // Case and accents do not count.
     await search.fill("MATIAS");
@@ -154,9 +152,7 @@ test.describe("the transfer flow, by hand", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Cambiar" }).click();
 
-    await expect(page.getByRole("combobox", { name: SEARCH })).toHaveValue(
-      "mati.granate",
-    );
+    await expect(recipientSearch(page)).toHaveValue("mati.granate");
     const matias = page.getByRole("option", { name: /Matías Herrera/ });
     await expect(matias).toHaveAttribute("aria-selected", "true");
     await expect(matias).toBeInViewport();
