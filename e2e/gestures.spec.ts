@@ -249,6 +249,20 @@ test.describe("drag a sheet to dismiss it", () => {
     await expect(page.getByRole("button", { name: "Tu perfil" })).toBeFocused();
   });
 
+  test("dismissed by a drag, it opens again at rest, from the bottom edge", async ({
+    page,
+  }) => {
+    let sheet = await openProfileSheet(page);
+    const height = (await sheet.boundingBox())!.height;
+    await dragSheet(page, sheet, height * 0.6);
+    await liftSlowly(page);
+    await expect(sheet).toBeHidden();
+
+    // Opened again: risen all the way, not left where the finger let it go.
+    sheet = await openProfileSheet(page);
+    expect(await sheetOffset(sheet)).toBe(0);
+  });
+
   test("dragging from a button never presses it", async ({ page }) => {
     const sheet = await openProfileSheet(page);
     const logout = sheet.getByRole("button", { name: "Cerrar sesión" });
