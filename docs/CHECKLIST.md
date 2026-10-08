@@ -4,7 +4,7 @@ Estado de cada requerimiento del enunciado, con la evidencia que lo respalda. Se
 
 Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 
-Última actualización: 07/10/2026 (verificado contra `c52164e`)
+Última actualización: 07/10/2026 (verificado contra `32fcfd2`)
 
 ---
 
@@ -54,13 +54,13 @@ Leyenda: `[x]` hecho y verificado · `[ ]` pendiente · ⏳ en curso
 
 ### Hecho hoy
 
-- [x] Colores solo de la marca (T12a): cada rol de la UI usa granate, oro o Cool Gray 7C; el rojo de error queda como excepción documentada (`43bf0f2`).
-- [x] Marca del club (T21): paleta oficial como tokens, escudo oficial en vector y login rediseñado (`afd20d9`, `ee169df`, `80d077c`).
-- [x] UX móvil (T12b-A): Transferir sin barra inferior, cierre de sesión en una hoja de perfil, separador de miles al tipear y cuenta en pesos por defecto (`e2d8581`, `9bf6390`, `fc6b41c`).
-- [x] Movimiento (T12b-B): un solo lenguaje de animación sobrio, con tokens compartidos (`745e493`).
-- [x] Lista tipo billetera (T12b-D): agrupada por día, montos con `+`/`−` y color por dirección (`8096a5e`, `72500af`).
-- [x] Pulido (T12b-C): barra de navegación tipo iOS en lugar de "Volver", acciones en el detalle con `/transferir?to=`, tarjetas en español con segunda tarjeta dorada, QR en Recibir y alerta del login sobre granate (`09b4b6c`, `83e1fc1`, `494f619`, `f0634f5`, `ee38e92`).
-- [x] Fix del seed para los e2e: ningún movimiento demo queda con fecha futura (`9da2b6c`).
+- [x] Colores solo de la marca (T12a): cada rol de la UI usa granate, oro o Cool Gray 7C; el rojo de error queda como excepción documentada (`ab2c023`).
+- [x] Marca del club (T21): paleta oficial como tokens, escudo oficial en vector y login rediseñado (`61a425f`, `e9126b1`, `2c11f24`).
+- [x] UX móvil (T12b-A): Transferir sin barra inferior, cierre de sesión en una hoja de perfil, separador de miles al tipear y cuenta en pesos por defecto (`a4d3c6a`, `e93d4c3`, `8f218f9`).
+- [x] Movimiento (T12b-B): un solo lenguaje de animación sobrio, con tokens compartidos (`38508a5`).
+- [x] Lista tipo billetera (T12b-D): agrupada por día, montos con `+`/`−` y color por dirección (`1ea74a5`, `3befcc6`).
+- [x] Pulido (T12b-C): barra de navegación tipo iOS en lugar de "Volver", acciones en el detalle con `/transferir?to=`, tarjetas en español con segunda tarjeta dorada, QR en Recibir y alerta del login sobre granate (`7c70f56`, `df99739`, `b8ce6ed`, `65dda61`, `18fac3a`).
+- [x] Fix del seed para los e2e: ningún movimiento demo queda con fecha futura (`51f740b`).
 
 ### Pendiente, en orden
 
