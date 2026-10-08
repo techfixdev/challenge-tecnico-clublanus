@@ -32,13 +32,16 @@ describe("LoginForm", () => {
     expect(
       screen.getByText("Con cada compra, sumás orgullo granate"),
     ).toBeInTheDocument();
-    // The club's official shield, not a drawn mark.
-    expect(
-      screen.getByRole("img", { name: "Escudo del Club Atlético Lanús" }),
-    ).toHaveAttribute(
+    // The club's official shield (the starless one, granate with white initials), not a
+    // drawn mark, sitting on its white plate.
+    const shield = screen.getByRole("img", {
+      name: "Escudo del Club Atlético Lanús",
+    });
+    expect(shield).toHaveAttribute(
       "src",
-      expect.stringContaining("/brand/escudo-estrellas-doradas.svg"),
+      expect.stringContaining("/brand/escudo.svg"),
     );
+    expect(shield.closest(".login-emblem")).not.toBeNull();
     expect(email).toHaveAttribute("placeholder", "Ingresá tu email");
     expect(email).toHaveAttribute("type", "email");
     expect(email).toHaveAttribute("autocomplete", "email");

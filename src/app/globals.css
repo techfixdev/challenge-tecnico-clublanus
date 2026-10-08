@@ -933,25 +933,30 @@ body {
 }
 
 /*
- * The shield in 3D, by CSS alone (the vector is untouched): layered drop shadows tinted
- * with the deepest granate fall down-right of the top-left key light (contact, near and
- * ambient), and a specular sheen masked to the shield's own silhouette (`--emblem-mask`,
- * the same SVG) catches the light top-left. It rises gently into place; transform and
- * shadows only, never opacity, so it paints at once.
+ * The shield's plate: the official shield is granate, like the backdrop, so it sits on a
+ * white disc rather than being recolored. The disc reads as a raised token under the
+ * app's top-left key light: layered shadows tinted with the deepest granate (contact,
+ * near and ambient) fall down-right, a hairline highlight lines its top edge and a faint
+ * shade its bottom. It rises gently into place; transform only, never opacity, so it
+ * paints at once.
  */
 .login-emblem {
   --emblem-shade: color-mix(in srgb, var(--color-primary-deep) 55%, black);
-  position: relative;
   display: block;
-  filter: drop-shadow(
-      0.5px 1px 0.5px color-mix(in srgb, var(--emblem-shade) 60%, transparent)
-    )
-    drop-shadow(
-      2px 5px 5px color-mix(in srgb, var(--emblem-shade) 40%, transparent)
-    )
-    drop-shadow(
-      5px 16px 20px color-mix(in srgb, var(--emblem-shade) 55%, transparent)
-    );
+  padding: 12px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    120% 120% at 30% 20%,
+    white 55%,
+    color-mix(in srgb, var(--color-primary-deep) 6%, white)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -3px 6px
+      color-mix(in srgb, var(--color-primary-deep) 14%, transparent),
+    0.5px 1px 1px color-mix(in srgb, var(--emblem-shade) 60%, transparent),
+    2px 6px 10px color-mix(in srgb, var(--emblem-shade) 40%, transparent),
+    6px 18px 32px color-mix(in srgb, var(--emblem-shade) 55%, transparent);
   animation: login-emblem-enter var(--motion-duration-nav) var(--motion-ease)
     both;
 
@@ -959,36 +964,12 @@ body {
     display: block;
   }
 
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      radial-gradient(
-        80% 60% at 28% 22%,
-        rgb(255 255 255 / 0.2),
-        rgb(255 255 255 / 0) 65%
-      ),
-      linear-gradient(
-        var(--light-angle),
-        transparent 55%,
-        color-mix(in srgb, var(--color-primary-deep) 30%, transparent)
-      );
-    -webkit-mask: var(--emblem-mask) center / contain no-repeat;
-    mask: var(--emblem-mask) center / contain no-repeat;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
 
   @media (forced-colors: active) {
-    filter: none;
-
-    &::after {
-      display: none;
-    }
+    box-shadow: none;
   }
 }
 
@@ -996,16 +977,6 @@ body {
   from {
     translate: 0 10px;
     scale: 0.94;
-    filter: drop-shadow(
-        0.5px 0.5px 0.5px
-          color-mix(in srgb, var(--emblem-shade) 60%, transparent)
-      )
-      drop-shadow(
-        1px 2px 3px color-mix(in srgb, var(--emblem-shade) 40%, transparent)
-      )
-      drop-shadow(
-        2px 6px 10px color-mix(in srgb, var(--emblem-shade) 55%, transparent)
-      );
   }
 }
 

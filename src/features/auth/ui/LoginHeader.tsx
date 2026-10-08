@@ -1,33 +1,26 @@
 import Image from "next/image";
-import type { CSSProperties } from "react";
 
 import { BRAND_ASSETS } from "@/shared/ui/brand/assets";
 
-/** Intrinsic size of the shield with stars (its viewBox is 126.2 × 147.6). */
-const EMBLEM = { width: 112, height: 131 } as const;
+/** Rendered size of the shield (its viewBox is square, 245 × 245). */
+const EMBLEM_SIZE = 96;
 
 /**
- * Brand block of the login screen: the club's shield (the official vector, untouched,
- * with the gold stars, the version for granate backgrounds), the "GranaBank"
- * wordmark and the tagline from the Figma design. The shield's depth is CSS only (see
+ * Brand block of the login screen: the club's shield (the official vector, untouched:
+ * granate with white initials), the "GranaBank" wordmark and the tagline from the Figma
+ * design. A granate shield would sink into the granate backdrop, so it sits on a white
+ * round plate instead of being recolored; the plate's depth is CSS only (see
  * `.login-emblem` in globals.css).
  */
 export function LoginHeader() {
   return (
     <header className="flex flex-col items-center text-center">
-      <span
-        className="login-emblem"
-        style={
-          {
-            "--emblem-mask": `url(${BRAND_ASSETS.escudoEstrellasDoradas})`,
-          } as CSSProperties
-        }
-      >
+      <span className="login-emblem">
         <Image
-          src={BRAND_ASSETS.escudoEstrellasDoradas}
+          src={BRAND_ASSETS.escudo}
           alt="Escudo del Club Atlético Lanús"
-          width={EMBLEM.width}
-          height={EMBLEM.height}
+          width={EMBLEM_SIZE}
+          height={EMBLEM_SIZE}
           loading="eager"
           fetchPriority="high"
         />
