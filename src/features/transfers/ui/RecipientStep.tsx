@@ -1,6 +1,12 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import {
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 
 import { CloseIcon, SearchIcon } from "@/shared/ui/icons";
 
@@ -39,6 +45,9 @@ function resultsAnnouncement(count: number): string {
  * `search` is what was typed; `value` is what "Continuar" resolves. They differ once a
  * tile is chosen: a drag chooses without rewriting the search, so the strip it narrowed
  * stays as it was.
+ *
+ * Typed text is read from the field itself, never only from React's `onChange`, so none
+ * is ever lost (see `searchWhatWasTyped`).
  */
 export function RecipientStep({
   search,
@@ -84,6 +93,23 @@ export function RecipientStep({
     );
   }
 
+  const searchWhatWasTyped = useEffectEvent(changeSearch);
+
+  // The search follows the field's own `input` event, not React's onChange, which misses
+  // text in two cases: React turns its events off while it starts a view transition until
+  // the browser captures the old screen, so a paste delivered meanwhile never reaches
+  // onChange; and text typed before hydration is kept in the field without any event at
+  // all (the field then differs from its server value, `defaultValue`). onChange still
+  // mirrors the text, so React never puts the old one back.
+  useLayoutEffect(() => {
+    const field = fieldRef.current;
+    if (!field) return;
+    if (field.value !== field.defaultValue) searchWhatWasTyped(field.value);
+    const onInput = () => searchWhatWasTyped(field.value);
+    field.addEventListener("input", onInput);
+    return () => field.removeEventListener("input", onInput);
+  }, []);
+
   function clearSearch() {
     changeSearch("");
     setShowErrors(false);
@@ -125,7 +151,7 @@ export function RecipientStep({
             aria-expanded={showStrip}
             aria-autocomplete="list"
             value={search}
-            onChange={(event) => changeSearch(event.target.value)}
+            onChange={(event) => onSearchChange(event.target.value)}
             onBlur={() => setShowErrors(true)}
             readOnly={pending}
             placeholder="Buscar por nombre, alias o CVU"

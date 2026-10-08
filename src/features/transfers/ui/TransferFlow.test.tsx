@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -8,7 +9,9 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   TRANSFER_FAILURE_MESSAGE,
@@ -99,6 +102,14 @@ function renderFlow({
     />,
   );
   return { user, lookup, send, key };
+}
+
+/** Sets a field's text the way the browser does, without telling React. */
+function setFieldValue(field: HTMLInputElement, text: string) {
+  Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )!.set!.call(field, text);
 }
 
 async function toAmountStep(user: ReturnType<typeof userEvent.setup>) {
@@ -623,6 +634,68 @@ describe("TransferFlow", () => {
     ).toHaveAttribute("aria-selected", "true");
     await user.click(screen.getByRole("button", { name: /Buscar «hincha»/ }));
     expect(lookup).toHaveBeenCalledWith("hincha");
+  });
+
+  it("searches text whose input event never reached React's onChange", async () => {
+    // React turns its events off while it starts a view transition: a paste the browser
+    // delivers meanwhile reaches only the field itself. A non-bubbling event plays that
+    // here, since React reads onChange as events bubble.
+    const { user, lookup } = renderFlow({ recent: [HINCHA, SOCIA] });
+    const field = screen.getByRole<HTMLInputElement>("combobox", {
+      name: "Buscar por nombre, alias o CVU",
+    });
+
+    act(() => {
+      setFieldValue(field, "socia");
+      field.dispatchEvent(new Event("input", { bubbles: false }));
+    });
+
+    expect(field).toHaveValue("socia");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    expect(
+      screen.getByRole("option", { name: /Socia Granate/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(lookup).toHaveBeenCalledWith("socia.granate");
+  });
+
+  it("searches text typed before hydration", async () => {
+    const lookup = vi.fn<LookupRecipientAction>(async () => ({
+      ok: true,
+      recipient: SOCIA,
+    }));
+    const flow = (
+      <TransferFlow
+        cards={CARDS}
+        recentRecipients={[HINCHA, SOCIA]}
+        idempotencyKey="key-before-hydration"
+        lookupAction={lookup}
+        sendAction={vi.fn<SendTransferAction>()}
+      />
+    );
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(flow);
+    document.body.append(container);
+    // Typed into the server's HTML while the scripts still load: no React, no events.
+    const field = container.querySelector<HTMLInputElement>("#recipient")!;
+    setFieldValue(field, "socia");
+
+    let root!: ReturnType<typeof hydrateRoot>;
+    act(() => {
+      root = hydrateRoot(container, flow);
+    });
+    onTestFinished(() => {
+      act(() => root.unmount());
+      container.remove();
+    });
+
+    expect(field).toHaveValue("socia");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    expect(
+      screen.getByRole("option", { name: /Socia Granate/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(lookup).toHaveBeenCalledWith("socia.granate");
   });
 
   it("clears the search with its button, bringing every recent back", async () => {

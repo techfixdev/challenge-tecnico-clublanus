@@ -1,11 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { movementRows } from "./fixtures/screens";
+import { movementRows, recipientSearch } from "./fixtures/screens";
 import { login } from "./fixtures/session";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /*
- * Text pasted into the movements search must always search, whenever it lands.
+ * Text pasted into the movements search must always search, whenever it lands. The send
+ * flow's recipient search follows the same rule (its before-hydration case is below; no
+ * view transition starts while it is on screen).
  *
  * React commits a view transition in two steps: it turns its event system off, asks the
  * browser for `startViewTransition`, and turns it back on only in the update callback,
@@ -117,4 +119,31 @@ test("text typed before the page hydrates still searches", async ({ page }) => {
 
   await expectAdobeResults(page);
   await expect(search).toHaveValue("adobe");
+});
+
+test("a recipient typed before the transfer screen hydrates still narrows the recents", async ({
+  page,
+}) => {
+  // Same hold as above: the send flow's search is only the server's HTML.
+  let releaseScripts!: () => void;
+  const scriptsHeld = new Promise<void>((resolve) => {
+    releaseScripts = resolve;
+  });
+  await page.route("**/_next/static/chunks/**/*.js", async (route) => {
+    await scriptsHeld;
+    await route.continue();
+  });
+
+  await page.goto("/transferir", { waitUntil: "commit" });
+  const search = recipientSearch(page);
+  await search.fill("matias");
+  releaseScripts();
+
+  // The seed gives the demo user six recents; only Matías Herrera matches, and is chosen.
+  const strip = page.getByRole("listbox", { name: "Recientes" });
+  await expect(strip.getByRole("option")).toHaveCount(1);
+  await expect(
+    strip.getByRole("option", { name: /Matías Herrera/ }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(search).toHaveValue("matias");
 });
