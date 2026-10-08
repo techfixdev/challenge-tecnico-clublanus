@@ -37,8 +37,6 @@ const CAPTION_REACH = 0.5;
 
 const LISTBOX_LABEL_ID = "recent-recipients";
 
-const optionId = (index: number) => `recent-recipient-${index}`;
-
 /**
  * Recent recipients as a strip of initials tiles the finger drags sideways. The strip
  * follows the finger 1:1 (a motion value, no re-render per frame) and stretches past its
@@ -48,18 +46,22 @@ const optionId = (index: number) => `recent-recipient-${index}`;
  * derived from the strip's position.
  *
  * Settling on a tile chooses that person (`onSelect`); tapping a tile, or Enter on the
- * focused strip, goes on with them (`onPick`). Without a pointer it is a listbox: the
+ * focused strip, goes on with them (`onPick`). A search narrowing `recipients` recenters
+ * the strip on the chosen tile, or on the first one when the choice is filtered out. Without a pointer it is a listbox: the
  * arrows move the selection, Home and End jump to the ends. Under reduced motion the
  * drag still works, but the strip jumps to the tile instead of gliding, and nothing
  * scales.
  */
 export function RecipientCarousel({
+  id,
   recipients,
   selectedQuery,
   onSelect,
   onPick,
   disabled,
 }: {
+  /** The listbox's id, for the search field that controls it (`aria-controls`). */
+  id: string;
   recipients: ConfirmedRecipient[];
   /** The query of the chosen person, if they are one of the recents. */
   selectedQuery: string | null;
@@ -69,6 +71,7 @@ export function RecipientCarousel({
   disabled: boolean;
 }) {
   const reduced = useReducedMotionPreference();
+  const optionId = (index: number) => `${id}-option-${index}`;
   const selectedIndex = recipients.findIndex(
     (recipient) => recipient.query === selectedQuery,
   );
@@ -86,22 +89,28 @@ export function RecipientCarousel({
   // null while the finger holds it.
   const restingAt = useRef<number | null>(-centered * TILE_STEP);
 
-  // Typing a recent's alias in the field below chooses them too: the strip follows.
-  const [followedIndex, setFollowedIndex] = useState(selectedIndex);
-  if (selectedIndex !== followedIndex) {
-    setFollowedIndex(selectedIndex);
+  // Typing in the search chooses too, and narrows the strip: it follows. A narrowed strip
+  // that lost the chosen tile starts over at its first one.
+  const listKey = recipients.map((recipient) => recipient.query).join("\n");
+  const [followed, setFollowed] = useState({ selectedIndex, listKey });
+  if (
+    selectedIndex !== followed.selectedIndex ||
+    listKey !== followed.listKey
+  ) {
+    setFollowed({ selectedIndex, listKey });
     if (selectedIndex !== -1) setCentered(selectedIndex);
+    else if (listKey !== followed.listKey) setCentered(0);
   }
   useEffect(() => {
     // Under the finger, the release decides where the strip goes.
-    if (selectedIndex === -1 || restingAt.current === null) return;
-    const target = -selectedIndex * TILE_STEP;
+    if (restingAt.current === null) return;
+    const target = -centered * TILE_STEP;
     // Compared with where the strip is headed, not where it is: a settle still running
     // toward another tile is redirected (the spring keeps its velocity), not left to land.
     if (restingAt.current === target) return;
     restingAt.current = target;
     animate(offset, target, reduced ? INSTANT : SPRING);
-  }, [selectedIndex, offset, reduced]);
+  }, [centered, offset, reduced]);
 
   /** Glides the strip to rest at `target`, carrying a release velocity (px/s). */
   function glideTo(target: number, velocity = 0) {
@@ -196,6 +205,7 @@ export function RecipientCarousel({
       </h2>
       <m.div
         ref={viewport}
+        id={id}
         role="listbox"
         aria-labelledby={LISTBOX_LABEL_ID}
         aria-orientation="horizontal"
@@ -219,6 +229,7 @@ export function RecipientCarousel({
           {recipients.map((recipient, index) => (
             <CarouselTile
               key={recipient.query}
+              id={optionId(index)}
               recipient={recipient}
               index={index}
               offset={offset}
@@ -250,6 +261,7 @@ function useStepsFromCenter(offset: MotionValue<number>, index: number) {
 }
 
 function CarouselTile({
+  id,
   recipient,
   index,
   offset,
@@ -258,6 +270,7 @@ function CarouselTile({
   isCentered,
   onClick,
 }: {
+  id: string;
   recipient: ConfirmedRecipient;
   index: number;
   offset: MotionValue<number>;
@@ -271,7 +284,7 @@ function CarouselTile({
   const opacity = useTransform(steps, [0, 1, 2], [1, 0.6, 0.3]);
   return (
     <m.div
-      id={optionId(index)}
+      id={id}
       role="option"
       aria-selected={isSelected}
       aria-label={`${recipient.fullName}${recipient.alias ? `, ${recipient.alias}` : ""}`}

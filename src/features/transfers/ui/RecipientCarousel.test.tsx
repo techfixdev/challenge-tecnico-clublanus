@@ -28,13 +28,20 @@ afterEach(() => {
 });
 
 /** The carousel as the recipient step wires it: choosing someone writes the field. */
-function Harness({ disabled = false }: { disabled?: boolean }) {
+function Harness({
+  disabled = false,
+  recipients = RECENTS,
+}: {
+  disabled?: boolean;
+  recipients?: ConfirmedRecipient[];
+}) {
   const [field, setField] = useState("");
-  const chosen = RECENTS.find((recipient) => recipient.query === field);
+  const chosen = recipients.find((recipient) => recipient.query === field);
   return (
     <MotionProvider>
       <RecipientCarousel
-        recipients={RECENTS}
+        id="recents"
+        recipients={recipients}
         selectedQuery={chosen?.query ?? null}
         onSelect={(recipient) => setField(recipient.query)}
         onPick={(recipient) => setField(recipient.query)}
@@ -89,5 +96,31 @@ describe("RecipientCarousel", () => {
     expect(
       screen.getByRole("option", { name: /Socia Granate/ }),
     ).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("recenters on the first tile when a search narrows the strip under it", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness />);
+    const strip = screen.getByRole("listbox", { name: "Recientes" });
+    strip.focus();
+    await user.keyboard("{End}");
+    await waitFor(() => expect(stripX()).toBe("translateX(-324px)"), {
+      timeout: 2000,
+    });
+
+    // The search leaves two tiles, neither of them the chosen one.
+    rerender(<Harness recipients={[RECENTS[0], RECENTS[1]]} />);
+
+    expect(strip).toHaveAttribute(
+      "aria-activedescendant",
+      screen.getByRole("option", { name: /Hincha Granate/ }).id,
+    );
+    // Motion writes no transform at all once the strip is back at 0.
+    await waitFor(
+      () => expect(stripX()).toMatch(/^(none|translateX\(0px\))$/),
+      {
+        timeout: 2000,
+      },
+    );
   });
 });
