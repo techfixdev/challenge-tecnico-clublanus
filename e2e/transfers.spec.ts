@@ -3,7 +3,12 @@ import { expect, test, type Page } from "@playwright/test";
 import { formatAmount, formatMoney } from "../src/shared/lib/format";
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
 import { primaryCard, recipientSearch } from "./fixtures/screens";
-import { DEMO_USER, login, SECOND_USER } from "./fixtures/session";
+import {
+  DEMO_USER,
+  login,
+  SECOND_USER,
+  waitForHomeToSettle,
+} from "./fixtures/session";
 import {
   cardBalance,
   primaryCardBalance,
@@ -35,6 +40,8 @@ function centsToAmount(cents: number): string {
 
 /** Balances are masked on load: the card's eye fetches and shows its balance. */
 async function revealPrimaryCard(page: Page) {
+  // Home's cards stream in and dissolve in: a tap before that never reaches the eye.
+  await waitForHomeToSettle(page);
   await page
     .getByRole("button", {
       name: "Mostrar datos de la tarjeta Mastercard terminada en 1234",

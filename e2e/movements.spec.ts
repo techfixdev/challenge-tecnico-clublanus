@@ -6,6 +6,7 @@ import {
   recipientSearch,
 } from "./fixtures/screens";
 import { login, waitForHomeToSettle } from "./fixtures/session";
+import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /**
  * Seed facts (prisma/seed.ts): 33 movements (27 plus the six past transfers the demo user
@@ -121,11 +122,12 @@ test("a sent transfer's detail shares, copies and repeats it", async ({
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   // The seeded transfer to the second user (prisma/seed.ts).
   await page.goto("/movimientos?type=enviado");
-  await movementRows(page)
-    .filter({ hasText: "Hincha Granate" })
-    .first()
-    .getByRole("link")
-    .click();
+  const sent = movementRows(page).filter({ hasText: "Hincha Granate" }).first();
+  // The rows stream in with a reveal (a view transition): a tap while it runs never
+  // reaches them, so the page would stay on the list.
+  await expect(sent).toBeVisible();
+  await waitForScreenToSettle(page);
+  await sent.getByRole("link").click();
   await expect(
     page.getByRole("heading", { level: 1, name: "Hincha Granate" }),
   ).toBeVisible();
