@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-import { resetRateLimitsFor } from "./rate-limits";
+import { resetRateLimitsBeforeSignIn } from "./rate-limits";
 import { waitForScreenToSettle } from "./view-transitions";
 
 /*
@@ -27,7 +27,7 @@ export const SECOND_USER: Credentials = {
  * signs in starts with empty rate-limit counters for that user (fixtures/rate-limits.ts).
  */
 export async function fillLoginForm(page: Page, user = DEMO_USER) {
-  await resetRateLimitsFor(user.email);
+  await resetRateLimitsBeforeSignIn(user.email);
   await page.goto("/login");
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Contraseña", { exact: true }).fill(user.password);

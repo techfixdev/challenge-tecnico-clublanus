@@ -1,10 +1,8 @@
-import { Client } from "pg";
-
 import {
   CARD_REVEAL_POLICY,
   windowStartFor,
 } from "../../src/shared/lib/rate-limit";
-import { testDatabaseUrl } from "../../scripts/test-database";
+import { withTestDb } from "./test-db";
 
 /*
  * The rate-limit counters (`RateLimitBucket`) as the e2e specs need them. The limits stay
@@ -15,31 +13,22 @@ import { testDatabaseUrl } from "../../scripts/test-database";
  * a global reset in one would wipe the counters another spec is building up.
  */
 
-async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client({ connectionString: testDatabaseUrl() });
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
-}
-
 /** Empties every counter (failed logins per email/IP, reveals per user): before a run only. */
 export function resetAllRateLimits(): Promise<void> {
-  return withClient(async (client) => {
+  return withTestDb(async (client) => {
     await client.query(`DELETE FROM "RateLimitBucket"`);
   });
 }
 
 /**
- * Empties `email`'s counters: its failed logins (per email, and per email from each
- * client), the per-IP login counters and, if it is a user, its reveals. Every spec signs
- * in from the same local address, so the per-IP counter is shared by the whole run: it is
- * emptied with any user's, or a run's worth of failed-login scenarios would trip it.
+ * Empties every counter a sign-in as `email` meets: its failed logins (per email, and per
+ * email from each client), ALL per-IP login counters and, if it is a user, its reveals.
+ * Every spec signs in from the same local address, so the per-IP counter is shared by the
+ * whole run: it is emptied before any user's sign-in, or a run's worth of failed-login
+ * scenarios would trip it.
  */
-export function resetRateLimitsFor(email: string): Promise<void> {
-  return withClient(async (client) => {
+export function resetRateLimitsBeforeSignIn(email: string): Promise<void> {
+  return withTestDb(async (client) => {
     await client.query(
       `DELETE FROM "RateLimitBucket"
         WHERE "key" = $1
@@ -55,7 +44,7 @@ export function resetRateLimitsFor(email: string): Promise<void> {
 /** Spends `email`'s whole reveal budget for the current window: the next reveal is a 429. */
 export function exhaustRevealBudget(email: string): Promise<void> {
   const windowStart = windowStartFor(new Date(), CARD_REVEAL_POLICY);
-  return withClient(async (client) => {
+  return withTestDb(async (client) => {
     // The column is a UTC `timestamp`: the instant is converted explicitly, whatever the
     // session's time zone.
     await client.query(

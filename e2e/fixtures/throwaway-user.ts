@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import bcrypt from "bcryptjs";
-import { Client } from "pg";
 
-import { testDatabaseUrl } from "../../scripts/test-database";
 import { SECOND_USER, type Credentials } from "./session";
+import { withTestDb } from "./test-db";
 
 /*
  * A user that exists for one scenario only: no other spec knows its email, so nothing
@@ -18,16 +17,6 @@ export type ThrowawayUser = Credentials & {
   remove: () => Promise<void>;
 };
 
-async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client({ connectionString: testDatabaseUrl() });
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
-}
-
 export async function createThrowawayUser(): Promise<ThrowawayUser> {
   const runId = randomUUID().slice(0, 8);
   const id = `e2e-throwaway-${runId}`;
@@ -35,7 +24,7 @@ export async function createThrowawayUser(): Promise<ThrowawayUser> {
   const password = `Granate-${runId}!`;
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await withClient(async (client) => {
+  await withTestDb(async (client) => {
     await client.query("BEGIN");
     try {
       await client.query(
@@ -64,7 +53,7 @@ export async function createThrowawayUser(): Promise<ThrowawayUser> {
     email,
     password,
     remove: () =>
-      withClient(async (client) => {
+      withTestDb(async (client) => {
         await client.query(
           `DELETE FROM "RateLimitBucket" WHERE "key" = $1 OR "key" LIKE $2 || '%'`,
           [id, email],
