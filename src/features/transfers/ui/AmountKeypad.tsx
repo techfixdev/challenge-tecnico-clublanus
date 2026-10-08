@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import type { KeypadKey } from "../domain/amount-keypad";
 
@@ -68,12 +68,18 @@ function DeleteKey({
 }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Set when the long press already cleared: the click that ends it must not delete too.
+  // A press that ends off the key brings no click, so every new press (finger or key)
+  // starts with it unset.
   const cleared = useRef(false);
 
   function cancel() {
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = null;
   }
+
+  // The keypad can fold away under a held finger (the step changed): the pending clear
+  // must not reach an amount that is no longer on screen.
+  useEffect(() => cancel, []);
 
   return (
     <button
@@ -92,6 +98,7 @@ function DeleteKey({
       onPointerUp={cancel}
       onPointerLeave={cancel}
       onPointerCancel={cancel}
+      onKeyDown={() => (cleared.current = false)}
       onContextMenu={(event) => event.preventDefault()}
       onClick={() => {
         if (cleared.current) {
