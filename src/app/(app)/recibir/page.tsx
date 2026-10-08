@@ -37,16 +37,19 @@ export default async function ReceivePage() {
         <QuickActionMorph name={QUICK_ACTION_MORPH.receive}>
           <main className="flex flex-col px-6 pt-8">
             <NavBar title="Recibir" back={BACK_HOME} />
-            <h1 className="mt-6 font-display text-[22px] font-semibold text-foreground">
+            <h1 className="mt-4 font-display text-[22px] font-semibold text-foreground">
               Recibir dinero
             </h1>
             <p className="mt-1 text-sm text-muted">
               Compartí tu alias o tu CVU con quien te quiera transferir.
             </p>
 
-            <div className="mt-8">
+            <div className="mt-5">
               {details ? (
-                <ReceiveDetailsCard details={details} />
+                <ReceiveDetailsCard
+                  details={details}
+                  qr={<ReceiveQrCard details={details} className="mt-4" />}
+                />
               ) : (
                 <p className="rounded-3xl bg-surface lit-surface p-6 text-center text-sm text-muted shadow-card">
                   Tu cuenta todavía no tiene alias ni CVU asignados.
@@ -54,13 +57,9 @@ export default async function ReceivePage() {
               )}
             </div>
 
-            {details ? (
-              <ReceiveQrCard details={details} className="mt-6" />
-            ) : null}
-
             <section
               aria-labelledby="how-it-arrives"
-              className="mt-6 flex gap-3 px-1"
+              className="mt-4 flex gap-3 px-1"
             >
               <span
                 aria-hidden="true"

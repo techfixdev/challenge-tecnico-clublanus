@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/shared/ui/Button";
 import { copyText } from "@/shared/ui/clipboard";
@@ -18,12 +18,20 @@ const COPY_FAILED =
 type Feedback = { key: "alias" | "cvu" | "share"; message: string } | null;
 
 /**
- * Receive screen body: the user's alias and CVU, each with its own copy button, and
- * "Compartir" (the native share sheet, or a ready-made message copied where it does not
- * exist). Copying works on the LAN dev URL too (see `copyText`). The values stay
- * selectable text, the last resort if every copy method fails.
+ * Receive screen body: the user's alias and CVU, each with its own copy button, then the
+ * QR (passed in by the page, drawn on the server) and "Compartir" (the native share
+ * sheet, or a ready-made message copied where it does not exist). The QR sits right
+ * under the identifiers it encodes, so on a phone it opens whole above the bottom nav.
+ * Copying works on the LAN dev URL too (see `copyText`). The values stay selectable
+ * text, the last resort if every copy method fails.
  */
-export function ReceiveDetailsCard({ details }: { details: ReceiveDetails }) {
+export function ReceiveDetailsCard({
+  details,
+  qr,
+}: {
+  details: ReceiveDetails;
+  qr?: ReactNode;
+}) {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -68,7 +76,7 @@ export function ReceiveDetailsCard({ details }: { details: ReceiveDetails }) {
   return (
     <div className="flex flex-col">
       <dl className="divide-y divide-border rounded-3xl bg-surface lit-surface p-5 shadow-card">
-        <div className="pb-4">
+        <div className="pb-3">
           <dt className="text-xs text-muted">Titular</dt>
           <dd className="mt-1 text-[15px] font-medium text-foreground">
             {details.holderName}
@@ -90,7 +98,9 @@ export function ReceiveDetailsCard({ details }: { details: ReceiveDetails }) {
         />
       </dl>
 
-      <Button variant="secondary" className="mt-6 gap-2" onClick={share}>
+      {qr}
+
+      <Button variant="secondary" className="mt-5 gap-2" onClick={share}>
         {copiedKey === "share" ? (
           <CheckIcon className="size-5" />
         ) : (
@@ -124,7 +134,7 @@ function CopyRow({
   onCopy: () => void;
 }) {
   return (
-    <div className="py-4 last:pb-0">
+    <div className="py-3 last:pb-0">
       <dt className="text-xs text-muted">{term}</dt>
       {/* The button sits beside the value it copies. A grouped CVU may wrap at a group
           boundary on narrow phones; the text stays selectable as a last resort. */}

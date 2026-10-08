@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
 import { DEMO_USER, login } from "./fixtures/session";
+import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
 /*
  * Real phones reach narrow CSS viewports: 320px handsets, and Android's page zoom shrinks
@@ -210,6 +211,24 @@ test.describe("every screen fits every width", () => {
     test("receive", async ({ page }) => {
       await page.goto("/recibir");
       await expectFitsEveryWidth(page, "receive");
+    });
+
+    test("receive shows its whole QR above the bottom nav, without scrolling", async ({
+      page,
+    }) => {
+      // A phone-sized viewport (390×844): the code is there to be scanned, so it must
+      // not open half under the fixed nav.
+      await page.goto("/recibir");
+      await waitForScreenToSettle(page);
+      const qr = page.getByRole("img", { name: /^Código QR con tu alias/ });
+      await expect(qr).toBeVisible();
+      const nav = await page
+        .getByRole("navigation", { name: "Principal" })
+        .boundingBox();
+      const code = await qr.boundingBox();
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      expect(code!.y).toBeGreaterThanOrEqual(0);
+      expect(code!.y + code!.height).toBeLessThanOrEqual(nav!.y);
     });
   });
 });

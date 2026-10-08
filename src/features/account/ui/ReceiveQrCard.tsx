@@ -31,7 +31,7 @@ export function ReceiveQrCard({
       <QrCode
         value={payload}
         label={`Código QR con tu alias ${details.alias} y tu CVU`}
-        className="mt-4 max-w-52 rounded-2xl ring-1 ring-border"
+        className="mt-3 max-w-48 rounded-2xl ring-1 ring-border"
       />
     </section>
   );
