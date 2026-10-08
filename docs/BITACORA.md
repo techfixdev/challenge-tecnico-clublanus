@@ -1,7 +1,71 @@
 # Bitácora del challenge — GranaBank
 
-Registro de cómo se construyó este proyecto, paso a paso: qué se hizo, qué se decidió y por qué.
-Sirve como fuente de requerimientos y como guía para explicar el trabajo en la entrevista.
+Registro de las modificaciones del proyecto, tarea por tarea: qué se pidió, qué se decidió, qué se hizo, cómo se verificó y en qué commits quedó.
+
+## Cómo leer esta bitácora
+
+1. **Estado final** resume qué hace la app hoy y con cuántos tests cuenta.
+2. El **índice** lista cada tarea con sus commits principales; el identificador (`T1`, `T12b-C`…) es el mismo del registro de tareas del proyecto.
+3. **Decisiones del candidato** reúne las decisiones de producto tomadas explícitamente, con su fecha.
+4. **Proceso y verificación** explica cómo se trabajó y qué se revisó (y qué no).
+5. El **registro por tarea** está agrupado en cinco fases y, dentro de cada fase, en orden cronológico. Cada entrada sigue el mismo esquema: **Pedido · Decisión · Qué se hizo · Cómo se verificó · Commits**.
+6. **Limitaciones conocidas** junta en un solo lugar las salvedades que siguen abiertas.
+
+Los hashes citados son los del historial actual de la rama `feat/granabank` y todos existen en el repositorio. Los commits se pueden inspeccionar con `git show <hash>`.
+
+## Estado final
+
+- **Qué es:** GranaBank, billetera móvil del Club Atlético Lanús. Login con un usuario demo, Home con dos tarjetas (dólares y pesos), lista de movimientos con búsqueda, filtros y agrupación por día, detalle de cada movimiento, transferencias reales entre usuarios demo y pantalla de Recibir con QR.
+- **Stack:** Next.js 16 (App Router) + TypeScript estricto, Tailwind CSS v4, PostgreSQL 17 + Prisma 7, sesión JWT en cookie `httpOnly`, Motion para la física de gestos, Vitest + Testing Library, Playwright.
+- **Diseño:** layout del Figma, paleta institucional del club (granate, oro y Cool Gray), Poppins para la interfaz y Rokkitt como tipografía de display.
+- **Datos sensibles:** el saldo, el número completo y el CVV de cada tarjeta están ocultos por defecto y se piden al servidor recién al revelarlos.
+- **Tests en HEAD (`ff12385`):** 1007 unitarios (107 archivos) · 54 de integración contra PostgreSQL · 113 end-to-end.
+- **Pendiente:** T5, publicar el repositorio y desplegar en Vercel. Requiere la aprobación explícita del candidato; hasta entonces todo es local.
+
+## Índice
+
+| Fase | Tarea | Título | Commits principales |
+|---|---|---|---|
+| 1. Base y requerimientos | [T1](#t1--scaffold-y-base-de-datos-05102026) | Scaffold y base de datos | `ef45e46` |
+| | [T2](#t2--login-sesión-y-protección-de-rutas-05102026) | Login, sesión y protección de rutas | `3134de9` |
+| | [T3](#t3--home-movimientos-y-detalle-05102026) | Home, movimientos y detalle | `87b5e5a`…`c36f451` (14) |
+| | [T4](#t4--pulido-final-05102026) | Pulido: revisiones, integración, CI, README | `97590c4`…`876b44e` (9) |
+| | [T4b](#t4b--cierre-de-observaciones-05102026) | Cierre de observaciones | `aee4565`, `5fc30b8`, `011f56b`, `952ad3e` |
+| | [Inspección](#inspección-ocular-limpieza-del-historial-y-alternativa-desktop-05102026) | Inspección ocular, historial y alternativa desktop | `6edda00`, `3627e4d`, `caef689` |
+| | [Mobile](#fixes-de-mobile-real-05102026) | Fixes de mobile real | `94ed88e`, `8c47d3a`, `e7b3e2b` |
+| | [T7 · T8](#t7-y-t8--recorrida-completa-checklist-y-mensajes-de-la-api-06102026) | Recorrida completa, checklist y mensajes de la API | `54b7220`, `ab9d849`, `c4d0a2b`, `089f354`, `1e06f25` |
+| | [T10](#t10--transferencias-y-recibir-06102026) | Transferencias y Recibir (T10a, T10b, T10c) | `f40a503`…`3ec1782`, `79a1cfa`, `b94a234` |
+| | [T17](#t17--dos-monedas-y-formato-argentino-06102026) | Dos monedas y formato argentino | `da809a4`…`f72883e`, `e5825a2` |
+| | [T13](#t13--vuelta-de-tarjeta-y-datos-bajo-demanda-06102026) | Vuelta de tarjeta y datos bajo demanda | `5f4b3cc`, `068fe0c`, `6c86e6a`, `1acf3f1`, `30b2de2` |
+| 2. Calidad y robustez | [T9b](#t9b--tarjetas-que-escalan-con-su-propio-ancho-06102026) | Tarjetas que escalan con su propio ancho | `8240624` |
+| | [T14](#t14--barrido-responsive-y-pulido-de-transferencias-06102026) | Barrido responsive y pulido de transferencias | `0dd6d7b`, `0436010`, `7977706`, `f881334`, `b25c29a` |
+| | [T15a/b](#t15a-y-t15b--rendimiento-medido-06102026) | Rendimiento medido | `f95aa01`…`1c1a392` |
+| | [T16](#t16--base-de-datos-propia-para-los-tests-06102026) | Base de datos propia para los tests | `3ec82d3`, `b1fc44f`, `25a3dcb` |
+| | [T19](#t19--vista-previa-de-producción-en-el-celular-06102026) | Vista previa de producción en el celular | `e815a7f`, `d297369` |
+| | [T18](#t18--test-inestable-del-header-de-vidrio-06102026) | Test inestable del header de vidrio | `12177ac` |
+| | [T18b](#t18b--el-seed-nunca-fecha-movimientos-en-el-futuro-07102026) | El seed nunca fecha movimientos en el futuro | `51f740b` |
+| 3. Diseño y marca | [T9](#t9--pulido-de-las-tarjetas-06102026) | Pulido de las tarjetas | `9285923`, `b5f347f`, `ccec803` |
+| | [T12](#t12--una-sola-luz-para-toda-la-app-06102026) | Una sola luz para toda la app | `270281c` |
+| | [T21](#t21--marca-del-club-y-login-07102026) | Marca del club y login | `61a425f`, `e9126b1`, `2c11f24` |
+| | [T12a](#t12a--solo-colores-institucionales-del-club-07102026) | Solo colores institucionales | `ab2c023` |
+| | [T12b-A](#t12b-a--ux-bloqueante-transferir-enfocado-y-cerrar-sesión-fuera-de-la-barra-07102026) | Transferir enfocado y cerrar sesión fuera de la barra | `8f218f9`…`66bb932`, `d3f3228` |
+| | [T12b-D](#t12b-d--lista-de-movimientos-agrupada-y-montos-con-signo-07102026) | Lista agrupada y montos con signo | `1ea74a5`, `3befcc6` |
+| | [T12b-C2](#t12b-c2--tarjetas-en-español-y-segunda-tarjeta-en-oro-07102026) | Tarjetas en español y segunda tarjeta en oro | `b8ce6ed` |
+| | [T12b-C3](#t12b-c3--qr-en-recibir-y-errores-del-login-sobre-granate-07102026) | QR en Recibir y errores del login | `18fac3a`, `65dda61` |
+| | [T12b-C1](#t12b-c1--barra-de-navegación-tipo-ios-y-acciones-en-el-detalle-07102026) | Barra tipo iOS y acciones en el detalle | `7c70f56`, `df99739` |
+| | [T12b-C](#t12b-c--integración-de-c1-c2-y-c3-07102026) | Integración de C1, C2 y C3 | `95e5c36`…`32fcfd2` |
+| 4. Movimiento | [T6](#t6--animaciones-y-valor-agregado-05102026) | Animaciones, ocultar saldo y resumen del mes | `5a6ed87`…`dd9eb60`, `da04d2d`…`cb048be` |
+| | [T7a](#t7a--versión-premium-06102026) | Versión premium | `fa9be8c`…`3c15bde` |
+| | [T15c](#t15c--enviar-y-recibir-se-expanden-en-su-pantalla-06102026) | Enviar y Recibir se expanden en su pantalla | `0ada6f9`, `94b8b6e` |
+| | [T20](#t20--navegación-tipo-ios-06102026) | Navegación tipo iOS | `20c027c`, `98ed24c`, `273c6fc` |
+| | [T12b-B](#t12b-b--un-solo-lenguaje-de-movimiento-07102026) | Un solo lenguaje de movimiento | `5937865`, `38508a5`, `225ba72`…`34513fc` |
+| | [T23](#t23--motion-v2-manipulación-no-navegación-07102026) | Motion v2: manipulación, no navegación | `0860957`…`07c6e69` |
+| 5. Legibilidad y cierre | [T11](#t11--checklist-tokens-y-pantallas-para-figma-07102026) | Checklist, tokens y pantallas para Figma | `f135f51`, `a668497`, `f6a5d3b`, `be36118`, `4695cc9` |
+| | [T22](#t22--pase-de-legibilidad-07102026) | Pase de legibilidad | `21c82f8`…`2f06347` (35) |
+| | [T24](#t24--sin-referencias-a-documentos-externos-07102026) | Sin referencias a documentos externos | `b639361`, `d0d3f21` |
+| | [T25](#t25--tipografía-de-display-rokkitt-07102026) | Tipografía de display: Rokkitt | `ee3e709`, `01020cf`, `93a853c` |
+| | [T26](#t26--pase-sobre-las-observaciones-de-t23-07102026) | Pase sobre las observaciones de T23 | `28cc013`…`ff12385` (13) |
+| | [T5](#t5--deploy-pendiente) | GitHub y deploy en Vercel | pendiente |
 
 ---
 
@@ -12,42 +76,34 @@ Sirve como fuente de requerimientos y como guía para explicar el trabajo en la 
 - **Consigna (Notion):** web app sencilla que consuma y muestre información siguiendo un diseño de Figma.
 
 ### Requerimientos funcionales
+
 - Mostrar una lista de elementos.
 - Ver el detalle de un elemento.
 - Estados de carga, error y vacío.
 - App funcional y navegable.
 
 ### Requerimientos técnicos
+
 - Frontend con Next.js y TypeScript.
 - Backend simple con Node.js + TypeScript (o API routes de Next.js).
 - Base de datos relacional (PostgreSQL preferentemente).
 - ORM.
 
 ### Suman puntos
+
 Validaciones, estructura de componentes, manejo de estados y datos, detalles de UX.
 
 ### Entregables
-Repositorio en GitHub, deploy (preferentemente Vercel) y README con: cómo correrlo, decisiones técnicas y qué mejoraría con más tiempo.
+
+Repositorio en GitHub, deploy (preferentemente Vercel) y README con: cómo correrlo, decisiones técnicas y qué mejoraría con más tiempo. El estado de cada requerimiento, con su evidencia, está en [`docs/CHECKLIST.md`](CHECKLIST.md).
 
 ---
 
-## 2. Forma de trabajo
-
-Trabajo con asistencia de IA (Claude Code), con este protocolo:
-
-1. Todo se hace **en local**. No se publica nada (push, deploy) sin aprobación explícita.
-2. El trabajo se divide en tareas chicas.
-3. Al terminar cada tarea, se revisan juntos **todos los cambios y decisiones**.
-4. Solo después de aprobarlos se hace el commit (Conventional Commits).
-5. Cada decisión queda registrada en esta bitácora con su justificación.
-
----
-
-## 3. El diseño
+## 2. El diseño
 
 El Figma es público pero de solo lectura, y no había token de API. Se obtuvo la imagen de vista previa del archivo desde el endpoint público de Figma y se guardó, junto con ampliaciones, en `docs/design/`.
 
-La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
+La app se llama **GranaBank** (billetera del club) y el Figma tiene tres pantallas:
 
 | Pantalla | Contenido |
 |---|---|
@@ -55,39 +111,68 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | **Home** | "Hola, Granate", tarjeta con saldo (USD 978.85, ****1234, vence 02/30), "Últimos movimientos". La lupa lleva a Movimientos. |
 | **Movimientos** | Búsqueda por persona o servicio, filtros rápidos (Todos, Débito Aut., Recibido, Enviado) y listado. |
 
-**Tokens de diseño extraídos:** granate `#7A1D2D`, fondo `#F9FAFC`, tipografía Poppins. Por tipo de movimiento: suscripción violeta `#C76DFF`, recibido granate sobre `#DDC6CA`, enviado naranja `#EF9C55`.
+**Tokens de diseño extraídos del Figma:** granate `#7A1D2D`, fondo `#F9FAFC`, tipografía Poppins. Por tipo de movimiento: suscripción violeta `#C76DFF`, recibido granate sobre `#DDC6CA`, enviado naranja `#EF9C55`. Más tarde (T21, T12a) la paleta pasó a los colores institucionales del club; el layout sigue siendo el del Figma.
 
-**Interpretación:** la consigna pide "lista + detalle". La lista son los movimientos; el detalle es una pantalla nueva por movimiento (`/movimientos/[id]`), que no está en el Figma y se diseña con el mismo lenguaje visual.
+**Interpretación:** la consigna pide "lista + detalle". La lista son los movimientos; el detalle es una pantalla nueva por movimiento (`/movimientos/[id]`), que no está en el Figma y se diseñó con el mismo lenguaje visual.
 
 ---
 
-## 4. Plan de tareas
+## 3. Decisiones del candidato
 
-| # | Tarea | Estado |
+Decisiones de producto tomadas explícitamente por el candidato. Las técnicas están en cada entrada del registro.
+
+| Fecha | Decisión | Tarea |
 |---|---|---|
-| T1 | Scaffold, base de datos, ORM, datos de ejemplo, tests | ✅ Hecha |
-| T2 | Login, sesión, protección de rutas, logout | ✅ Hecha |
-| T3 | Home, listado con búsqueda y filtros, detalle, estados | ✅ Hecha |
-| T4 | Pulido: hallazgos de revisión, estructura, CI, README final | ✅ Hecha |
-| — | Inspección ocular, limpieza de historial, alternativa desktop | ✅ Hecha (desktop archivada) |
-| — | Fixes de mobile real | ✅ Hecha |
-| T6 | Animaciones, ocultar saldo, resumen del mes | ✅ Hecha |
-| T5 | GitHub + deploy en Vercel (requiere aprobación) | ⏳ Pendiente |
+| 05/10 | Todo se trabaja en local; nada se publica (push, deploy) sin aprobación explícita. | Proceso |
+| 05/10 | La alternativa de layout para desktop queda archivada fuera de la entrega; en desktop se muestra la columna móvil centrada, como el Figma. | Inspección |
+| 06/10 | Se autorizan commits locales por unidad de trabajo una vez pasados los checks y la revisión automática. | Proceso |
+| 06/10 | Mantener las filas como tarjetas y los montos sin signo, como el Figma (revertida el 07/10). | T7 |
+| 06/10 | Transferencias reales entre usuarios demo **y** pantalla de Recibir; sin botón de "acreditar" simulado. | T10 |
+| 06/10 | El texto secundario que no llegaba a AA se oscurece hasta 4,5:1. | T12, T16 |
+| 06/10 | Dos monedas (Mastercard en dólares, Visa en pesos) y formato argentino para ambas, como desvío documentado del Figma. | T17 |
+| 06/10 | Un ojo por tarjeta; revela saldo, número completo y CVV, **todo oculto por defecto**. | T13 |
+| 06/10 | Pedidos de valor agregado: rendimiento percibido, vista previa de producción en el celular y navegación tipo iOS. | T15, T19, T20 |
+| 06/10 | **Colores institucionales del club** (granate Pantone 188 C, oro Pantone 618 C, Cool Gray 7C) y el escudo oficial en vector, sin redibujarlo ni deformarlo. | T21 |
+| 07/10 | Solo colores institucionales en toda la app, sin violeta, naranja, verde ni ámbar. | T12a |
+| 07/10 | **El rojo de error se mantiene** como excepción de accesibilidad a la paleta institucional. | T12a |
+| 07/10 | Se adoptan los cuatro paquetes de la auditoría de UX, salvo "saldo visible por defecto": **el saldo sigue oculto por defecto**. | T12b |
+| 07/10 | **Se revierte la decisión del 06/10:** lista agrupada por día y montos con `+`/`−`, priorizando la legibilidad sobre la fidelidad al Figma. | T12b-D |
+| 07/10 | Pase de legibilidad antes de la entrega, porque los evaluadores van a leer sobre todo el código. | T22 |
+| 07/10 | **Movimiento de manipulación** inspirado en una referencia de video: superficies que se arrastran y se transforman en su lugar (transferencia continua, gestos globales, coreografía de Home). | T23 |
+| 07/10 | Ninguna referencia a documentos externos de marca, ni en el código ni en la documentación. | T24 |
+| 07/10 | **Rokkitt como tipografía de display** (logotipo, títulos y montos grandes); Poppins sigue en la interfaz. | T25 |
+| 07/10 | Revisar una por una las observaciones no bloqueantes de T23 antes de la entrega. | T26 |
+
+---
+
+## 4. Proceso y verificación
+
+- **Asistencia de IA:** el proyecto se construyó con Claude Code, con el candidato decidiendo el alcance y aprobando cada decisión de producto.
+- **Unidades de trabajo:** cada tarea cierra con uno o más commits chicos y coherentes, en formato Conventional Commits, con los tests y la documentación junto al comportamiento que cubren. T3 se partió después en 14 commits porque un solo commit de ~4.500 líneas no se podía revisar.
+- **Tests primero donde hay un resultado determinista:** se escribe el test, se observa que falla (RED) y después se implementa (GREEN). Cuando un test se escribió después del código (tests de caracterización, algunos de T3 y T4), la entrada lo dice.
+- **Revisiones automáticas independientes:** cada cambio de riesgo medio o alto pasó por una revisión automática con uno o cuatro enfoques (seguridad, resiliencia, legibilidad, confiabilidad). Hay revisiones registradas para la mayoría de las tareas. **T6, T7b, T15 y T16 no tienen una revisión registrada**: en T6 y T7b esta bitácora anotó en su momento revisiones aprobadas, pero no quedó un registro de ellas, así que se cuentan como no revisadas. Ninguna revisión encontró un bloqueante sin corregir; las observaciones no bloqueantes se corrigieron en tareas posteriores (T4b, T14, T22, T26) o quedan listadas como limitaciones.
+- **Trabajo en paralelo aislado:** T12b, T22, T23 y T26 se hicieron con varias ramas en paralelo, cada una en su propio worktree. Al integrarlas se corrieron las suites completas (unitarios, integración y e2e) y, para los tests sensibles al tiempo, corridas repetidas con varios workers.
+- **Datos de prueba aislados:** desde T16 los tests de integración y e2e usan su propia base (`granabank_test`), así que nunca mueven los saldos de la base de desarrollo.
 
 ---
 
 ## 5. Registro por tarea
 
-### T1 — Scaffold y base de datos (05/10/2026)
+### Fase 1 — Base y requerimientos
+
+#### T1 — Scaffold y base de datos (05/10/2026)
+
+**Pedido:** base del proyecto con el stack de la consigna.
 
 **Qué se hizo**
+
 - Proyecto Next.js con TypeScript estricto, Tailwind CSS, ESLint y Prettier.
 - PostgreSQL 17 en Docker (`docker-compose.yml`).
 - Prisma con tres modelos: `User`, `Card` y `Movement`.
 - Seed con el usuario del diseño, 2 tarjetas y 26 movimientos.
 - Vitest + Testing Library, con tests del formateador de montos.
 
-**Decisiones y por qué**
+**Decisión**
 
 | Decisión | Por qué |
 |---|---|
@@ -100,32 +185,34 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | Índices en `(userId, occurredAt)` y `counterparty` | Son las consultas reales: "movimientos del usuario ordenados por fecha" y "búsqueda por nombre". |
 | Seed idempotente con fechas relativas a hoy | Se puede correr las veces que haga falta sin duplicar datos, y los movimientos siempre se ven recientes. |
 | Cliente de Prisma generado, no versionado | Se regenera en `postinstall` y `build`; evita commitear código generado y funciona igual en Vercel. |
-| Formato de montos `en-US` (`$978.85`) | El diseño usa punto decimal. Con `es-AR` se mostraría `978,85` y no coincidiría con el Figma. |
+| Formato de montos `en-US` (`$978.85`) | El diseño usa punto decimal. (Reemplazado por el formato argentino en T17.) |
 | Estructura por features (`src/features/{auth,movements,account}`) | La carpeta "grita" qué hace la app, no qué framework usa; cada feature agrupa su UI, datos y lógica. |
 | Script `typecheck` = `next typegen && tsc --noEmit` | Next 16 genera tipos globales (`LayoutProps`) en build; sin ese paso, `tsc` falla en un checkout limpio. |
 | Sin modo oscuro | El diseño es solo claro; agregarlo sería alcance no pedido. |
 | Archivos de herramientas locales fuera del repo | `.atl/`, `odd/`, `AGENTS.md` y `CLAUDE.md` son del entorno de trabajo, no del proyecto. |
 
-**Verificación:** lint ✅ · typecheck ✅ · tests 7/7 ✅ · build ✅ · seed corrido 3 veces sin duplicar ✅
+**Cómo se verificó:** lint ✅ · typecheck ✅ · tests 7/7 ✅ · build ✅ · seed corrido 3 veces sin duplicar ✅. Revisión automática (confiabilidad) aprobada, con 4 observaciones no bloqueantes; las dos importantes se corrigieron en T2:
 
-**Commit:** `ef45e46` — `chore: scaffold next.js app with prisma, postgres and testing setup`
+- `formatMoney("")` devolvía `$0` en lugar de fallar, porque `Number("")` es `0`. Corrección: rechazar strings vacíos.
+- El seed borraba los datos en una transacción y los recreaba fuera de ella; si fallaba a mitad de camino, el usuario quedaba sin tarjetas. Corrección: todo el reset y la recreación en una sola transacción.
 
-**Revisión automática (enfoque confiabilidad): aprobada**, con 4 observaciones no bloqueantes. Las dos importantes se corrigen en T2:
-- `formatMoney("")` devuelve `$0` en lugar de fallar, porque `Number("")` es `0`. Corrección: rechazar strings vacíos.
-- El seed borra los datos en una transacción y los recrea fuera de ella; si falla a mitad de camino, el usuario queda sin tarjetas. Corrección: hacer todo el reset y la recreación en una sola transacción.
+**Commits:** `ef45e46`
 
-### T2 — Login, sesión y protección de rutas (05/10/2026)
+#### T2 — Login, sesión y protección de rutas (05/10/2026)
+
+**Pedido:** login del Figma con el usuario demo, rutas privadas y logout.
 
 **Qué se hizo**
+
 - Pantalla `/login` fiel al Figma (captura en `docs/screenshots/login.png`), con mostrar/ocultar contraseña.
 - Validación con zod, errores en español por campo y un error general para credenciales inválidas.
-- Sesión con JWT firmado en una cookie httpOnly. "Recordarme" la mantiene 30 días.
+- Sesión con JWT firmado en una cookie `httpOnly`. "Recordarme" la mantiene 30 días.
 - `src/proxy.ts` protege las rutas privadas; `requireUser()` vuelve a validar la sesión en cada lectura de datos.
 - Logout. Endpoints REST `POST /api/auth/login` y `POST /api/auth/logout` que reutilizan la misma lógica.
-- `AppShell`: en celular ocupa todo el ancho; en desktop, una columna centrada de 420px.
+- `AppShell`: en celular ocupa todo el ancho; en desktop, una columna centrada de 420 px.
 - Correcciones de la revisión de T1 (formateador y seed atómico).
 
-**Decisiones y por qué**
+**Decisión**
 
 | Decisión | Por qué |
 |---|---|
@@ -136,7 +223,7 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | "Recordarme": 30 días; sin marcar, cookie de sesión con token de 1 día | Respeta la intención del usuario y limita el riesgo si el navegador restaura sesiones. |
 | `SESSION_SECRET` obligatorio (mínimo 32 caracteres) | Falla rápido y con un mensaje claro si falta, en vez de firmar con un secreto débil. |
 | Server Actions + `useActionState` | El formulario funciona aun sin JavaScript, y Next valida el origen (protección CSRF). |
-| Un mismo schema zod en cliente y servidor | En el cliente da feedback inmediato; en el servidor es la validación real, porque el cliente se puede saltear. |
+| Un mismo schema zod en cliente y servidor | En el cliente da feedback inmediato; en el servidor es la validación real, porque el cliente se puede saltear. (En T15 las reglas del cliente pasaron a funciones puras sin zod.) |
 | Mensaje genérico "Email o contraseña incorrectos" | No revela qué emails están registrados. |
 | bcrypt contra un hash falso cuando el email no existe | Ambos errores tardan lo mismo; el tiempo de respuesta no filtra usuarios. |
 | `authenticate` recibe sus dependencias por parámetro | Se testea con mocks, sin base ni bcrypt (arquitectura hexagonal). |
@@ -146,37 +233,34 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | Accesibilidad: `aria-invalid`, `aria-describedby`, `role="alert"`, foco en el primer error | Lectores de pantalla y navegación por teclado funcionan correctamente. |
 | `server-only` en el código de sesión y base | Impide que ese código termine por error en el bundle del navegador. |
 
-**Tests:** primero se escribieron y fallaron (RED), después se implementó (GREEN).
-- Unitarios: 39/39 (schema, token, lógica de login, formulario, formateador).
-- End-to-end con Playwright: 5/5 (redirecciones, error de credenciales, validación, login/logout, flags de la cookie y "Recordarme").
-
-**Verificación:** lint ✅ · typecheck ✅ · tests 39/39 ✅ · e2e 5/5 ✅ · build ✅ · prettier ✅
-
-**Commit:** `3134de9` — `feat(auth): add login, jwt session cookie and route protection`
-
-**Revisión automática (4 enfoques: seguridad, resiliencia, legibilidad, confiabilidad): aprobada sin bloqueantes**, con 15 observaciones. Las importantes se corrigen en T3:
-- La API de login acepta cualquier `Content-Type` que *contenga* `application/json` (chequeo por substring).
-- Si la base se cae, la API de login devuelve un 500 sin controlar; debería devolver un error claro (503).
-- Las rutas REST no tienen tests.
-- Si falta `SESSION_SECRET`, el proxy rompe en lugar de redirigir al login.
-- No hay límite de intentos de login (rate limiting): bcrypt consume CPU y permite fuerza bruta. Queda documentado como mejora, porque en serverless un límite en memoria no sirve y requiere un servicio externo (por ejemplo Redis).
-- Esta bitácora decía "expiración corta", pero con "Recordarme" son 30 días; se corrigió el texto.
-
 **Diferencia con el Figma:** los placeholders dicen "Ingresá…" (voseo, igual que el lema "sumás"); en el Figma dicen "Ingresa…".
 
-### T3 — Home, movimientos y detalle (05/10/2026)
+**Cómo se verificó:** tests escritos antes del código (RED → GREEN). Unitarios 39/39 (schema, token, lógica de login, formulario, formateador) · e2e 5/5 (redirecciones, error de credenciales, validación, login/logout, flags de la cookie y "Recordarme") · lint, typecheck, build y prettier ✅. Revisión automática con 4 enfoques aprobada sin bloqueantes, con 15 observaciones; las importantes se corrigieron en T3:
+
+- La API de login aceptaba cualquier `Content-Type` que *contuviera* `application/json`.
+- Si la base se caía, la API de login devolvía un 500 sin controlar en lugar de un 503 claro.
+- Las rutas REST no tenían tests.
+- Si faltaba `SESSION_SECRET`, el proxy rompía en lugar de redirigir al login.
+- No hay límite de intentos de login; queda como mejora (ver Limitaciones), porque en serverless un límite en memoria no sirve.
+- Esta bitácora decía "expiración corta", pero con "Recordarme" son 30 días; se corrigió el texto.
+
+**Commits:** `3134de9`
+
+#### T3 — Home, movimientos y detalle (05/10/2026)
+
+**Pedido:** lista + detalle de la consigna, con los estados de carga, error y vacío.
 
 **Qué se hizo**
+
 - **Home:** saludo, carrusel de tarjetas (la Visa asoma al costado, como en el Figma), "Últimos movimientos" (5) con "Ver todos", lupa que lleva a Movimientos y campana con aviso "Próximamente".
 - **Movimientos:** búsqueda por nombre o servicio, filtros rápidos (Todos, Débito Aut., Recibido, Enviado) y paginación con "Cargar más".
 - **Detalle** `/movimientos/[id]`: pantalla nueva con el mismo lenguaje visual (fecha, tipo, tarjeta, referencia, estado).
-- **Estados:** esqueletos de carga, error con "Reintentar", vacío sin movimientos y vacío sin resultados (con "Limpiar filtros"). También hay pantalla de "no encontrado".
+- **Estados:** esqueletos de carga, error con "Reintentar", vacío sin movimientos y vacío sin resultados (con "Limpiar filtros"), y pantalla de "no encontrado".
 - **Navegación inferior** compartida: Home, Movimientos y Salir.
 - **API REST:** `GET /api/movements`, `GET /api/movements/[id]`, `GET /api/account/cards`.
-- **Correcciones de la revisión de T2.**
-- **Capturas** en `docs/screenshots/`.
+- **Correcciones de la revisión de T2:** `Content-Type` comparado exacto; errores de infraestructura con 503 y un formato común `{ error: { code, message } }`; errores de validación completos en la API; el proxy no rompe si falta el secreto; constante compartida para `expired`; tests de todas las rutas REST y del proxy.
 
-**Decisiones y por qué**
+**Decisión**
 
 | Decisión | Por qué |
 |---|---|
@@ -186,20 +270,36 @@ La app se llama **GranaBank** (billetera del club) y tiene tres pantallas:
 | Paginación por cursor (`occurredAt` + `id`) en lugar de offset | Es estable si entran movimientos nuevos (con offset se duplican o saltean filas) y aprovecha el índice. |
 | Cada consulta filtra por `userId`; un id ajeno da el mismo 404 que uno inexistente | Protección IDOR: nadie ve datos de otro cambiando el id en la URL, y ni siquiera se confirma que el id exista. |
 | Ids mal formados se rechazan antes de ir a la base | Ahorra la consulta y evita entradas inválidas. |
-| Casos de uso que reciben el repositorio por parámetro | Igual que el login: se testean con mocks, y el wiring con Prisma ocurre solo en las páginas y las rutas. |
+| Casos de uso que reciben el repositorio por parámetro | Igual que el login: se testean con mocks, y el wiring con Prisma ocurre solo en las rutas. |
 | Montos como string con 2 decimales en la API | Mantiene la exactitud del `Decimal`; un número JSON podría perder precisión. |
 | Fechas en zona horaria `America/Argentina/Buenos_Aires` | Vercel corre en UTC; sin esto, un movimiento de las 22 h aparecería al día siguiente. |
-| Mismo schema zod con dos políticas | La página ignora parámetros inválidos y muestra todo (amable con el usuario); la API responde 400 con el detalle (estricta con el desarrollador). |
+| Mismo schema zod con dos políticas | La vista ignora parámetros inválidos y muestra todo (amable con el usuario); la API responde 400 con el detalle (estricta con el desarrollador). |
 | `Suspense` con key por filtros | El esqueleto aparece solo en los resultados; el buscador y los chips no se desmontan y no se pierde el foco. |
 | Error boundaries por sección | Si fallan los movimientos, la navegación sigue funcionando. |
 | Dos estados vacíos distintos | "No tenés movimientos" y "No hay resultados para tu búsqueda" son situaciones diferentes y piden acciones diferentes. |
 | "Volver" construido con parámetros validados | Vuelve a la lista con los mismos filtros y no se puede usar como redirección abierta a otro sitio. |
 | Íconos y logos en SVG inline | Sin dependencias extra. |
-| Lista sin encabezados por fecha | Se probó agrupar por "Hoy/Ayer", pero con un movimiento por día quedaba un título en casi cada fila. Se mantuvo la lista del diseño. |
+| Lista sin encabezados por fecha | Con un movimiento por día quedaba un título en casi cada fila. (Revisado en T12b-D, con más movimientos por día.) |
 
-**Correcciones de la revisión de T2:** `Content-Type` comparado exacto; errores de infraestructura devuelven 503 con un formato común `{ error: { code, message } }`; errores de validación completos en la API; el proxy no rompe si falta el secreto; constante compartida para `expired`; tests de todas las rutas REST y del proxy; ternario anidado reemplazado.
+**Correcciones antes del commit** (detectadas al revisar juntos):
 
-**Historial de commits:** T3 se hizo primero como un solo commit (95 archivos, ~4.500 líneas). La revisión automática no pudo procesarlo por tamaño, y además un commit así es difícil de revisar para cualquier persona. Se partió en 14 commits temáticos de ~400 líneas, cada uno con sus tests, y se verificó que cada uno compile y pase los tests por sí solo. El código final quedó idéntico byte a byte (mismo hash de árbol de git).
+- **Búsqueda sin distinguir acentos:** "jose" encuentra "José". Se activó la extensión `unaccent` de Postgres con una migración. La consulta usa parámetros (`Prisma.sql`), nunca concatenación, así que no hay inyección SQL; además se escapan `%` y `_`, y buscar "%" no devuelve todo. No se normalizó en la app (habría que traer todas las filas) ni con una columna duplicada (dato a mantener sincronizado). Mejora futura: índice trigram (GIN) sobre una función `unaccent` inmutable.
+- **404 real en el detalle:** con un `loading.tsx` por encima, Next empieza a transmitir la respuesta y el status queda fijo en 200 antes de saber si el movimiento existe. Los esqueletos de Home y lista se movieron a *route groups* (`(home)`, `(list)`) para que no envuelvan al detalle; las URLs no cambian. Trade-off: el detalle no muestra esqueleto mientras carga, pero es una sola consulta indexada.
+
+**Historial de commits:** T3 se hizo primero como un solo commit (95 archivos, ~4.500 líneas). La revisión automática no pudo procesarlo por tamaño, y un commit así es difícil de revisar para cualquier persona. Se partió en 14 commits temáticos de ~400 líneas, cada uno con sus tests, y se verificó que cada uno compile y pase los tests por sí solo. El código final quedó idéntico byte a byte (mismo hash de árbol de git).
+
+**Cómo se verificó:** 149 unitarios (28 archivos) y 13 e2e · lint, typecheck, build y prettier ✅. La mayoría de los tests se escribió antes del código; algunos (detalle, pantalla de error y helpers de tarjeta) se escribieron después. Revisión automática por tramos, los 4 aprobados sin bloqueantes:
+
+| Tramo | Commits | Enfoques | Observaciones relevantes (no bloqueantes, corregidas en T4) |
+|---|---|---|---|
+| A — shared + hardening auth | `87b5e5a`…`cdf3dcb` | 4 enfoques | El manejo de errores convertía *cualquier* error en 503: un bug de programación debería ser 500, y se tragaban los `redirect()`/`notFound()` de Next. |
+| B — dominio, datos y API | `e09aa1c`…`bc95fba` | confiabilidad | El SQL crudo de búsqueda no tenía un test contra la base real. |
+| C — componentes UI | `ac28de2`…`6ab2167` | confiabilidad | En el buscador, si se cambiaba de filtro mientras se escribía, la búsqueda pendiente podía aplicarse con el filtro anterior. |
+| D — estados y vistas | `6772e5b`…`633b41d` | 4 enfoques | "Reintentar" no usaba bien la función de Next; "Cargar más" ignoraba errores en silencio y, con la sesión vencida, podía reintentar sin parar. |
+
+**Limitación de entonces:** el violeta de suscripción del Figma no llegaba al contraste AA en texto chico; desapareció con la paleta institucional (T12a).
+
+**Commits:**
 
 ```
 87b5e5a refactor(shared): add api error helpers, validation and route constants
@@ -218,63 +318,39 @@ ac28de2 feat(ui): add shared bottom nav, icons, skeleton and error state
 c36f451 docs: update project log and screenshots
 ```
 
-**Revisión automática por tramos: los 4 aprobados, sin bloqueantes.**
+#### T4 — Pulido final (05/10/2026)
 
-| Tramo | Commits | Enfoques | Observaciones relevantes (no bloqueantes) |
-|---|---|---|---|
-| A — shared + hardening auth | `87b5e5a`…`cdf3dcb` | seguridad, resiliencia, legibilidad, confiabilidad | El manejo de errores convierte *cualquier* error en 503: un bug de programación debería ser 500, y se tragan los `redirect()`/`notFound()` de Next. |
-| B — dominio, datos y API | `e09aa1c`…`bc95fba` | confiabilidad | El SQL crudo de búsqueda no tiene un test contra la base real; conviene verificar el cast del cursor. |
-| C — componentes UI | `ac28de2`…`6ab2167` | confiabilidad | En el buscador, si cambiás de filtro mientras tipeás, la búsqueda pendiente puede aplicarse con el filtro anterior. |
-| D — estados y páginas | `6772e5b`…`633b41d` | seguridad, resiliencia, legibilidad, confiabilidad | "Reintentar" no usa bien la función de Next; "Cargar más" ignora errores en silencio y, con la sesión vencida, puede reintentar sin parar. |
+**Pedido:** cerrar las observaciones de T3, probar el SQL contra una base real, CI y README.
 
-Todas se corrigen en T4.
-
-**Tests:** 149 unitarios (28 archivos) y 13 end-to-end. La mayoría se escribió antes del código. Algunos (detalle, pantalla de error y helpers de tarjeta) se escribieron después; se reconoce honestamente.
-
-**Verificación:** lint ✅ · typecheck ✅ · tests 149/149 ✅ · e2e 13/13 ✅ · build ✅ · prettier ✅
-
-**Correcciones antes del commit** (detectadas al revisar juntos):
-- **Búsqueda sin distinguir acentos:** "jose" encuentra "José". Se activó la extensión `unaccent` de Postgres con una migración. La consulta usa parámetros (`Prisma.sql`), nunca concatenación, así que no hay inyección SQL; además se escapan `%` y `_`, y buscar "%" no devuelve todo.
-  - *Por qué no normalizar en la app:* habría que traer todas las filas para quitarles los acentos.
-  - *Por qué no una columna normalizada:* es un dato duplicado que hay que mantener sincronizado; no se justifica para este volumen.
-  - *Mejora futura:* índice trigram (GIN) sobre una función `unaccent` inmutable, para búsquedas rápidas con muchos datos.
-- **404 real en el detalle:** un movimiento inexistente o ajeno ahora responde HTTP 404. Con un `loading.tsx` por encima, Next empieza a transmitir la página y el status queda fijo en 200 antes de saber si el movimiento existe. Los esqueletos de Home y lista se movieron a *route groups* (`(home)`, `(list)`) para que no envuelvan al detalle; las URLs no cambian. *Trade-off:* el detalle no muestra esqueleto mientras carga, pero es una sola consulta indexada.
-
-**Limitación conocida:** el violeta de suscripción (`#C76DFF`) del diseño no llega al contraste AA en texto chico. Se respetó el diseño.
-
-### T4 — Pulido final (05/10/2026)
-
-**Qué se hizo**
-- Se corrigieron todos los hallazgos de las revisiones automáticas de T3.
-- Tests de integración contra Postgres real.
-- La estructura de carpetas quedó unificada en las tres features.
-- CI con GitHub Actions.
-- README final en español.
-
-**Correcciones y por qué**
+**Qué se hizo y por qué**
 
 | Cambio | Por qué |
 |---|---|
-| Errores de la API: 503 solo si la base no responde, 500 para el resto, y las redirecciones de Next se dejan pasar (`unstable_rethrow`) | Un 503 le dice al cliente "reintentá más tarde"; un bug no se arregla reintentando, es un 500 que hay que corregir. Antes, un `redirect()` dentro de una ruta se convertía en error. |
+| Errores de la API: 503 solo si la base no responde, 500 para el resto, y las redirecciones de Next se dejan pasar (`unstable_rethrow`) | Un 503 le indica al cliente que reintente más tarde; un bug no se arregla reintentando. Antes, un `redirect()` dentro de una ruta se convertía en error. |
 | Clasificador de errores de base (`db-errors.ts`) basado en errores observados | Con Prisma 7 y el adaptador `pg`, una conexión rechazada llega como `ECONNREFUSED`, no como el clásico `P1001`. Se verificó en la práctica en lugar de suponerlo. |
 | Respuesta de login con formato `{ data }` / `{ error }` | Todas las respuestas de la API siguen el mismo formato. |
 | Tests de integración (`pnpm test:integration`) contra Postgres | El SQL crudo de la búsqueda solo se puede probar contra una base real: acentos, `%`/`_`, aislamiento por usuario, desempate con timestamps iguales y paginación de las 26 filas sin duplicados. |
 | Los tests de integración corren en zona horaria de Buenos Aires | Se probó que, si se rompe la conversión de fechas del cursor, los tests fallan (*mutation check*). |
-| El buscador lee los filtros actuales al momento de disparar | Si cambiabas de chip mientras tipeabas, la búsqueda pendiente usaba el filtro viejo. |
+| El buscador lee los filtros actuales al momento de disparar | Si se cambiaba de chip mientras se escribía, la búsqueda pendiente usaba el filtro viejo. |
 | "Cargar más": mensaje de error con "Reintentar", redirección al login si la sesión venció, timeout de 10 s | Antes, los errores se ignoraban en silencio y con la sesión vencida podía reintentar sin fin. |
 | Pantalla de error compartida (`RouteError`) que registra el error con su `digest` | Una sola implementación para todas las secciones, y el `digest` permite rastrear el error en los logs del servidor. |
 | Los tests unitarios corren con `TZ=UTC` (como Vercel) | Garantiza que las fechas se ven bien en Argentina aunque el servidor esté en UTC. |
 | Un id mal formado en la API sigue dando 404 y no 400 | La API nunca revela si un id existe o no. |
+| Estructura unificada | `db.ts` pasó a `src/shared/lib/`; `auth` quedó con las mismas capas que las otras features, más `server/`; se eliminaron exports sin uso. |
+| CI (`.github/workflows/ci.yml`) | En cada PR y push a `main`: (1) lint, typecheck, formato y unitarios; (2) Postgres real con migraciones, seed, integración, build y e2e contra el build de producción. |
 
-**Estructura:** `db.ts` pasó a `src/shared/lib/`. `auth` quedó con las mismas capas que las otras features, más `server/` para el código que solo corre en el servidor (Server Actions, sesión, orquestación del login). También se eliminaron exports que no se usaban.
+**Bug encontrado al commitear:** el CI define `SESSION_SECRET`, y el test "falla si falta el secreto" leía esa variable del entorno, así que en GitHub Actions iba a fallar. Se reprodujo con las mismas variables del CI (RED), se aisló el test con `vi.stubEnv` (GREEN) y se agregó `876b44e`. Un test no debe depender del entorno en el que corre.
 
-**CI** (`.github/workflows/ci.yml`): en cada PR y en cada push a `main`. Corre en dos jobs: (1) lint, typecheck, formato y tests unitarios; (2) Postgres real con migraciones, seed, integración, build y e2e contra el build de producción.
+**Cómo se verificó:** unitarios 189/189 (3 corridas) · integración 10/10 · e2e 13/13 (dev y producción) · build ✅ · README probado en un clon limpio ✅. Algunos tests de T4 son de caracterización (escritos después del código, fijan un comportamiento existente). En el clon limpio un test falló una vez y no se repitió en 17 corridas; el sospechoso dependía del tiempo real y se reescribió con timers simulados. Revisión automática por tramos, los 3 aprobados sin bloqueantes:
 
-**Tests:** 189 unitarios, 10 de integración y 13 end-to-end. Algunos tests de T4 se escribieron después del código: son *tests de caracterización*, que fijan un comportamiento que ya existía. Se aclara con honestidad.
-
-**Verificación:** lint ✅ · typecheck ✅ · formato ✅ · unitarios 189/189 ✅ (3 corridas) · integración 10/10 ✅ · e2e 13/13 (dev y producción) ✅ · build ✅ · README probado en un clon limpio ✅
+| Tramo | Commits | Observaciones relevantes (no bloqueantes, cerradas en T4b) |
+|---|---|---|
+| E — estructura + errores de la API | `97590c4`…`9562bd6` | Algunos errores de Prisma desconocidos no se clasificaban; un error de credenciales de la base se trataba como caída (503) cuando es de configuración (500). |
+| F — integración, buscador, "Cargar más" | `70f5d85`…`2285768` | Con la sesión vencida, "Cargar más" podía quedar en estado de carga mientras redirigía; el test de integración dependía de los datos del seed. |
+| G — UI, CI, docs | `1e078bc`…`876b44e` | CI: fijar las acciones por hash y limitar los permisos del token. |
 
 **Commits:**
+
 ```
 97590c4 refactor: move prisma client to shared and layer the auth feature
 9562bd6 fix(api): answer 503 only for database outages and rethrow next control flow
@@ -287,47 +363,37 @@ dbe5dea docs: rewrite readme and update project log
 876b44e test(auth): isolate missing-secret test from the environment
 ```
 
-**Bug encontrado al commitear:** el CI define `SESSION_SECRET`, y el test "falla si falta el secreto" leía esa variable del entorno, así que en GitHub Actions iba a fallar. Se reprodujo con las mismas variables del CI (RED), se aisló el test con `vi.stubEnv` (GREEN) y se agregó `876b44e`. Lección: un test no debe depender del entorno en el que corre.
+#### T4b — Cierre de observaciones (05/10/2026)
 
-**Revisión automática por tramos: los 3 aprobados, sin bloqueantes.**
+**Pedido:** cerrar las observaciones de los tramos E, F y G.
 
-| Tramo | Commits | Observaciones relevantes (no bloqueantes) |
-|---|---|---|
-| E — estructura + errores de la API | `97590c4`…`9562bd6` | Algunos errores de Prisma desconocidos no se clasifican; un error de credenciales de la base se trata como caída (503) cuando es de configuración (500). |
-| F — integración, buscador, "Cargar más" | `70f5d85`…`2285768` | Con la sesión vencida, "Cargar más" puede quedar en estado de carga mientras redirige; el test de integración depende de los datos del seed. |
-| G — UI, CI, docs | `1e078bc`…`876b44e` | CI: fijar las acciones por hash y limitar los permisos del token (buenas prácticas de seguridad de supply chain). |
-
-**Nota:** en el clon limpio, un test falló una vez y no se repitió en 17 corridas más. El sospechoso era un test del buscador que dependía del tiempo real; se reescribió con timers simulados.
-
-### T4b — Cierre de observaciones (05/10/2026)
+**Qué se hizo**
 
 | Commit | Cambio | Por qué |
 |---|---|---|
 | `aee4565` | "Cargar más" pasa a un estado final "Tu sesión venció. Redirigiendo…" ante un 401 | El usuario entiende por qué se cortó la lista, en lugar de ver un botón trabado en "Cargando…". |
 | `5fc30b8` | Errores de base clasificados en *no disponible* (503), *mal configurada* (500) y *no clasificado* (500) | Una contraseña de base incorrecta no se arregla reintentando: es un error de configuración. |
-| `011f56b` | El test de integración crea y borra sus propios datos, y verifica que la zona horaria sea la de Buenos Aires | Un test no debe depender del seed ni del entorno: tiene que poder correr en cualquier base. |
+| `011f56b` | El test de integración crea y borra sus propios datos, y verifica la zona horaria de Buenos Aires | Un test no debe depender del seed ni del entorno. |
 | `952ad3e` | CI: acciones fijadas por hash de commit, permisos de solo lectura y `persist-credentials: false` | Seguridad de *supply chain*: un tag (`v4`) se puede mover a código malicioso, un hash no. |
 
-**Clasificador basado en evidencia:** se probó contra el Postgres local con contraseña incorrecta, base inexistente, puerto cerrado y host desconocido, y se registró el error real de cada caso. Por ejemplo, una contraseña incorrecta da `P1000` en consultas normales y `P2010` (con `AuthenticationFailed` / `28P01`) en SQL crudo. Hay 6 tests de integración que reproducen esos casos.
+**Decisión:** el clasificador se basó en evidencia. Se probó contra el Postgres local con contraseña incorrecta, base inexistente, puerto cerrado y host desconocido, y se registró el error real de cada caso (por ejemplo, una contraseña incorrecta da `P1000` en consultas normales y `P2010` con `28P01` en SQL crudo). Seis tests de integración reproducen esos casos. Prisma bloquea `migrate reset` cuando lo ejecuta una IA, salvo con consentimiento explícito; no se forzó.
 
-**Nota:** Prisma bloquea `migrate reset` cuando lo ejecuta una IA, salvo con consentimiento explícito del usuario. No se forzó.
+**Cómo se verificó:** unitarios 210/210 (también con las variables del CI) · integración 17/17 (con y sin seed) · e2e 13/13 · build ✅. Revisión con 4 enfoques aprobada sin bloqueantes; quedan sugerencias menores en tests que no afectan el comportamiento.
 
-**Verificación:** unitarios 210/210 (también con las variables del CI) ✅ · integración 17/17 (con y sin seed) ✅ · e2e 13/13 ✅ · build ✅
+**Commits:** `aee4565`, `5fc30b8`, `011f56b`, `952ad3e`, `dd120e5` (docs)
 
-**Revisión automática (4 enfoques): aprobada, sin bloqueantes.** Quedan sugerencias menores en tests (por ejemplo, un helper de test que podría ocultar un éxito inesperado). Se documentan y no se corrigen, porque no afectan el comportamiento.
+#### Inspección ocular, limpieza del historial y alternativa desktop (05/10/2026)
 
-### Inspección ocular (05/10/2026)
+**Pedido:** recorrer la app en un navegador real antes de seguir.
 
-Se recorrió la app juntos, en un navegador real (Chromium con Playwright, tamaño iPhone 390×844), sobre el build de producción.
-
-**Qué se verificó**
+**Qué se hizo:** recorrida conjunta en Chromium (Playwright, 390×844) sobre el build de producción.
 
 | Flujo | Resultado |
 |---|---|
 | Login con contraseña incorrecta y correcta | ✅ |
 | Home: tarjetas, carrusel, últimos movimientos | ✅ |
 | Lupa → Movimientos con foco en el buscador | ✅ |
-| Búsqueda "jose" encuentra "José Suárez" (sin acentos) | ✅ |
+| Búsqueda "jose" encuentra "José Suárez" | ✅ |
 | Detalle → "Volver" conserva la búsqueda | ✅ |
 | Chips de filtro conservan la búsqueda | ✅ |
 | "Cargar más": 26 movimientos, sin duplicados, el botón desaparece al final | ✅ |
@@ -336,146 +402,431 @@ Se recorrió la app juntos, en un navegador real (Chromium con Playwright, tama�
 | Salir + botón atrás → rebota al login | ✅ |
 
 **Hallazgos y decisiones**
-- **El último chip se ve cortado:** es intencional, igual que en el Figma. Indica que la fila se desliza. Para reforzarlo se agregó un **degradé** en el borde derecho (máscara CSS del mismo ancho que el margen, así el último chip se ve completo al llegar al final). Commit `6edda00`.
-- **"Se perdió la búsqueda":** se reprodujo el recorrido de forma automatizada (incluso tocando un chip antes de que pasen los 300 ms del buscador) y la búsqueda siempre se conserva. Lo más probable es que se haya vuelto con "Movimientos" de la barra inferior, que a propósito abre la lista limpia, como una pestaña. No es un bug.
-- **Desktop "raro":** el Figma es solo mobile, y en desktop la app se mostraba como una columna de teléfono centrada. Ver la alternativa más abajo.
 
-### Limpieza del historial de git (05/10/2026)
+- **El último chip se ve cortado:** es intencional, igual que en el Figma; indica que la fila se desliza. Se reforzó con un degradé en el borde derecho (máscara CSS del ancho del margen, así el último chip se ve completo al llegar al final). Commit `6edda00`.
+- **"Se perdió la búsqueda":** se reprodujo el recorrido de forma automatizada (incluso tocando un chip antes de los 300 ms del buscador) y la búsqueda siempre se conservó. Lo más probable es que se haya vuelto con "Movimientos" de la barra inferior, que a propósito abre la lista limpia, como una pestaña. No es un bug.
+- **Limpieza del historial:** la preparación de la entrevista vivía en esta bitácora y se movió a un archivo ignorado por git. Se reescribieron los commits (`git filter-branch`) para quitarla de todas las versiones, se verificó que el código final quedara idéntico (mismo árbol) y se actualizaron las referencias a commits (`3627e4d`). Se hizo antes de publicar, porque reescribir un historial ya publicado rompe los clones de otras personas.
+- **Alternativa responsive para desktop (archivada, fuera de la entrega):** se construyó en 3 commits y se guardó fuera del repo como bundle de git (`caef689` lo documenta). Cambiaba solo desde 1024 px (mobile idéntico píxel por píxel, verificado con `magick compare`), con barra lateral, Home en dos columnas y login partido; 216 unitarios y 16 e2e. **Decisión:** no se incluye, porque el Figma es solo mobile y sería diseño propio; la entrega usa la columna centrada en desktop.
 
-La preparación para la entrevista vivía en esta bitácora y se movió a un archivo personal ignorado por git, pero seguía en las versiones anteriores del historial. Se reescribieron los commits (`git filter-branch`) para quitar esa sección de todas las versiones, y se verificó que:
-- no quede en ningún commit;
-- el código final sea idéntico al anterior (mismo árbol);
-- las referencias a commits de esta bitácora se actualizaron a los nuevos hashes (`3627e4d`).
+**Commits:** `3790478`, `6edda00`, `3627e4d`, `46bac74`, `caef689`
 
-Se hizo antes de publicar, porque reescribir el historial de algo ya publicado rompe los clones de otras personas.
+#### Fixes de mobile real (05/10/2026)
 
-### Alternativa: layout responsive para desktop (05/10/2026) — 🗄️ archivada, fuera de la entrega
+**Pedido:** que la app se comporte bien en un teléfono real.
 
-**Decisión:** no se incluye en el challenge. La entrega usa la columna centrada en desktop, que respeta el Figma (solo mobile) sin agregar diseño propio. La alternativa (3 commits) se guardó **fuera del repo**, como bundle de git y parches, por si se retoma más adelante.
-
-| Decisión | Por qué |
-|---|---|
-| Cambios solo desde 1024px (`lg`) | Mobile queda **idéntico píxel por píxel** al Figma (verificado con `magick compare`: 0 píxeles de diferencia). |
-| Barra lateral en lugar de nav inferior | Es el patrón estándar en desktop; la nav inferior y la lateral comparten la misma lista de rutas y la lógica de "activo" (sin duplicar). |
-| Home en dos columnas: tarjetas apiladas a la izquierda, movimientos a la derecha | Dos tarjetas lado a lado quedaban estiradas, y filas de 1000px se ven vacías; así todo entra sin scroll. |
-| Buscador y chips en una sola barra recién desde 1280px | A 1024px, con la barra lateral, los chips no entran al lado del buscador. |
-| Login partido: panel granate de marca + formulario | Aprovecha el ancho con la identidad visual del club, sin inventar estilos nuevos. |
-| La nav oculta usa `display:none` | Los lectores de pantalla ven un solo menú "Principal", no dos. |
-
-**Verificación:** 216 tests unitarios y 16 e2e (13 mobile sin cambios + 3 desktop) ✅
-
-**Trade-off:** es diseño propio (el Figma no tiene desktop). Argumento para la entrevista: "extendí el sistema de diseño a desktop sin tocar la versión mobile del Figma".
-
-### Fixes de mobile real (05/10/2026)
+**Qué se hizo**
 
 | Commit | Cambio | Por qué |
 |---|---|---|
-| `94ed88e` | Inputs a 16px; safe areas con `viewport-fit=cover`; `theme-color` | iOS Safari hace zoom al enfocar inputs de menos de 16px. El placeholder sigue chico como en el Figma, porque el zoom depende del tamaño del input, no del placeholder. Sin `viewport-fit=cover`, `env(safe-area-inset-*)` vale 0. |
-| `8c47d3a` | Íconos de GranaBank (SVG, apple-icon, `.ico`) y web manifest | Reemplaza el ícono por defecto de Next. El `.ico` se mantiene para Safari viejo, que ignora los favicons SVG. |
+| `94ed88e` | Inputs a 16 px; safe areas con `viewport-fit=cover`; `theme-color` | iOS Safari hace zoom al enfocar inputs de menos de 16 px. El placeholder sigue chico como en el Figma, porque el zoom depende del input. Sin `viewport-fit=cover`, `env(safe-area-inset-*)` vale 0. |
+| `8c47d3a` | Íconos de GranaBank (SVG, apple-icon, `.ico`) y web manifest | Reemplaza el ícono por defecto de Next. El `.ico` se mantiene para Safari viejo. |
 | `e7b3e2b` | README "Cómo ver los estados" | El evaluador puede provocar cada estado: vacío, carga, error y 404. Cada instrucción se probó contra el build de producción. |
 
-La barra del navegador usa el color de fondo y no el granate: todas las pantallas arrancan con un header claro y una franja granate arriba quedaría cortada.
+**Decisión:** la barra del navegador usa el color de fondo y no el granate, porque todas las pantallas arrancan con un header claro.
 
-**Revisión (4 enfoques): aprobada, sin bloqueantes.**
+**Cómo se verificó:** revisión con 4 enfoques aprobada sin bloqueantes.
 
-### T6 — Animaciones y valor agregado (05/10/2026)
+**Commits:** `94ed88e`, `8c47d3a`, `e7b3e2b`, `5a6ed87`, `e7d0a14`
 
-**Criterio:** cada animación *comunica* algo (de dónde viene un elemento, que algo cambió, que se tocó un botón). Duran entre 150 y 300 ms, animan solo `transform` y `opacity` (sin recalcular el layout) y **se desactivan con "reducir movimiento"**, con tests que lo verifican. No se agregaron librerías.
+#### T7 y T8 — Recorrida completa, checklist y mensajes de la API (06/10/2026)
 
-| Feature | Decisión y por qué |
-|---|---|
-| Tokens de movimiento en `globals.css` | Duraciones y curvas definidas una sola vez, como el resto del sistema de diseño. |
-| Feedback al tocar | Filas, chips y botones se achican a 0.97: confirma el toque como en una app nativa. |
-| Esqueletos con brillo | Indican que algo está cargando y no que la pantalla está rota. |
-| Ícono que viaja de la lista al detalle | React `<ViewTransition>`, incluido en el App Router de Next 16. Solo se anima el par tocado. Los navegadores sin soporte navegan normal. |
-| Filas que entran escalonadas | Animación CSS que corre solo cuando una fila se inserta: al cargar y solo las nuevas con "Cargar más". Nunca se repite en un re-render. |
-| Saldo que cuenta hacia arriba | El último cuadro usa el formateador real, así que el valor final es exacto. Los lectores de pantalla solo escuchan el valor final. No se repite al recargar la página (no muestra 978.85 → 0 → 978.85). |
-| **Ocultar saldo** (👁) | La preferencia vive en una **cookie** que lee el servidor, no en localStorage: el saldo oculto nunca parpadea visible al cargar. El botón usa `aria-pressed` con un nombre fijo (patrón WAI-ARIA de toggle). |
-| **Resumen del mes** | Ingresos = recibidos; egresos = enviados + suscripciones. Solo movimientos completados (un pendiente todavía puede fallar). La suma la hace la base con `groupBy` sobre `Decimal`, y los centavos se combinan como enteros, nunca como float. El mes empieza a medianoche de Buenos Aires (03:00 UTC). Tiene su endpoint `GET /api/movements/summary?month=AAAA-MM`. |
+**Pedido:** recorrer la app de punta a punta, separar lo local de lo de producción, verificar el enunciado punto por punto y arreglar el morph de vuelta del detalle a la lista.
 
-**Limitación conocida:** con el saldo oculto, el valor igual viaja en los datos de la página. La función protege de quien mira la pantalla, no de quien inspecciona el código; es el mismo criterio que usan las apps bancarias.
+**Qué se hizo**
 
-**Commits:** 11, de `5a6ed87` a `dd9eb60`, cada uno verificado por separado.
+- **Recorrida** con un Chromium visible en tamaño iPhone (390×844): errores por campo con `aria-invalid`, credenciales inválidas sin revelar qué falló, `/` sin sesión responde 307 a `/login`, brillo de los esqueletos, filas escalonadas, morph del ícono lista → detalle y odómetro del saldo.
+- **Morph de vuelta (T7b):** con el link "Volver" funciona en producción, porque el prefetch trae la lista antes de navegar y el ícono "pareja" existe cuando cambia la pantalla (en `next dev` no hay prefetch). Con el botón atrás del navegador no se anima: React restaura esa entrada del historial de forma síncrona y no inicia ninguna view transition. No se intercepta el historial para forzarlo.
+- **Mensajes de la API (T8):** probando con `curl`, un JSON de login *sin* `email` o `password` devolvía el mensaje por defecto de zod en inglés. Se corrigió con `z.string({ error })`.
+- **Checklist del enunciado:** `docs/CHECKLIST.md`, con el estado de cada requerimiento y su evidencia.
+- **Probar desde el celular (T7e):** `ALLOWED_DEV_ORIGINS` (solo dev) habilita la IP de la máquina en la red local.
+- **Fidelidad al diseño (T7d):** se evaluó cambiar las filas y poner signo a los montos, pero se decidió mantener el Figma (decisión revertida el 07/10 en T12b-D).
 
-**Verificación:** unitarios 263/263 ✅ · integración 21/21 ✅ · e2e 24/24 (dev y producción) ✅ · build ✅. Video de las animaciones en `docs/screenshots/motion-demo.webm`.
-
-**Revisión en 3 tramos: los 3 aprobados, sin bloqueantes.** Las observaciones menores se cerraron en T6b:
-- `da04d2d`: el mes del resumen se limita a 2000-01…2100-12, una ventana fija para que los tests no dependan de la fecha actual.
-- `4eb6814`: el hover de las filas respeta "reducir movimiento".
-- `8a67dfd`: los tests son deterministas, sin esperas fijas.
-
-Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsdom y el test verificaba `0.00` en vez del saldo real. Ahora verifica 978.85. Los e2e se corrieron 3 veces seguidas (25/25 en las tres) y la revisión salió aprobada.
-
-### T7 — Versión premium y recorrida completa en navegador (06/10/2026)
-
-**Merge de la versión premium.** La rama `feat/premium-motion` se había hecho en un worktree aparte y nunca se había integrado. Se incorporó con *fast-forward* (`cb048be..3c15bde`), sin conflictos:
-
-| Feature | Qué aporta |
-|---|---|
-| Tarjeta "viva" | Se inclina con el dedo o el mouse y tiene un brillo que la recorre; el carrusel tiene profundidad. |
-| Saldo tipo odómetro | Los dígitos ruedan como un contador mecánico. Reemplaza al conteo lineal de T6. |
-| Header glass y nav con indicador | El header se vuelve translúcido al hacer scroll; la pastilla granate se desliza a la pestaña activa. |
-
-**Cambio de criterio:** en T6 se evitó sumar librerías. La versión premium agrega `motion`, porque la física de resortes (inclinación, odómetro, indicador) es difícil de lograr bien a mano. Se carga por partes (`LazyMotion`) para no inflar el bundle, y sigue respetando "reducir movimiento".
-
-**Recorrida de punta a punta** con un Chromium visible en tamaño iPhone (390×844). Se verificó en vivo:
-- Login: errores por campo con `aria-invalid`; credenciales inválidas sin revelar si falló el email o la contraseña.
-- Protección de rutas: sin sesión, `/` responde 307 a `/login`.
-- Animaciones: brillo de los esqueletos, filas escalonadas, morph del ícono lista → detalle y odómetro del saldo al navegar a Home.
-
-**Morph de vuelta (detalle → lista):**
-- Con el link "Volver" **funciona en producción**: el prefetch del link trae la lista antes de navegar, así el ícono "pareja" existe cuando cambia la pantalla. En `next dev` no hay prefetch, y por eso no se ve en desarrollo.
-- Con el **botón atrás del navegador no se anima**. React restaura esa entrada del historial de forma síncrona y no inicia ninguna view transition. Es una limitación del framework. No se intercepta el historial para forzarlo, y queda un test que fija el comportamiento actual (solo puede fallar la espera de la transición) y se pone en rojo el día que el framework lo soporte.
-
-**Fidelidad al diseño:** se evaluó cambiar las filas y poner signo a los montos, pero el Figma muestra filas como tarjetas separadas y montos sin signo. Se mantiene el diseño.
-
-**Probar desde el celular:** `ALLOWED_DEV_ORIGINS` (solo dev) habilita la IP de la máquina en la red local. Los pasos están en el README.
-
-#### Local vs. producción
+**Local vs. producción**
 
 | Tema | Local (desarrollo) | Producción (Vercel, prevista: el deploy es T5) |
 |---|---|---|
-| Servidor | `next dev`: sin prefetch, con recarga en caliente y el indicador "N" de Next abajo a la izquierda | `next build` + `next start`: prefetch de links, sin indicador de dev |
+| Servidor | `next dev`: sin prefetch, con recarga en caliente y el indicador "N" de Next | `next build` + `next start`: prefetch de links, sin indicador |
 | Base de datos | PostgreSQL 17 en Docker (`pnpm db:up`), puerto 5432 | Neon (Postgres administrado) desde el Marketplace de Vercel |
-| Migraciones | `pnpm db:migrate` (`prisma migrate dev`, puede crear migraciones) | `pnpm db:deploy` (`prisma migrate deploy`, solo aplica las existentes) |
-| Datos | `pnpm db:seed`: usuario demo y 26 movimientos | Seed una única vez sobre la base de producción |
+| Migraciones | `pnpm db:migrate` (`prisma migrate dev`) | `pnpm db:deploy` (`prisma migrate deploy`, solo aplica las existentes) |
+| Datos | `pnpm db:seed`: usuarios demo y movimientos | Seed una única vez sobre la base de producción |
 | Variables | `.env` local (no se versiona); `.env.example` como plantilla | Variables de entorno del proyecto en Vercel |
 | `SESSION_SECRET` | Cualquier valor de 32+ caracteres | Secreto aleatorio (`openssl rand -base64 32`), nunca el del ejemplo |
-| Cookie de sesión | `httpOnly`, `SameSite=Lax`, **`secure=false`** (se usa `http://localhost`) | `httpOnly`, `SameSite=Lax`, **`secure=true`** (solo viaja por HTTPS) |
-| Cliente de Prisma | Se guarda en `globalThis` para no abrir conexiones nuevas en cada recarga | Una instancia por proceso |
-| `ALLOWED_DEV_ORIGINS` | Habilita la IP de la red local para probar en el celular | No tiene efecto: solo aplica a `next dev` |
+| Cookie de sesión | `httpOnly`, `SameSite=Lax`, `secure=false` (`http://localhost`) | `httpOnly`, `SameSite=Lax`, `secure=true` (solo HTTPS) |
+| Cliente de Prisma | En `globalThis` para no abrir conexiones nuevas en cada recarga | Una instancia por proceso |
+| `ALLOWED_DEV_ORIGINS` | Habilita la IP de la red local | Sin efecto: solo aplica a `next dev` |
 | Morph "Volver" | No se ve (no hay prefetch) | Funciona |
 | Tests e2e | `pnpm test:e2e` levanta `next dev` en el 3100 | Con `CI=1` levanta `next start` y prueba el build real |
 
-**Detalle importante:** el build de producción no se puede probar desde el celular por `http://` en la red local, porque la cookie `Secure` se descarta fuera de HTTPS (los navegadores solo hacen excepción con `localhost`). En Vercel hay HTTPS y no pasa.
+El build de producción no se podía probar desde el celular por `http://` en la red local, porque la cookie `Secure` se descarta fuera de HTTPS; T19 resolvió eso con una opción explícita y solo local.
 
-**Revisiones:**
-- `.gitignore` (scripts locales): aprobada.
-- Fix del morph de vuelta, e2e y checklist: aprobada, con 2 observaciones menores. Se aplicó la principal en dos pasos. Primero `test.fixme` → `test.fail`, porque `fixme` no ejecuta el cuerpo y nunca avisaría. Después, por otra observación de la revisión (`test.fail` aceptaba cualquier falla, hasta un login roto), un test normal que solo admite el timeout de la espera de la transición.
+**Cómo se verificó:** el mensaje de zod tiene un test que primero falló (RED). El comportamiento del botón atrás quedó fijado en un test que solo admite el timeout de la espera de la transición (primero `test.fixme`, que nunca ejecuta el cuerpo; después `test.fail`, que aceptaba cualquier falla; al final un test normal que distingue el error por tipo) y se pondrá en rojo el día que React anime esa navegación. Revisiones: `.gitignore` aprobada; T8 aprobada con 4 enfoques y en una segunda revisión de riesgo medio. **T7b (`54b7220`) no tiene una revisión registrada.**
 
-**Hallazgo probando la API con `curl`:** si el JSON del login venía *sin* `email` o `password`, zod respondía su mensaje por defecto en inglés ("Invalid input: expected string…"). La UI no se veía afectada porque el formulario siempre manda los campos, pero un cliente de la API sí. Se corrigió con `z.string({ error })` y un test que primero falló (RED).
+**Commits:** `c5cf5b4`, `54b7220`, `ab9d849`, `c4d0a2b`, `089f354`, `c3e2481`, `cb34a81`, `1e06f25`
 
-**Checklist del enunciado:** `docs/CHECKLIST.md`, con el estado de cada requerimiento y su evidencia.
+#### T10 — Transferencias y Recibir (06/10/2026)
 
-### T12a — Solo colores institucionales del club (07/10/2026)
+**Pedido:** que el dinero se pueda mover de verdad entre usuarios demo, y una pantalla para recibir.
 
-**Pedido:** la app tiene que usar únicamente los colores institucionales del club (granate Pantone 188 C, oro Pantone 618 C y Cool Gray 7C), sin el violeta, el naranja, el verde ni el ámbar del Figma, y sin desequilibrar el diseño.
+**Decisión:** transferencias reales y Recibir, las dos (decisión del candidato); sin botón de "acreditar" simulado. Se dividió en T10a (backend), T10b (envío) y T10c (Recibir y accesos desde Home).
 
-**Qué se hizo:**
+**Qué se hizo**
+
+- **T10a, backend:** helpers de centavos compartidos y parseo estricto de montos; segundo usuario demo (`hincha`), alias y CVU con dígitos verificadores; transferencia en **una sola transacción**: débito con un `UPDATE` condicional (`WHERE balance >= monto`, nunca sobregira con concurrencia), crédito al destinatario, los dos movimientos enlazados a un `Transfer` y un `CHECK (balance >= 0)` como red de seguridad. Idempotencia por clave del cliente: un reintento devuelve la transferencia original sin mover dinero dos veces; la misma clave con otros datos responde 409.
+- **CSRF:** el guard comparaba `Origin` con la URL del request, que refleja la dirección de escucha (`0.0.0.0` con `next dev -H`); ahora compara con el header `Host`, la misma regla que aplica Next a las Server Actions.
+- **T10b/c, UI:** flujo de tres pasos (destinatario, monto, revisión) con clave de idempotencia emitida por el servidor y Server Actions; pantalla Recibir con copiar y compartir (con respaldo para contextos no seguros); accesos rápidos en Home. Los e2e que mueven dinero corren después de los de solo lectura.
+
+**Cómo se verificó:** 439 unitarios y 38 de integración en verde al terminar la UI. La revisión de T10a pidió una corrección por un problema **crítico**: dos requests simultáneas con la misma clave podían responder 422 en lugar de repetir el resultado. Se reprodujo en rojo 3 de 3 veces con un duplicado desfasado y se corrigió volviendo a leer la clave confirmada ante un rechazo; el validador aprobó. El fix de CSRF se aprobó con 4 enfoques. La UI se aprobó con 3 advertencias que se cerraron en T14.
+
+**Commits:** `f40a503`, `d06518f`, `99748a8`, `b3a76d6`, `3ec1782`, `b94a234`, `79a1cfa`
+
+#### T17 — Dos monedas y formato argentino (06/10/2026)
+
+**Pedido:** que la Mastercard opere en dólares y la Visa en pesos, con saldos y movimientos realistas.
+
+**Decisión:** formato argentino para las dos monedas (`$ 312.400,50` y `US$ 978,85`), como desvío documentado del Figma ("978.85"): con pesos y dólares en la misma pantalla, un solo formato y símbolos distintos evitan leer el `$` de los pesos como dólares. Nunca se convierte ni se suman monedas.
+
+**Qué se hizo**
+
+- Un solo formateador para las dos monedas, construido desde centavos exactos, y un parser que acepta el formato argentino y rechaza lo ambiguo; un componente `Money` que lee el monto con su moneda en voz alta.
+- Tarjetas, filas y detalle con el formateador compartido; el resumen del mes devuelve un total por moneda.
+- Las transferencias acreditan en la tarjeta del destinatario de la misma moneda (`hincha` recibe una tarjeta en pesos); sin cuenta en esa moneda, se rechaza con `CURRENCY_MISMATCH`. Topes por moneda.
+- Seed: una suscripción en pesos en el mes actual.
+
+**Cómo se verificó:** revisión aprobada, con una advertencia que se corrigió de inmediato: la regla argentina de miles leía un `"10.555"` de la API como 10555, así que un cliente que mandara un decimal común podía mover mil veces el monto. Desde `f72883e` la API y el dominio solo aceptan montos canónicos (el punto es siempre el decimal) y el formulario convierte lo escrito antes de llegar a ellos.
+
+**Commits:** `da809a4`, `2097ce4`, `07f5230`, `b72b974`, `075f4cc`, `f72883e`, `e5825a2`, `04da40c`
+
+#### T13 — Vuelta de tarjeta y datos bajo demanda (06/10/2026)
+
+**Pedido:** faltaba el ojo en la Visa. Un ojo por tarjeta, y que la tarjeta se dé vuelta al tocarla.
+
+**Decisión:** el ojo revela saldo, número completo y CVV, **todo oculto por defecto** (decisión del candidato). Esto reemplaza la cookie de "ocultar saldo" de T6: recordar "visible" obligaría a mandar el saldo en el HTML inicial.
+
+**Qué se hizo**
+
+- **Datos bajo demanda:** Home renderiza la cara de la tarjeta sin saldo; ni el HTML ni el payload RSC traen saldo, número ni CVV. Al tocar el ojo, `GET /api/account/cards/:id/details` reverifica la sesión, busca la tarjeta por dueño (una ajena da 404) y responde con `Cache-Control: no-store`. Los datos se vuelven a ocultar a los 30 s, al ocultar la pestaña o al salir.
+- **Números ficticios:** PAN de 16 dígitos inventado, válido por Luhn y consistente con sus últimos 4. El CVV no se guarda (PCI DSS lo prohíbe): se deriva en el servidor con HMAC, solo para la demo.
+- **Vuelta:** giro 3D con resorte (banda, panel de firma, CVV); deslizar, inclinar o mantener presionado nunca la da vuelta; Enter y Espacio sí; con movimiento reducido es un fundido.
+
+**Cómo se verificó:** e2e de vuelta y de revelado por tarjeta, más un e2e que verifica que el HTML inicial no trae datos sensibles. Revisión aprobada; una advertencia (una tarjeta sin número guardado respondía 500 al revelar) se corrigió en `30b2de2`.
+
+**Commits:** `5f4b3cc`, `068fe0c`, `6c86e6a`, `1acf3f1`, `4b1ecaa`, `30b2de2`
+
+---
+
+### Fase 2 — Calidad y robustez
+
+#### T9b — Tarjetas que escalan con su propio ancho (06/10/2026)
+
+**Pedido (urgente, captura del candidato en Android):** a 320 px de ancho CSS se cortaba el último dígito de la tarjeta, a 280 px desaparecían los últimos 4 y a 200 px o menos la pantalla se desbordaba (el zoom de Android achica el viewport CSS).
+
+**Decisión:** la tarjeta usaba píxeles fijos dentro de un ítem de carrusel que mide un porcentaje del ancho. Se convirtió en un *size container* con unidades de container query, calibrado para quedar idéntico a 390 px.
+
+**Cómo se verificó:** e2e responsive de 240 a 768 px; revisión aprobada.
+
+**Commits:** `8240624`
+
+#### T14 — Barrido responsive y pulido de transferencias (06/10/2026)
+
+**Pedido:** que ninguna pantalla se desborde en anchos chicos y cerrar las advertencias de T10.
+
+**Qué se hizo**
+
+- Ninguna ruta se desborda de costado ni corta texto entre 240 y 1024 px, y ninguna scrollea de costado a 180–200 px; 390 px y más quedan idénticos. Un e2e audita cada ruta y estado.
+- Referencia corta y legible compartida por los dos movimientos (`ENV-7Q4K-92XA` / `REC-7Q4K-92XA`, base32 de Crockford), un solo formateador para el CVU enmascarado, el monto con coma se normaliza al salir del campo, el seed agrega una transferencia para "Recientes", orden determinista de recientes y, ante un rechazo del destinatario, se lo vuelve a confirmar.
+- Una referencia repetida se reintenta solo ante su propio índice único (`b25c29a`).
+- El e2e de "Volver" espera el prefetch real de la lista y los e2e de transferencias corren en serie.
+
+**Cómo se verificó:** revisión con 4 enfoques aprobada.
+
+**Commits:** `0dd6d7b`, `0436010`, `7977706`, `f881334`, `b25c29a`, `18194a6`
+
+#### T15a y T15b — Rendimiento medido (06/10/2026)
+
+**Pedido:** rendimiento percibido. Medir primero el build de producción y optimizar con números de antes y después.
+
+**Qué se hizo**
+
+- **Medición (T15a):** lo peor era el LCP de `/transferir` (2816 ms, por un HTML del servidor en `opacity: 0` hasta hidratar), zod en el bundle del cliente (89 KB gzip), el esqueleto en cada navegación desde Home por un prefetch parcial y dos pesos de Poppins sin uso.
+- **Arreglos (T15b):** prefetch completo de las pantallas probables (Home → `/movimientos` de 1153 a 287 ms en un teléfono limitado); el primer paso de `/transferir` se renderiza visible desde el servidor (LCP de 2816 a 952 ms); las reglas del cliente pasaron a módulos sin zod, con el schema del servidor como fuente de verdad; se quitaron los pesos de Poppins sin uso.
+- **Caché:** el prefetch completo dejaba `/movimientos` en caché 5 minutos, así que un ingreso enviado por otra persona podía tardar eso en verse; se limitó a 30 s (`staleTimes.static`). "Cargar más" incluye su validador (`zod/mini`) con la vista.
+
+**Cómo se verificó:** mediciones de antes y después sobre el build de producción. **T15 no tiene una revisión registrada.**
+
+**Commits:** `f95aa01`, `5886c32`, `ce05f5b`, `5d24596`, `1482292`, `92aa414`, `ca7e4b5`, `1c1a392`, `c2244aa`
+
+#### T16 — Base de datos propia para los tests (06/10/2026)
+
+**Pedido:** las corridas automáticas usaban la base de desarrollo y movieron dos veces los saldos que el candidato estaba probando a mano.
+
+**Qué se hizo**
+
+- Integración y e2e corren sobre `granabank_test`, creada, migrada y sembrada en cada corrida; el helper de URL rechaza cualquier base cuyo nombre no termine en `_test`, y el guard tiene tests.
+- En el mismo lote: el texto secundario pasó de `#8a8d9b` (3,3:1 sobre blanco) a `#707382`, el gris más claro del mismo tono que llega a 4,5:1 sobre todos sus fondos (decisión del candidato, ver T12); y la pantalla de transferir se achica de vuelta hacia Enviar (ver T15c).
+
+**Cómo se verificó:** e2e 49/49 dos veces y comprobación de que la base de desarrollo no cambió. **T16 no tiene una revisión registrada.**
+
+**Commits:** `3ec82d3`, `b1fc44f`, `94b8b6e`, `2ee0354`, `25a3dcb`, `762eab7`
+
+#### T19 — Vista previa de producción en el celular (06/10/2026)
+
+**Pedido:** probar el rendimiento real del build de producción desde el teléfono.
+
+**Decisión:** una opción explícita y solo local: `GRANABANK_LAN_PREVIEW=1` (`pnpm preview:lan`) emite una cookie de sesión sin `Secure` para que el login funcione por `http://<IP-de-la-red>`. Avisa en voz alta, está apagada por defecto y se niega a arrancar en Vercel o con un host público.
+
+**Cómo se verificó:** revisión con 4 enfoques aprobada; el refactor `d297369` decide la vista previa desde una sola fuente de "producción".
+
+**Commits:** `e815a7f`, `b08e6c7`, `d297369`
+
+#### T18 — Test inestable del header de vidrio (06/10/2026)
+
+**Pedido:** un e2e del header de vidrio con movimiento reducido fallaba 2 de 4 corridas completas y pasaba solo.
+
+**Decisión:** la causa era real, no del test: un scroll anterior a que cargara el renderer diferido de Motion se perdía y el header quedaba congelado. Los valores ligados al scroll ahora se escriben directo en el estilo del elemento.
+
+**Cómo se verificó:** `premium.spec.ts` diez veces seguidas, 80/80, dos veces.
+
+**Commits:** `12177ac`
+
+#### T18b — El seed nunca fecha movimientos en el futuro (07/10/2026)
+
+**Pedido:** un e2e de transferencias fallaba si el seed se corría antes de las 09:00.
+
+**Decisión:** el movimiento de Adobe de hoy se sembraba a las 09:00 hora local; antes de esa hora quedaba en el futuro, por encima de la transferencia del e2e. Las fechas salen ahora de `seedDate`, que nunca pasa de "ahora".
+
+**Cómo se verificó:** test unitario del recorte y e2e 70/70; revisado dentro del primer tramo de T12b.
+
+**Commits:** `51f740b`
+
+---
+
+### Fase 3 — Diseño y marca
+
+#### T9 — Pulido de las tarjetas (06/10/2026)
+
+**Pedido:** "los números de la Visa se ven horribles; todo centrado y alineado al detalle".
+
+**Qué se hizo:** Poppins no tiene cifras tabulares, así que cada columna del odómetro se dimensiona por su dígito final (había un hueco alrededor del "1"); los grupos enmascarados se centran sobre los dígitos; la marca de Visa es el logotipo real en lugar de una caja genérica y las dos marcas terminan en el borde del contenido. Las columnas del saldo oculto se dimensionan con un dígito neutro.
+
+**Cómo se verificó:** verificación visual a 3x y un test del kerning oculto contra un control visible. Tres revisiones de riesgo medio aprobadas.
+
+**Commits:** `9285923`, `b5f347f`, `ccec803`, `e3a0e8a`
+
+#### T12 — Una sola luz para toda la app (06/10/2026)
+
+**Pedido:** profundidad visual sobria en toda la app.
+
+**Decisión:** un solo sistema de luz, desde arriba a la izquierda: sombras en capas teñidas con la tinta y el granate, un borde superior especular y un degradé de la misma paleta en el ángulo de la luz. Los controles principales se hunden al presionarlos y los inputs se leen rehundidos. Los tokens viven en `globals.css`.
+
+**Cómo se verificó:** revisión con 4 enfoques aprobada. La revisión señaló que el texto secundario no llegaba a AA; el candidato eligió oscurecerlo (aplicado en `b1fc44f`, T16).
+
+**Commits:** `270281c`
+
+#### T21 — Marca del club y login (07/10/2026)
+
+**Pedido:** normalizar la marca con los colores institucionales del club y el escudo oficial, y rediseñar el login.
+
+**Decisión**
+
+- **Paleta:** granate `#70192D` (Pantone 188 C, reemplaza al `#7A1D2D` del Figma), oro `#B4982F` (Pantone 618 C: chip de moneda y acentos) y Cool Gray 7C `#9A999D`, con el contraste AA medido.
+- **Escudo:** el vector oficial del club, sin redibujarlo, modificarlo ni estirarlo; relleno granate sobre fondo claro e iniciales blancas. El efecto 3D sale solo de filtros CSS (sombras teñidas, luz desde arriba a la izquierda, un brillo especular sutil), con el vector intacto.
+- **Login:** degradé radial en granate (más claro alrededor del escudo, casi `#3A0D18` abajo), el escudo con estrellas, logotipo "GranaBank" en una slab serif libre (Arvo, reemplazada por Rokkitt en T25), controles adaptados al fondo oscuro y foco en oro.
+- Todos los colores escritos a mano pasaron a tokens. El README aclara que los recursos de marca pertenecen al club.
+
+**Cómo se verificó:** typecheck y unitarios en verde commit por commit (703/707/707), lint en verde y 70/70 e2e. Revisión con 4 enfoques aprobada, con 6 observaciones no bloqueantes (entre ellas el contraste del rojo de error) que se cerraron en T12a y T22.
+
+**Commits:** `61a425f`, `e9126b1`, `2c11f24`
+
+#### T12a — Solo colores institucionales del club (07/10/2026)
+
+**Pedido:** usar únicamente los colores institucionales del club (granate Pantone 188 C, oro Pantone 618 C y Cool Gray 7C), sin el violeta, el naranja, el verde ni el ámbar del Figma, y sin desequilibrar el diseño.
+
+**Decisión:** el rojo de error se mantiene como **excepción de accesibilidad** (confirmada por el candidato): se lee como error en cualquier contexto y el granate ya significa "dinero recibido". Se corrió hacia el tono del granate (`#B32D32`) y quedó bien separado de él en claridad.
+
+**Qué se hizo**
+
 - Todos los colores ya eran tokens en `globals.css`, así que se cambiaron los **valores**, no los nombres: los componentes y sus tests (`text-subscription`, `bg-sent-soft`…) no se tocaron.
 - Suscripción y pendiente → oro oscurecido (`#6F5C14`); enviado → Cool Gray oscurecido (`#5E5D61`); completado → granate; recibido sigue granate. Los azulejos son 25 % del color oficial sobre blanco, como `primary-soft`.
 - Texto principal y fondo pasaron a neutros sobre el tono del Cool Gray (`#1B1A1D`, `#F9F9FA`), sin el tinte azul del Figma. `APP_BACKGROUND_COLOR` (barra del navegador y manifest) se actualizó con el CSS.
-- **Excepción:** el error sigue rojo (se lee como error en cualquier contexto y el granate ya es "dinero recibido"), corrido hacia el tono del granate (`#B32D32`) y bien separado de él en claridad.
 
-**Tests primero:** `src/app/brand-palette.test.ts` lee `globals.css`, resuelve los `var()` y verifica (1) que cada token tenga su valor de la lista permitida, (2) que todo token que no sea neutro esté en el tono del granate o del oro (salvo la familia `danger`) y (3) que cada par texto/fondo nuevo llegue a 4,5:1. Falló (9 tests en rojo) antes de cambiar el CSS y pasó después.
+**Cómo se verificó:** test primero. `src/app/brand-palette.test.ts` lee `globals.css`, resuelve los `var()` y verifica (1) que cada token tenga un valor de la lista permitida, (2) que todo token no neutro esté en el tono del granate o del oro (salvo la familia `danger`) y (3) que cada par texto/fondo llegue a 4,5:1. Falló (9 tests en rojo) antes de cambiar el CSS y pasó después; 729 unitarios en verde. Todos los pares de texto de los roles quedan entre 5,2:1 y 17,3:1. Revisado dentro del primer tramo de T12b.
 
-**Resultado:** desaparece la limitación conocida del violeta (no llegaba a AA); ahora todos los pares de texto de los roles están entre 5,2:1 y 17,3:1.
+**Commits:** `ab2c023`
 
-### T12b-B — Un solo lenguaje de movimiento (07/10/2026)
+#### T12b-A — UX bloqueante: transferir enfocado y cerrar sesión fuera de la barra (07/10/2026)
+
+**Pedido (auditoría de UX):** en un iPhone (390×844) el "Continuar" del paso del monto y medio "Motivo" quedaban debajo de la barra inferior translúcida; "Cerrar sesión" era la tercera pestaña, en plena zona del pulgar; el monto no agrupaba miles al escribir y la transferencia arrancaba desde la tarjeta en dólares.
+
+**Decisión:** "saldo visible por defecto", que también proponía la auditoría, **no se hizo**: el candidato mantuvo la decisión de T13 (todo oculto por defecto).
+
+**Qué se hizo y por qué**
+
+- **Transferir es una tarea enfocada:** la barra inferior se oculta en `/transferir` (pasos, comprobante, error) y `--nav-clearance` baja a 0 sin ella. La única salida es terminar o "Volver", como en las apps de bancos; la pantalla de error de `/transferir` ganó su propio "Volver".
+- **Botón fijo abajo (`StepActions`):** la acción principal de cada paso es `sticky` al fondo con `mt-auto`. Se eligió `sticky` y no `fixed` para que el botón siga en el flujo del documento (orden de foco y lectura naturales). Sube por encima del teclado con `visualViewport`.
+- **Deshabilitado claro:** gris plano con texto apagado; antes era el granate al 70 % y parecía tocable.
+- **Barra inferior = secciones:** Inicio · Movimientos. "Transferir" no es pestaña: abriría una pantalla sin barra y Enviar/Recibir ya están a un toque en Home.
+- **Perfil:** las iniciales en el header de Home abren una hoja inferior (`<dialog>` modal nativo: foco atrapado, Escape, devuelve el foco) con nombre, email y "Cerrar sesión", que pide confirmación. Se reutiliza la misma Server Action `logout`.
+- **Monto con miles al escribir:** `editAmount` reescribe el texto en cada tecla y recalcula el cursor; solo cambia la vista, lo que muestra se parsea igual con `parseAmount`.
+- **Tarjeta por defecto:** la de pesos, la de todos los días.
+
+**Cómo se verificó:** rojo → verde en `defaultSourceCardId`, `editAmount` (43 casos), el monto en `TransferFlow`, `BottomNav`, `ProfileMenu` y `keyboardInset`. E2E nuevo `focused-flows.spec.ts` (sin barra en el flujo, cada botón visible y sin nada encima con `elementFromPoint`, cerrar sesión desde la hoja); falló 3 de 4 antes del cambio. Revisado en los tramos de T12b (ver T12b-D).
+
+**Commits:** `8f218f9`, `e93d4c3`, `14a0787`, `a4d3c6a`, `66bb932`, `d3f3228`
+
+#### T12b-D — Lista de movimientos agrupada y montos con signo (07/10/2026)
+
+**Pedido (auditoría de UX):** cada fila era su propia tarjeta con sombra (entraban ~3 filas sobre la barra), una lista de 20 filas no tenía fechas y los montos sin signo, coloreados por tipo, no dejaban leer qué entra y qué sale.
+
+**Decisión:** **el candidato revirtió la decisión del 06/10 (T7d)**: se prioriza la legibilidad de la lista sobre la fidelidad al Figma en este punto.
+
+**Qué se hizo**
+
+- **Superficie agrupada:** las filas de Home y Movimientos comparten una superficie blanca (`grouped-list`) con separadores de 1 px que arrancan después del ícono. Filas de ~64 px que se tiñen al pasar el mouse en lugar de elevarse.
+- **Días en Movimientos:** `groupMovementsByDay` agrupa por día calendario de Buenos Aires: "Hoy", "Ayer", "5 de octubre", y el año solo si no es el actual. Los encabezados quedan pegados debajo del buscador y los chips (`StickyFiltersHeight` publica su alto en una variable CSS). "Hoy" lo decide el servidor una vez, así el navegador no nombra distinto un día al hidratar. Una tanda de "Cargar más" que continúa un día se suma a su grupo.
+- **Home** usa un solo grupo, sin encabezados: cinco filas partidas en días se leerían como fragmentos.
+- **Signo por dirección:** sale → `−` (U+2212), entra → `+`. Entra solo `RECEIVED`; salen `SENT` y `SUBSCRIPTION`. El monto es granate si entra y tinta si sale; el color del tipo queda en el ícono. El detalle usa la misma convención.
+
+**Cómo se verificó:** rojo → verde en `dayOf`/`formatDayLabel`, `groupMovementsByDay` y las filas con signo, tono y lectura ("menos 95 dólares"). E2E de encabezados pegados y de días sin repetir tras "Cargar más". Al integrar T12b (A, B y D): 816 unitarios y 76/76 e2e, incluidos los que mueven dinero; la revisión de alto riesgo excedió el presupuesto como un solo candidato y se partió en 4 tramos, todos aprobados; 12 observaciones pasaron a T22.
+
+**Commits:** `1ea74a5`, `3befcc6`
+
+#### T12b-C2 — Tarjetas en español y segunda tarjeta en oro (07/10/2026)
+
+**Pedido:** las tarjetas decían "Balance" y "Exp. Date", el número oculto usaba asteriscos y la segunda tarjeta era rosa, fuera de los colores del club.
+
+**Qué se hizo**
+
+- **Etiquetas en español:** "Saldo" y "Vence".
+- **Número oculto con viñetas:** `•••• •••• •••• 1234`, agrupado 4-4-4-4 como el revelado (`formatMaskedCardNumber`). La viñeta queda en el centro óptico de los dígitos, sin corrimiento.
+- **Segunda tarjeta en oro satinado** (`card-gold` `#DCCA8E`, sombra `#CDB66A`, etiquetas `#4D4219`). Se descartó una tarjeta grafito: la marca de Visa va en su azul oficial y sobre un fondo oscuro no se leería. Con el oro, las dos tarjetas son los dos colores del club; el chip de moneda toma el otro color.
+
+**Cómo se verificó:** rojo → verde en `formatMaskedCardNumber`, `PaymentCard`, `CardReveal` y `brand-palette.test.ts` (tokens nuevos y contrastes: texto 9,0:1 / 7,3:1, etiquetas 6,1:1 / 5,0:1, Visa 8,7:1 / 7,1:1). Sin cortes de 240 a 390 px.
+
+**Commits:** `b8ce6ed`
+
+#### T12b-C3 — QR en Recibir y errores del login sobre granate (07/10/2026)
+
+**Pedido (auditoría de UX):** Recibir no tenía QR y su recuadro informativo era un cuarto estilo de superficie; en el login, el aviso de credenciales incorrectas era un recuadro rosa pálido con texto rojo sobre el granate.
+
+**Decisión:** el QR es **texto plano** a propósito (`GranaBank` / `Alias: …` / `CVU: …`); no se imita un QR interoperable de pagos, que emite un adquirente registrado. Librería `uqr` (sin dependencias); se descartó `qrcode` por sus tres dependencias.
+
+**Qué se hizo**
+
+- `receiveQrPayload` (dominio, puro) arma el contenido y rechaza un alias o CVU inválido. `QrCode` lo dibuja en el servidor como un solo `<path>` SVG, granate sobre blanco, zona de silencio de 4 módulos, corrección H y sin logo.
+- El recuadro informativo pasó a una nota sin fondo con el ícono en el azulejo suave.
+- **Login:** el aviso es un recuadro granate oscuro translúcido con texto `#FFB4AB` (8,2:1 en la zona más clara del fondo, 9,9:1 en la más oscura); los errores de campo usan el mismo color e ícono. Se mantienen `role="alert"` y el mensaje genérico.
+
+**Cómo se verificó:** rojo → verde en el payload, la matriz → path SVG, `QrCode` con `role="img"` y el aviso del login; `brand-palette.test.ts` suma el contraste del aviso compuesto.
+
+**Commits:** `18fac3a`, `65dda61`
+
+#### T12b-C1 — Barra de navegación tipo iOS y acciones en el detalle (07/10/2026)
+
+**Pedido (auditoría de UX):** la píldora "Volver" con sombra pesaba más que el contenido, y el detalle era un callejón sin salida que además repetía el estado.
+
+**Qué se hizo**
+
+- **`NavBar`:** chevron de 44×44 con nombre "Volver", título corto centrado y un lugar a la derecha ("Paso 2 de 3"). Se pega arriba y se vuelve vidrio con el scroll. Conserva el link real, el prefetch completo y los tipos de transición. Se borraron `BackLink` y `back-control.ts`.
+- **Detalle:** se sacó la fila "Estado" (queda la etiqueta junto al monto) y se agregó una lista de acciones: compartir comprobante (Web Share API, o copiar con "Copiado"), copiar referencia y repetir transferencia.
+- **Repetir:** solo para transferencias enviadas a una cuenta con alias. Lleva a `/transferir?to=alias`; el servidor valida el alias con las reglas del formulario (nunca un CVU en una URL) y lo resuelve como la búsqueda del paso 1.
+
+**Cómo se verificó:** rojo → verde en `NavBar`, `MovementActions`, `movementShareText`, `parseTransferTo`/`resolveTransferPrefill`, el detalle y `TransferFlow` con prefill. Integración: `findById` trae el alias solo del lado que envía. E2E: chevron ≥ 44 px, un estado, copiar, repetir; `?to=` con un CVU o el alias propio se ignora.
+
+**Commits:** `7c70f56`, `df99739`
+
+#### T12b-C — Integración de C1, C2 y C3 (07/10/2026)
+
+**Pedido:** integrar las tres ramas paralelas, que salieron de la misma base, en orden C2 → C3 → C1.
+
+**Qué se hizo**
+
+- El único conflicto fue esta bitácora; quedaron las tres entradas.
+- "Copiar" al lado de cada valor en Recibir, dentro del mismo `<dd>`.
+- CVU agrupado de a cuatro desde el final (`28 5059 0940 0904 1813 5201`), así nunca termina en un par suelto y el último grupo son los 4 dígitos que deja ver el enmascarado. Un solo formateador (`groupForReading`) para los dos.
+- Esqueleto de Recibir con el marco de la `NavBar`.
+
+**Tests que fallaban bajo carga:**
+
+- `card-flip.spec.ts` fallaba 9 de 10 con 12 workers: el test tocaba la tarjeta antes de que llegaran las tarjetas y terminara la transición. Ahora espera ambas cosas: 50 de 50.
+- La intro de marca podía quedar montada (1 en 95 con 12 workers): el `animationend` podía perderse durante la hidratación. Ahora también se desmonta con la promesa `finished` de la animación (test unitario primero).
+- "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos; en una máquina tranquila pasa siempre. Queda anotado, sin cambios.
+
+**Cómo se verificó:** 874 unitarios, 54 de integración y 78/78 e2e, incluidos los que mueven dinero. Revisión de alto riesgo partida en 3 tramos, todos aprobados; 12 observaciones pasaron a T22.
+
+**Commits:** `95e5c36`, `59366b8`, `9e5bc65`, `7fefb64`, `4ecb477`, `2128ab3`, `32fcfd2`
+
+---
+
+### Fase 4 — Movimiento
+
+#### T6 — Animaciones y valor agregado (05/10/2026)
+
+**Pedido:** animaciones con sentido, ocultar el saldo y un resumen del mes.
+
+**Decisión:** cada animación *comunica* algo (de dónde viene un elemento, que algo cambió, que se tocó un botón). Duran entre 150 y 300 ms, animan solo `transform` y `opacity` y **se desactivan con "reducir movimiento"**, con tests que lo verifican. No se agregaron librerías.
+
+**Qué se hizo**
+
+| Feature | Decisión y por qué |
+|---|---|
+| Tokens de movimiento en `globals.css` | Duraciones y curvas definidas una sola vez. |
+| Feedback al tocar | Filas, chips y botones se achican a 0,97. |
+| Esqueletos con brillo | Indican que algo está cargando y no que la pantalla está rota. |
+| Ícono que viaja de la lista al detalle | React `<ViewTransition>`, incluido en el App Router de Next 16. Solo se anima el par tocado. |
+| Filas que entran escalonadas | Solo cuando una fila se inserta; nunca se repite en un re-render. |
+| Saldo que cuenta hacia arriba | El último cuadro usa el formateador real; los lectores de pantalla solo escuchan el valor final. |
+| Ocultar saldo | Preferencia en una cookie que lee el servidor, para que el saldo oculto nunca parpadee visible. (Reemplazado en T13 por datos bajo demanda.) |
+| Resumen del mes | Ingresos = recibidos; egresos = enviados + suscripciones; solo completados. La base suma con `groupBy` sobre `Decimal` y los centavos se combinan como enteros. El mes empieza a medianoche de Buenos Aires. Endpoint `GET /api/movements/summary?month=AAAA-MM`. |
+
+**Limitación de entonces:** con el saldo oculto, el valor igual viajaba en los datos de la vista. T13 la eliminó: ahora el saldo no está en el HTML inicial.
+
+**Cómo se verificó:** unitarios 263/263 · integración 21/21 · e2e 24/24 (dev y producción) · build ✅. Video en `docs/screenshots/motion-demo.webm`. Seguimientos (T6b): el mes del resumen se limita a 2000-01…2100-12 (`da04d2d`), el hover de las filas respeta "reducir movimiento" (`4eb6814`) y los tests son deterministas (`8a67dfd`). Un test del saldo **pasaba por casualidad** (verificaba `0.00` porque la animación no avanzaba en jsdom); ahora verifica el saldo real. **T6 no tiene una revisión registrada** (ver Proceso y verificación).
+
+**Commits:** `5a6ed87`…`dd9eb60` (11), `ee38e35`, `da04d2d`, `4eb6814`, `8a67dfd`, `cb048be`
+
+#### T7a — Versión premium (06/10/2026)
+
+**Pedido:** integrar la rama `feat/premium-motion`, hecha en un worktree aparte y nunca integrada.
+
+**Decisión:** en T6 se evitó sumar librerías; aquí se agrega `motion`, porque la física de resortes es difícil de lograr bien a mano. Se carga por partes (`LazyMotion`) y respeta "reducir movimiento".
+
+**Qué se hizo:** integración con *fast-forward*, sin conflictos.
+
+| Feature | Qué aporta |
+|---|---|
+| Tarjeta "viva" | Se inclina con el dedo o el mouse, con un brillo que la recorre; el carrusel tiene profundidad. |
+| Saldo tipo odómetro | Los dígitos ruedan como un contador mecánico; reemplaza al conteo lineal de T6. |
+| Header de vidrio y nav con indicador | El header se vuelve translúcido al hacer scroll; la píldora granate se desliza a la pestaña activa. |
+
+**Cómo se verificó:** suites completas tras el fast-forward; la regla de `.gitignore` asociada (`c5cf5b4`) se revisó y aprobó.
+
+**Commits:** `fa9be8c`, `fd70aa2`, `e1cac02`, `b8f428d`, `449eb72`, `3c15bde`
+
+#### T15c — Enviar y Recibir se expanden en su pantalla (06/10/2026)
+
+**Pedido:** disimular la latencia con movimiento, sin demorar nunca contenido que ya está listo.
+
+**Qué se hizo:** un *container transform* (React `ViewTransition` compartido, 280 ms) hace crecer el acceso rápido hasta la pantalla de destino, y "Volver" lo achica de vuelta (`94b8b6e`). Los destinos están precargados por completo, así el par existe en el momento del cambio. Con movimiento reducido el cambio es instantáneo.
+
+**Cómo se verificó:** e2e del cierre del morph. **Sin revisión registrada (forma parte de T15).**
+
+**Commits:** `0ada6f9`, `94b8b6e`
+
+#### T20 — Navegación tipo iOS (06/10/2026)
+
+**Pedido:** que la navegación se sienta de iOS/macOS.
+
+**Qué se hizo:** push y pop deslizan la pantalla sobre la anterior con paralaje (tipos de transición `nav-forward`/`nav-back`); las pestañas cambian con un fundido; header y barra inferior quedan quietos; los esqueletos se disuelven en el contenido; una intro de marca se reproduce una vez en la carga en frío sin demorar el LCP. Los morphs existentes se componen con esto. El botón atrás del navegador sigue sin animación (limitación de React, ver T7).
+
+**Cómo se verificó:** e2e 70/70 cuatro veces y LCP sin cambios. Revisión con 4 enfoques aprobada. Un arreglo posterior (`273c6fc`): sin `document.activeViewTransition` (Safari, Firefox), el guard de toques suponía una transición siempre en curso y podía robar toques; ahora "desconocido" significa "no".
+
+**Commits:** `20c027c`, `98ed24c`, `273c6fc`, `f5d0540`
+
+#### T12b-B — Un solo lenguaje de movimiento (07/10/2026)
 
 **Pedido:** el movimiento tenía que sentirse de iOS, no de demo: había ~9 duraciones, 3 curvas, 6 resortes (varios con rebote) y efectos decorativos.
 
-**Lenguaje de movimiento** (`globals.css` + `shared/ui/motion/tokens.ts` / `springs.ts`):
+**Decisión: un solo lenguaje** (`globals.css` + `shared/ui/motion/tokens.ts` / `springs.ts`):
 
 | Token | Valor | Uso |
 | --- | --- | --- |
@@ -488,206 +839,195 @@ Un test del saldo **pasaba por casualidad**: la animación nunca avanzaba en jsd
 
 No son duraciones (y se documentan así): el escalonado de filas (40 ms), el período del brillo del esqueleto (1,4 s) y la espera de la intro (420 ms).
 
-**Qué se sacó y por qué:**
-- Barrido de luz de 1,2 s sobre la primera tarjeta: decoración que se repetía en cada carga.
-- `blur` en transiciones (reveal 2 px, saldo 6 px): repinta la capa cada cuadro y se lee "efecto"; ahora opacidad + 4 px.
-- Rebotes: inclinación (ζ 0,58), check de éxito (pop 380/22), píldora; todo pasa al resorte crítico. El check ya no salta: el badge aparece y el trazo se dibuja en ~280 ms.
-- Fundido + escalado al cambiar de pestaña: una tab bar nativa cambia al instante.
-- Filas que volvían a entrar con cada filtro y con "Cargar más": ahora solo la primera lista de la carga, hasta 6 filas escalonadas (`row-entrance.ts` marca `<html data-rows-entered>` cuando terminan).
-- Brillo y sombra de la tarjeta, un poco más tenues.
+**Qué se hizo**
 
-**Se mantuvo:** push/pop con paralaje (400 ms, pop con sus propios keyframes), rodillo del saldo, píldora, vuelta de tarjeta, presión a 0,97, esqueleto → contenido y todos los modos de movimiento reducido.
+- Se quitaron: el barrido de luz de 1,2 s sobre la primera tarjeta; el `blur` en transiciones (ahora opacidad + 4 px); los rebotes (todo pasa al resorte crítico; el check de éxito se dibuja en ~280 ms); el fundido + escalado al cambiar de pestaña; las filas que volvían a entrar con cada filtro (ahora solo la primera lista, hasta 6 filas).
+- Se mantuvieron: push/pop con paralaje, rodillo del saldo, píldora, vuelta de tarjeta, presión a 0,97, esqueleto → contenido y todos los modos de movimiento reducido.
+- La hoja de perfil y los pasos de transferir usan los tokens compartidos.
+- La intro de marca se desmonta aunque su disolución termine antes de hidratar (`5937865`).
 
-**Tests primero:** `tokens.test.ts` (3 duraciones, 1 curva, sin tiempos sueltos en CSS ni en componentes, sin `blur` en keyframes, pestañas sin animación), `springs.test.ts` (ζ ≥ 1 salvo el rodillo), `row-entrance.test.ts` y el saldo sin desenfoque: en rojo antes del cambio, verdes después. Los e2e que fijaban el barrido, el fundido de pestañas y las filas en cada filtro se reescribieron para fijar el comportamiento nuevo. De paso, la intro de marca se desmonta aunque su disolución termine antes de hidratar (antes podía quedar montada).
+**Cómo se verificó:** rojo → verde en `tokens.test.ts` (3 duraciones, 1 curva, sin tiempos sueltos, sin `blur` en keyframes), `springs.test.ts` (ζ ≥ 1 salvo el rodillo), `row-entrance.test.ts` y el saldo sin desenfoque. Los e2e que fijaban el comportamiento viejo se reescribieron para el nuevo. Revisado en los tramos de T12b (ver T12b-D).
 
----
+**Commits:** `5937865`, `38508a5`, `225ba72`, `c22c3bb`, `cf1d1ae`, `34513fc`
 
-### T12b-D — Lista de movimientos agrupada y montos con signo (07/10/2026)
+#### T23 — Motion v2: manipulación, no navegación (07/10/2026)
 
-**Pedido:** la auditoría de UX mostró que cada fila era su propia tarjeta con sombra (pesado: entraban ~3 filas sobre la barra), que una lista de 20 filas no tenía fechas y que los montos sin signo, coloreados por tipo, no dejaban leer qué entra y qué sale.
+**Pedido:** que el movimiento se sienta como desplazar cosas con el dedo y no solo como tocar botones, inspirado en una referencia de video elegida por el candidato: Home que se construye desde un contenedor que sube, un carrusel arrastrable de destinatarios, el paso del monto que se transforma en su lugar y una sola superficie sin cortes de pantalla. El candidato eligió los tres paquetes: M1 (transferencia continua), M2 (gestos globales) y M3 (coreografía de Home e inercia de las tarjetas).
 
-**Decisión revertida:** en T7 (06/10) se había decidido mantener las filas como tarjetas separadas y los montos sin signo, como en el Figma. **El usuario revirtió esa decisión el 07/10/2026**: se prioriza la legibilidad de la lista sobre la fidelidad al Figma en este punto.
+**Decisión:** el saldo sigue oculto por defecto (T13); el conteo se reproduce al revelarlo, nunca al cargar. Cada gesto tiene un equivalente sin gesto (botones o teclado).
 
-**Qué se hizo:**
-- **Superficie agrupada:** las filas de Home y de Movimientos comparten una sola superficie blanca (`grouped-list` en `globals.css`) con separadores de 1 px que arrancan después del ícono. Filas de ~64 px (ícono de 40 px), sin elevarse al pasar el mouse: se tiñen, como las filas de una lista. El foco se dibuja hacia adentro porque la superficie recorta sus bordes.
-- **Días en Movimientos:** `groupMovementsByDay` agrupa por día calendario de Buenos Aires (`dayOf` y `formatDayLabel` en `src/shared/lib/dates.ts`): "Hoy", "Ayer", "5 de octubre", y "31 de diciembre de 2025" cuando el año no es el actual. Los encabezados quedan pegados debajo del buscador y los chips: un componente sin vista (`StickyFiltersHeight`) mide ese bloque y publica su alto en una variable CSS. "Hoy" lo decide el servidor una vez, así el navegador no puede nombrar distinto un día al hidratar. La primera página y las de "Cargar más" son una sola lista, así una página que continúa un día se suma a su grupo.
-- **Home** usa un solo grupo, sin encabezados: cinco filas partidas en dos o tres días se leerían como fragmentos, y "Últimos movimientos" ya dice que son los más nuevos.
-- **Signo por dirección:** sale → `−` (U+2212), entra → `+`. Entra solo `RECEIVED`; salen `SENT` y `SUBSCRIPTION` (débito automático), con la misma regla que el resumen del mes. El monto es granate si entra y tinta si sale; el color del tipo queda en el ícono. El detalle usa la misma convención (`MovementAmount`).
-- Esqueletos dentro de una superficie agrupada, con encabezado de día en Movimientos.
+**Qué se hizo** (tres ramas en paralelo, integradas en orden transferencia → gestos → Home):
 
-**Tests primero:** primero los tests de `dayOf`/`formatDayLabel` (Hoy, Ayer, cambio de mes y de año, zona horaria), de `groupMovementsByDay` (orden, unión de páginas) y los de fila/detalle/lista con signo, tono y lectura ("menos 95 dólares", "Recibido"); fallaron (5 y 7 en rojo) y pasaron después. En e2e, la lista se busca como región "Lista de movimientos"; se agregó un test de encabezados pegados debajo de los filtros y de días sin repetir tras "Cargar más". Como Home ahora es más corta (scrollea ~56 px a 390×844), los tests del header de vidrio scrollean 52 px en lugar de 200.
-
----
-
-### T12b-A — UX bloqueante: transferir enfocado y cerrar sesión fuera de la barra (07/10/2026)
-
-**Pedido (auditoría de UX):** en un iPhone (390×844) el "Continuar" del paso del monto y medio "Motivo" quedaban debajo de la barra inferior translúcida; "Cerrar sesión" era la tercera pestaña, en plena zona del pulgar; el monto no agrupaba miles al tipear y la transferencia arrancaba desde la tarjeta en dólares.
-
-**Qué se hizo y por qué:**
-- **Transferir es una tarea enfocada:** la barra inferior se oculta en `/transferir` (pasos, comprobante, error) y `--nav-clearance` baja a 0 sin ella (`:root:not(:has([data-bottom-nav]))`). La única salida es terminar o "Volver", como en las apps de bancos; por eso la pantalla de error de `/transferir` ganó su propio "Volver".
-- **Botón fijo abajo (`StepActions`):** cada paso llena la pantalla y su acción principal es `sticky` al fondo con `mt-auto`: en un paso corto queda abajo, en uno largo no se va de la pantalla. Se eligió `sticky` y no `fixed` para que el botón siga en el flujo del documento (orden de foco y lectura naturales, sin calcular alturas). Sube por encima del teclado con `visualViewport` (iOS y Chrome solo achican el viewport visual). En "Destinatario" el botón queda debajo de "Recientes" y envía el formulario con el atributo `form`.
-- **Deshabilitado claro:** gris plano con texto apagado, sin el brillo ni la sombra; antes era el granate al 70 % y parecía tocable.
-- **Barra inferior = secciones:** quedó Inicio · Movimientos. No se agregó "Transferir" como pestaña: abriría una pantalla sin barra (la pestaña nunca se vería activa) y Enviar/Recibir ya están a un toque en Home.
-- **Perfil:** las iniciales en el header de Home abren una hoja inferior (`<dialog>` modal nativo: foco atrapado, Escape, devuelve el foco) con nombre, email y "Cerrar sesión", que pide confirmación ("¿Cerrar sesión?", el foco va a "Cancelar"). Se reutiliza la misma Server Action `logout`.
-- **Monto con miles al tipear:** `editAmount` reescribe el texto en cada tecla y calcula dónde va el cursor contando dígitos y separador decimal. Solo cambia la vista: lo que muestra se parsea igual con `parseAmount` (sin tocar el servidor). Un punto tipeado queda "abierto" hasta que los dígitos siguientes deciden si es decimal o de miles, igual que el parser.
-- **Tarjeta por defecto:** la de pesos. La app no registra la última tarjeta usada, así que no hay nada mejor que preferir.
-
-**Tests primero (rojo → verde):** `defaultSourceCardId` (2 tests en rojo), `editAmount` (43 casos: agrupar, decimal, borrar sobre un punto, cursor en el medio, pegar), el monto en `TransferFlow` (agrupa y mantiene el cursor), `BottomNav` (sin botón de salir, oculta en `/transferir`), `ProfileMenu` (confirmación, cancelar, foco) y `keyboardInset`. E2E nuevo `focused-flows.spec.ts`: sin barra en el flujo, cada botón visible y sin nada encima (`elementFromPoint`) a 390×844, la barra vuelve al salir y cerrar sesión desde la hoja; falló (3 de 4) antes del cambio.
-
-**Pendiente (no se hizo):** "saldo visible por defecto". Choca con la decisión de T13 (el ojo revela saldo, número y CVV, todo oculto por defecto, y el saldo no viaja en el HTML) y no existe una cookie de "ocultar saldo" que conservar. Queda para que se decida explícitamente.
-
-### T12b-C2 — Tarjetas en español y segunda tarjeta en oro (07/10/2026)
-
-**Pedido:** las tarjetas de Home decían "Balance" y "Exp. Date", el número oculto usaba asteriscos y la segunda tarjeta era rosa, fuera de los colores institucionales del club.
-
-**Qué se hizo y por qué:**
-- **Etiquetas en español:** "Saldo" y "Vence" (el reverso ya decía "Firma autorizada", "CVV" y "Tocá para volver").
-- **Número oculto con viñetas:** `•••• •••• •••• 1234`, agrupado 4-4-4-4 como el número revelado (`formatMaskedCardNumber`, función pura). La viñeta queda en el centro óptico de los dígitos, así que se quitó el corrimiento que necesitaba el asterisco. Sin clipping de 240 a 390 px.
-- **Segunda tarjeta en oro satinado** (`card-gold` `#DCCA8E`, sombra `card-gold-shade` `#CDB66A`, etiquetas `card-gold-label` `#4D4219`, todo en el tono del oro Pantone 618 C). Se descartó una tarjeta grafito: la marca de Visa va en su azul oficial, sin tocar, y sobre un fondo oscuro no se leería. Con el oro las dos tarjetas son los dos colores del club, como el escudo. El chip de moneda toma el otro color: oro sobre granate, granate sobre oro.
-- Contraste: texto 9,0:1 / 7,3:1 (claro / sombra), etiquetas 6,1:1 / 5,0:1, marca de Visa 8,7:1 / 7,1:1.
-
-**Tests primero (rojo → verde):** `formatMaskedCardNumber` (2 en rojo), etiquetas y viñetas en `PaymentCard` y `CardReveal` (5 en rojo), y `brand-palette.test.ts` con los tokens nuevos en la lista permitida, sus pares de contraste y el azul de Visa sobre cada parada (7 en rojo). Los e2e de `card-reveal.spec.ts` esperan las viñetas.
-
----
-
-### T12b-C3 — QR en Recibir y errores del login sobre granate (07/10/2026)
-
-**Pedido (auditoría de UX):** Recibir no tenía QR y su recuadro informativo era un cuarto estilo de superficie; en el login, el aviso de credenciales incorrectas era un recuadro rosa pálido con texto rojo pegado sobre el granate, distinto del rojo claro de los errores de cada campo.
-
-**Qué se hizo:**
-- **QR de Recibir:** `receiveQrPayload` (dominio, puro) arma `GranaBank` / `Alias: …` / `CVU: …` y rechaza un alias o CVU inválido. Es texto plano a propósito: no se finge un QR de "Transferencias 3.0" (payload EMVCo de un adquirente registrado). `QrCode` (`src/shared/ui/qr/`) lo dibuja en el servidor como un solo `<path>` SVG (las corridas de módulos se unen en rectángulos, sin costuras al escalar), granate sobre blanco, zona de silencio de 4 módulos, corrección H y sin logo. Ancho fluido hasta 208 px. Librería: `uqr` (sin dependencias); se descartó `qrcode` por sus tres dependencias.
-- **Recuadro informativo:** dejó de ser una caja rosada; es una nota sin fondo con el ícono en el azulejo suave de la app. Quedan dos superficies en la pantalla: la tarjeta blanca y el texto.
-- **Login:** el aviso es un recuadro granate oscuro translúcido (`primary-deep` al 60 %) con anillo fino, ícono y texto `#FFB4AB`: 8,2:1 sobre la zona más clara del fondo, 9,9:1 en la más oscura. Los errores de campo usan el mismo color y el mismo ícono. Se mantienen `role="alert"` y el mensaje genérico (no revela si el email existe); la lógica de autenticación no se tocó.
-
-**Tests primero:** payload del QR, matriz → path SVG, `QrCode` con `role="img"` y etiqueta, y el aviso del login con sus clases: en rojo antes del cambio, verdes después. `brand-palette.test.ts` suma el contraste del aviso compuesto sobre el fondo.
-
-**Pendiente (resuelto en la integración, ver T12b-C):** "Copiar" al lado del valor y el agrupado del CVU (que terminaba en un par suelto) necesitaban tocar `ReceiveDetailsCard` y dos tests de la API, fuera del alcance autorizado de esta tarea.
-
----
-
-### T12b-C1 — Barra de navegación tipo iOS y acciones en el detalle (07/10/2026)
-
-**Pedido (auditoría de UX):** la píldora "Volver" con sombra pesaba más que el contenido de las pantallas apiladas, y el detalle del movimiento era un callejón sin salida que además repetía el estado (etiqueta + fila "Estado").
-
-**Qué se hizo y por qué:**
-- **`NavBar`** (`shared/ui`): chevron solo de 44×44 con nombre "Volver", título corto centrado ("Movimiento", "Transferir", "Recibir") y un lugar a la derecha ("Paso 2 de 3"). Se pega arriba y se vuelve vidrio ligado al scroll, sin duración propia. Se conservan el link real, el `prefetch` completo y los tipos de transición (pop, o cierre de acción rápida), así que el pop y los morphs siguen iguales. En los pasos de Transferir el encabezado pasó a ser un fragmento para que la barra quede pegada durante todo el paso. Se borraron `BackLink` y `back-control.ts`.
-- **Detalle:** se sacó la fila "Estado" (queda la etiqueta, más clara junto al monto) y se agregó una lista agrupada de acciones: compartir comprobante (Web Share API, o copiar con un "Copiado" discreto), copiar referencia y repetir transferencia.
-- **Repetir:** solo para transferencias enviadas a una cuenta con alias (el repositorio lee el alias del destinatario solo en el detalle). Lleva a `/transferir?to=alias`; el servidor valida el alias con las reglas del formulario (nada de CVU en URLs) y lo resuelve como la búsqueda del paso 1 antes de saltar al paso del monto.
-
-**Tests primero (rojo → verde):** `NavBar`, `MovementActions` (compartir, cancelar la hoja, copiar como respaldo, error al copiar, repetir solo si corresponde), `movementShareText` / `repeatTransferAlias`, `parseTransferTo` / `resolveTransferPrefill`, el detalle (un solo estado, repetir solo en enviadas con alias) y `TransferFlow` con prefill; 6 tests y 4 módulos en rojo antes del cambio. Integración: `findById` trae el alias solo del lado que envía. E2E (proyecto de solo lectura): detalle de la transferencia del seed → chevron ≥ 44 px, un estado, copiar comprobante, repetir abre el paso del monto; `?to=` con un CVU o el alias propio se ignora.
-
----
-
-### T12b-C — Integración de C1, C2 y C3 (07/10/2026)
-
-Las tres ramas salieron de la misma base y se integraron en orden C2 → C3 → C1. El único conflicto fue esta bitácora (las tres entradas iban al mismo lugar): quedaron las tres, en ese orden.
-
-**Qué se terminó al integrar:**
-- **"Copiar" al lado del valor** en Recibir: el botón va dentro del mismo `<dd>` que el alias o el CVU (el `<dl>` sigue siendo válido) y el valor sigue seleccionable. En pantallas angostas el CVU puede partirse en dos líneas, siempre entre grupos.
-- **CVU agrupado de a cuatro desde el final:** `28 5059 0940 0904 1813 5201` (22 dígitos = un par al principio + cinco grupos de cuatro). Nunca termina en un par suelto y el último grupo son justo los 4 dígitos que deja ver el enmascarado (`•• •••• •••• •••• •••• 5201`). Un solo formateador (`groupForReading`) sirve a los dos; los tests de dominio, de las rutas de la API, de la UI y el e2e de Recibir usan el formato nuevo.
-- **Esqueleto de Recibir** con el marco de la `NavBar` (fila de 44 px, chevron y título) en lugar de la píldora vieja.
-
-**Tests que fallaban bajo carga (no en una máquina tranquila):**
-- `card-flip.spec.ts` ("un toque da vuelta la tarjeta"): con 12 workers fallaba 9 de 10. Causa: la URL cambia a `/` mientras Home todavía muestra el esqueleto; el test medía la tarjeta y tocaba con el mouse "crudo" antes de que las tarjetas llegaran y terminara la transición, y ese toque se perdía. Ahora espera el botón de la tarjeta y que termine la transición: 50 de 50.
-- `navigation-motion.spec.ts` (la intro de marca se desmonta): 1 falla en 95 con 12 workers, con la página ya hidratada. El `animationend` de la disolución puede llegar mientras React todavía hidrata y perderse; ahora la intro también se desmonta con la promesa `finished` de esa animación (test unitario primero, en rojo y después verde).
-- "Toques durante una transición" (`navigation-motion.spec.ts`) falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que CI): los tres toques van separados por 120 ms y, con la CPU saturada, uno cae mientras el navegador todavía no pinta la pantalla nueva. En una máquina tranquila pasa siempre; queda anotado, sin cambios.
-
----
-
-### T11 — Tokens y pantallas para Figma (07/10/2026)
-
-**Pedido:** llevar el sistema visual a Figma sin copiar valores a mano: tokens importables como variables y una captura de cada pantalla y estado. (La parte que usa la cuenta de Figma, vía MCP, queda para cuando esté conectada.)
-
-**Qué se hizo:**
-- **`pnpm tokens:figma`** lee los bloques `@theme` y `:root` de `globals.css` y escribe `design/tokens.figma.json` en formato DTCG: 43 colores (marca, roles, neutros y tarjeta) en hex final, 14 sombras, 2 familias tipográficas, 5 duraciones y la curva. La descripción de cada token sale del comentario que tiene arriba en el CSS, así que el porqué de cada color viaja con él. Salida determinística (claves ordenadas, formato de Prettier: `pnpm format` no la cambia).
-- **Un solo resolvedor:** `src/shared/lib/design-tokens.ts` (puro) resuelve `var()`, `rgb()` y `color-mix()` en sRGB. `brand-palette.test.ts` usa el mismo en lugar de su copia.
-- **`--check`** falla si el JSON commiteado quedó viejo; un test hace lo mismo dentro de `pnpm test`.
-- **`pnpm screens:capture`** (Playwright) guarda 18 PNG de 390×844 @2x en `design/screens/` (sin versionar, ~5 MB). Espera fuentes, imágenes, view transitions y animaciones antes de cada captura (la primera versión sacaba la vuelta de tarjeta a mitad del fundido). Solo envía una transferencia con `CAPTURE_ALLOW_MUTATION=1`, y se niega si `DATABASE_URL` no es una base `_test`.
-
-**Tests primero (rojo → verde):** parser de bloques y comentarios, resolvedor de colores (cadenas de `var()`, alfa, `color-mix()` contra transparente y contra un color, ciclos), sombras, agrupado DTCG, orden determinístico y detección de archivo viejo. El guard de la captura tiene sus tests; la captura en sí se verificó corriéndola contra `next start` sobre `granabank_test` y mirando las imágenes.
-
----
-
-### T22 — Pase de legibilidad (07/10/2026)
-
-**Objetivo:** que el código se lea de arriba hacia abajo antes de entregarlo, sin cambiar lo que hace. Cinco ramas en paralelo, una por área, integradas en orden herramientas → shared → auth/cuenta → movimientos → transferencias, sin conflictos.
-
-**Política:** cambios que preservan el comportamiento, sin debilitar aserciones; nombres por intención en lugar de comentarios; los comentarios que quedan explican el porqué, no la historia del cambio. Cada bug encontrado se arregló junto con el test que lo reproduce.
-
-**Qué cambió por área:**
-- **Herramientas:** `globals.css` ordenado en secciones con título; fixtures compartidos en `e2e/fixtures` (usuarios demo, login, localizadores); los e2e y la captura de pantallas esperan condiciones reales en lugar de tiempos; el seed declara las tarjetas de cada usuario como datos; tests que fallan si un token de color se declara dos veces o si el ícono se aparta del escudo oficial.
-- **Shared:** formas del monto con nombre, helpers de dinero y fechas más planos, el fundido de vidrio pegajoso con nombre; tests nuevos: el QR decodifica a su contenido en nivel H y la barra se vuelve vidrio al scrollear y vuelve.
-- **Auth y cuenta:** los grupos enmascarados del número de tarjeta salen del mismo formateador; handlers del menú de perfil, brillo, anuncio de la vuelta y slide del carrusel con nombre.
-- **Movimientos:** filtros importados de su propio módulo, helpers de dominio nombrados por intención, texto del estado vacío extraído; tests del límite de las fechas del seed (independiente del huso), del respaldo de compartir y del tope del escalonado inicial.
-- **Transferencias:** la máquina de estados del envío se lee de arriba hacia abajo; pasos partidos en piezas de presentación con nombre (fila de resumen y etiqueta de tarjeta compartidas); la transacción con pasos nombrados y la regla de repetición idempotente documentada; pantalla "sin tarjeta" extraída.
-- **Integración:** se borró la sombra `--shadow-lifted` (sin usos) y los comentarios de las tintas de la tarjeta dejaron de describirlas como papel (`design/tokens.figma.json` regenerado); valores exportados que solo usaba su propio módulo pasaron a privados. El README suma un "Tour del código".
-
-**Bugs que encontró el pase:**
-- **Borrar sobre un punto abierto** (monto a transferir): con `12.|`, retroceso volvía a escribir el punto y el cursor no se movía. Un punto abierto (posible decimal) no es de miles: ahora borrar lo quita (`12.|` → `12|`).
-- **`color-mix()` sin normalizar** (exportación a Figma): dos porcentajes que no suman 100 % se escalan como dice CSS Color 5, y el faltante pasa a transparencia; sumas en cero o fuera de 0–100 % se rechazan.
-- **QR de Recibir con identificadores inválidos:** un alias o CVU guardado que no pasa las reglas rompía la pantalla. Ahora no hay QR (la pantalla sigue con los datos) y un valor guardado nunca puede agregar ni falsificar una línea del contenido.
-
----
-
-### T23–T25 — Motion v2, limpieza de referencias y tipografía (07/10/2026)
-
-**Pedido:** que el movimiento se sienta como desplazar cosas y no solo como tocar botones (manipulación, no navegación); que no quede ninguna referencia a documentos externos de marca en el código; y una tipografía de display para el logotipo, los títulos y los montos grandes.
-
-**T23 — Motion v2 (tres ramas en paralelo, integradas en orden transferencia → gestos → Home):**
 - **Transferir en una sola superficie:** "Recientes" es una tira que se arrastra (la ficha centrada crece, las vecinas asoman), la ficha elegida viaja al encabezado, sube un teclado numérico propio y el botón fijo cambia de texto sin ser reemplazado. Con teclado: flechas, Inicio/Fin, Enter y dígitos.
 - **Gestos compartidos:** deslizar desde el borde izquierdo para volver (detalle, Recibir) y bajar las hojas inferiores con el dedo para cerrarlas.
 - **Home se construye una vez** detrás de la disolución del escudo, y las tarjetas se empujan con el dedo con inercia.
-- **Integración:** un solo conflicto, en `e2e/fixtures/layout-audit.ts` (las dos ramas agregaron una excepción para contenido que sale de la pantalla a propósito); se conservaron las dos: la tira arrastrable (`data-gesture-viewport`) y la fila que se desplaza desde el código (overflow oculto solo en x).
-- **Una sola física** en `shared/ui/gestures/drag-physics.ts`: seguimiento 1:1, banda elástica de iOS (0,55), velocidad del dedo en sus últimos 100 ms, proyección con la desaceleración de un scroll de iOS y asentamiento críticamente amortiguado que nunca se pasa de su lugar. Antes había tres copias (carrusel, tarjetas y gestos); el asentamiento sin pasarse, que solo tenían las tarjetas, ahora lo tienen también el carrusel, las hojas y el deslizar para volver. Las tarjetas conservan lo suyo: el lanzamiento que gira una sola tarjeta y una resistencia de borde más tenue.
-- **Seed con destinatarios:** cinco personas ficticias con tarjeta en dólares y en pesos, y transferencias pasadas hacia ellas, más viejas que todo lo demás, para que "Recientes" tenga seis fichas para recorrer. Los saldos del seed no cambian: son datos fijos que los e2e verifican, no la suma de los movimientos, y las transferencias pasadas son historial que no mueve dinero al sembrar. La pantalla ofrece hasta seis recientes.
+- **Una sola física** en `shared/ui/gestures/drag-physics.ts`: seguimiento 1:1, banda elástica de iOS (0,55), velocidad del dedo en sus últimos 100 ms, proyección con la desaceleración de un scroll de iOS y asentamiento críticamente amortiguado que nunca se pasa de su lugar. Antes había tres copias; las tarjetas conservan lo suyo (el lanzamiento que gira una sola tarjeta y una resistencia de borde más tenue).
+- **Seed con destinatarios:** cinco personas ficticias con tarjeta en dólares y en pesos, y transferencias pasadas hacia ellas, para que "Recientes" tenga seis fichas. Los saldos del seed no cambian: son datos fijos que los e2e verifican, no la suma de los movimientos.
+- **Integración:** un solo conflicto, en `e2e/fixtures/layout-audit.ts` (las dos ramas agregaron una excepción para contenido que sale de la pantalla a propósito); se conservaron las dos.
 
-**T24 — Sin referencias externas:** comentarios, tests y tokens exportados a Figma describen los colores como los institucionales del club y el escudo como su vector oficial, sin nombrar documentos ni páginas.
+**Tests inestables bajo carga:** corriendo en paralelo, algunos e2e perdían su primer toque. Se arreglaron sin aflojar ninguna aserción: un fixture compartido espera a que Home termine de llegar y construirse; el ojo de una tarjeta fuera de pantalla se trae al frente con su punto antes de tocarlo; el botón fijo se comprueba cuando la pantalla ya se asentó; los lanzamientos se envían con marcas de tiempo propias. En la física, la velocidad al soltar dejaba de valer cero de golpe a los 50 ms de reposo; ahora decae con la pausa.
 
-**T25 — Tipografía:** Rokkitt (OFL, variable) reemplaza a Arvo como tipografía de display y se carga una vez en el layout raíz (`--font-display`). La usan el logotipo, el título de la barra de navegación, los encabezados de pantalla y los montos grandes; Poppins sigue en todo lo demás. Medida en Chromium, su altura de x es 0,40 em (Poppins 0,55) y sus dígitos 0,60 em (Poppins 0,74): títulos 2 px más grandes, montos 4 px. Sus dígitos son proporcionales y sin variante tabular, con márgenes laterales parejos (0,03–0,04 em), así que el odómetro dejó la corrección óptica que necesitaba el "1" de Poppins y la máscara se alineó al centro de los nuevos dígitos.
+**Cómo se verificó:** rojo → verde en hasta seis recientes, la pausa antes de soltar que frena el lanzamiento y la proyección compartida de las tarjetas. 994 unitarios, 54 de integración y 106/106 e2e; gestos tres veces con un worker (153/153) y la suite en paralelo cuatro veces (168/168, dos veces). Revisión en 5 tramos, todos aprobados; 23 observaciones no bloqueantes (13 advertencias) pasaron a T26.
 
-**Tests primero (rojo → verde):** hasta seis recientes por defecto; la familia de display exportada es Rokkitt; una pausa antes de soltar frena el lanzamiento en lugar de anularlo; un lanzamiento lento de las tarjetas proyecta con la desaceleración compartida. Un e2e nuevo registra cuadro a cuadro la posición y el ancho de cada columna del odómetro y exige que no cambien mientras rueda.
-
-**Tests inestables bajo carga:** corriendo en paralelo, algunos e2e perdían su primer toque. Las causas y los arreglos, sin aflojar ninguna aserción: tocar Home antes de que terminara de llegar y construirse (ahora un fixture compartido espera eso), tocar el ojo de una tarjeta fuera de pantalla (el navegador desplazaba el carrusel y la tarjeta se deslizaba bajo el toque; ahora se trae al frente con su punto), comprobar el botón fijo mientras la pantalla todavía aparecía (ahora se espera a que se asiente), y lanzamientos que la latencia del runner convertía en arrastres lentos (ahora se envían con marcas de tiempo propias, un cuadro entre eventos). En la física, la velocidad al soltar dejaba de valer cero de golpe a los 50 ms de reposo; ahora decae con la pausa, como ya lo hacían las tarjetas.
+**Commits:** `0860957`, `bbeb7dc`, `e405684`, `d68ff1a`, `28ee606`, `20e4285`, `8a57840`, `74b52e4`, `0b4c509`, `8375e58`, `90f3fef`, `6305bbc`, `b443c69`, `92f08bf`, `c9682bb`, `07c6e69`
 
 ---
 
-## 6. Estructura del proyecto
+### Fase 5 — Legibilidad y cierre
 
-Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, sin dependencias, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas.
+#### T11 — Checklist, tokens y pantallas para Figma (07/10/2026)
+
+**Pedido:** verificar el enunciado contra el build actual y llevar el sistema visual a Figma sin copiar valores a mano.
+
+**Qué se hizo**
+
+- **Checklist:** 42 puntos verificados con evidencia; se corrigió una contradicción del README (`f135f51`, `a668497`).
+- **`pnpm tokens:figma`** lee los bloques `@theme` y `:root` de `globals.css` y escribe `design/tokens.figma.json` en formato DTCG (colores en hex final, sombras, familias tipográficas, duraciones y la curva). La descripción de cada token sale del comentario que tiene arriba en el CSS. Salida determinista.
+- **Un solo resolvedor** (`src/shared/lib/design-tokens.ts`) para `var()`, `rgb()` y `color-mix()`; `brand-palette.test.ts` usa el mismo.
+- **`--check`** falla si el JSON commiteado quedó viejo; un test hace lo mismo dentro de `pnpm test`.
+- **`pnpm screens:capture`** (Playwright) guarda 18 PNG de 390×844 @2x en `design/screens/` (sin versionar). Solo envía una transferencia con `CAPTURE_ALLOW_MUTATION=1`, y se niega si `DATABASE_URL` no es una base `_test`.
+- **Archivo de Figma** armado con esos insumos: portada y fundamentos, las 18 pantallas y un antes/después, con variables de color y movimiento, estilos de efecto y de texto.
+
+**Cómo se verificó:** rojo → verde en el parser, el resolvedor (cadenas de `var()`, alfa, `color-mix()`, ciclos), sombras, agrupado DTCG, orden y detección de archivo viejo. La captura se verificó contra `next start` sobre `granabank_test`, mirando las imágenes. 894 unitarios. Revisión de alto riesgo aprobada; 6 observaciones pasaron a T22.
+
+**Commits:** `f135f51`, `a668497`, `f6a5d3b`, `be36118`, `4695cc9`
+
+#### T22 — Pase de legibilidad (07/10/2026)
+
+**Pedido:** los evaluadores van a leer sobre todo el código; que se lea de arriba hacia abajo antes de entregarlo, sin cambiar lo que hace.
+
+**Decisión:** cambios que preservan el comportamiento, sin debilitar aserciones; nombres por intención en lugar de comentarios; los comentarios que quedan explican el porqué, no la historia del cambio. Cada bug encontrado se arregla junto con el test que lo reproduce. Cinco ramas en paralelo, una por área, integradas en orden herramientas → shared → auth/cuenta → movimientos → transferencias, sin conflictos.
+
+**Qué se hizo**
+
+- **Herramientas:** `globals.css` en secciones con título; fixtures compartidos en `e2e/fixtures`; los e2e y la captura esperan condiciones reales en lugar de tiempos; el seed declara las tarjetas de cada usuario como datos; tests que fallan si un token de color se declara dos veces o si el ícono se aparta del escudo oficial.
+- **Shared:** formas del monto con nombre, helpers de dinero y fechas más planos; tests nuevos: el QR decodifica a su contenido en nivel H y la barra se vuelve vidrio al scrollear.
+- **Auth y cuenta:** los grupos enmascarados salen del mismo formateador; handlers y efectos con nombre.
+- **Movimientos:** filtros en su propio módulo, helpers de dominio por intención; tests del límite de las fechas del seed (independiente del huso), del respaldo de compartir y del tope del escalonado inicial.
+- **Transferencias:** la máquina de estados del envío se lee de arriba hacia abajo; pasos partidos en piezas de presentación con nombre; la transacción con pasos nombrados; pantalla "sin tarjeta" extraída.
+- **Integración:** se borró una sombra sin usos, valores exportados que solo usaba su módulo pasaron a privados y el README suma un "Tour del código".
+
+**Bugs que encontró el pase:**
+
+- **Borrar sobre un punto abierto** en el monto: con `12.|`, retroceso volvía a escribir el punto. Ahora lo quita (`12.|` → `12|`).
+- **`color-mix()` sin normalizar** en la exportación a Figma: porcentajes que no suman 100 % ahora se escalan como dice CSS Color 5; sumas en cero o fuera de rango se rechazan.
+- **QR de Recibir con identificadores inválidos:** un alias o CVU guardado inválido rompía la pantalla. Ahora no se muestra el QR y la pantalla sigue con los datos.
+
+**Cómo se verificó:** 924 unitarios, 54 de integración y 79/79 e2e dos veces. Revisión en 5 tramos, todos aprobados; quedaron 9 sugerencias y 1 advertencia no bloqueantes.
+
+**Commits:** `21c82f8`…`2f06347` (35), entre ellos `e4bb0c6` (punto abierto), `fdb85bb` (`color-mix()`) y `1d8e9d7` (QR)
+
+#### T24 — Sin referencias a documentos externos (07/10/2026)
+
+**Pedido:** que no quede ninguna referencia a documentos externos de marca, ni en la documentación ni en el código.
+
+**Qué se hizo:** README, esta bitácora y el checklist (`b639361`); después comentarios, tests y descripciones de los tokens exportados a Figma (`d0d3f21`), que describen los colores como los institucionales del club y el escudo como su vector oficial. Los mensajes de commit del historial local también se reescribieron (solo los mensajes; el código no cambió), por eso los hashes de esta bitácora son los actuales.
+
+**Decisión:** el club autorizó el uso de sus recursos de marca para este challenge. Su tipografía comercial no estuvo disponible en un formato utilizable, por eso se eligió una alternativa libre (T25).
+
+**Cómo se verificó:** búsqueda de las referencias en todo el repositorio y en los mensajes del historial; `pnpm tokens:figma --check` en verde con el JSON regenerado.
+
+**Commits:** `b639361`, `d0d3f21`
+
+#### T25 — Tipografía de display: Rokkitt (07/10/2026)
+
+**Pedido:** una tipografía de display para el logotipo, los títulos y los montos grandes.
+
+**Decisión:** Rokkitt (Google Fonts, licencia OFL, variable 100–900), elegida por comparación visual como la alternativa libre más cercana a la tipografía del club. Reemplaza a Arvo; Poppins sigue en toda la interfaz.
+
+**Qué se hizo:** se carga una vez en el layout raíz (`--font-display`). La usan el logotipo (en negrita), el título de la barra de navegación, los encabezados de pantalla y los montos grandes (saldo de la tarjeta, monto a transferir, detalle). Medida en Chromium, su altura de x es 0,40 em (Poppins 0,55) y sus dígitos 0,60 em (Poppins 0,74): títulos 2 px más grandes, montos 4 px. Sus dígitos son proporcionales y sin variante tabular, con márgenes laterales parejos, así que el odómetro dejó la corrección óptica que necesitaba el "1" de Poppins y la máscara se alineó al centro de los nuevos dígitos.
+
+**Cómo se verificó:** test primero: la familia de display exportada es Rokkitt. Un e2e nuevo registra cuadro a cuadro la posición y el ancho de cada columna del odómetro y exige que no cambien mientras rueda. Revisado dentro de los tramos de T23.
+
+**Commits:** `ee3e709`, `01020cf`, `51139a8`, `93a853c`
+
+#### T26 — Pase sobre las observaciones de T23 (07/10/2026)
+
+**Pedido:** revisar una por una las observaciones no bloqueantes de T23 antes de la entrega.
+
+**Decisión:** cada observación se verifica primero; después se corrige con un test que falla antes, se fortalece el test, o se refuta con evidencia. Tres ramas en paralelo: transferencias (7 puntos), gestos y fixtures de e2e (12) y seed + bitácora (4).
+
+**Qué se hizo (6 bugs reales, corregidos con test primero):**
+
+- **Carrusel de recientes:** un asentamiento en curso ya no se traga un alias escrito en el campo (la tira se redirige a esa ficha), y mientras se busca un destinatario, arrastrar o usar las flechas ya no elige a otra persona (`cc772aa`).
+- **Teclado:** la pulsación larga de borrar se cancela si el teclado se desmonta con el dedo apoyado, y una pulsación que termina fuera de la tecla ya no anula el siguiente borrado (`b46ec73`).
+- **Gestos:** una presión de mouse que salía del elemento antes de convertirse en arrastre bloqueaba todos los arrastres siguientes; ahora una presión nueva la reemplaza (`b4ed103`).
+- **Deslizar para volver con bfcache:** si la vuelta terminaba en una carga completa, la pantalla quedaba corrida y sin gestos; ahora vuelve a su lugar en el `pageshow` persistido (`43a58ee`).
+- **Auditoría de layout de los e2e:** `overflow-x: hidden` solo hace que `overflow-y` sea `auto`, así que la excepción pensada para las tarjetas eximía cualquier contenedor que ocultara un desborde, justo lo que la auditoría busca. Ahora las tarjetas se declaran explícitamente (`47bb605`).
+- **Seed:** los movimientos del segundo usuario y de los destinatarios se cuentan desde los datos en lugar de un número fijo, y la transacción tiene más tiempo que los 5 s por defecto de Prisma (`28cc013`).
+
+Además: tests que miden en lugar de copiar constantes, un sondeo del tirón de borde de las tarjetas, la prueba de que un arrastre vertical nunca las mueve, reabrir una hoja después de bajarla, y la lista de excepciones de las tarjetas al modelo compartido de gestos.
+
+**Cómo se verificó:** 1007 unitarios, 54 de integración y 113/113 e2e. Revisión de alto riesgo aprobada. Quedan 3 observaciones menores abiertas (ver Limitaciones conocidas).
+
+**Commits:** `28cc013`, `bdeb9b6`, `cc772aa`, `b46ec73`, `4ea8e5f`, `b4ed103`, `43a58ee`, `47bb605`, `20a0053`, `9cd0ff1`, `81f2985`, `b462d26`, `ff12385`
+
+#### T5 — Deploy (pendiente)
+
+**Pedido:** repositorio en GitHub y deploy en Vercel con Neon.
+
+**Estado:** pendiente. Publicar es una decisión del candidato y no se hace sin su aprobación explícita. Los pasos de producción están en la tabla "Local vs. producción" (T7).
+
+---
+
+## 6. Limitaciones conocidas
+
+- **Gesto de volver en iOS Safari:** en el navegador (no instalada como app), el gesto propio de Safari para ir atrás puede ganar un toque que empieza justo en el borde; entonces vuelve Safari y no el gesto de la app. El chevron de la barra no depende de un gesto.
+- **Botón atrás del navegador sin morph:** React restaura esa navegación de forma síncrona y no inicia view transitions. Un test fija el comportamiento y se pondrá en rojo cuando el framework lo soporte.
+- **QR de Recibir:** codifica el alias y el CVU como texto; no es un estándar interbancario de pagos.
+- **Saldos del seed:** son datos fijos de la demo (los e2e los verifican), no la suma de los movimientos sembrados.
+- **Tipografía:** Rokkitt reemplaza a la tipografía comercial del club, que no estuvo disponible en un formato utilizable.
+- **Rojo de error:** es una excepción de accesibilidad a la paleta institucional (granate, oro y Cool Gray).
+- **Datos de tarjeta ficticios:** PAN inventado y CVV derivado en el servidor solo para la demo; en un sistema real el PAN va cifrado o tokenizado.
+- **Sin límite de intentos** en el login ni en el revelado de tarjetas; requiere un servicio externo (por ejemplo Redis) porque en serverless un límite en memoria no sirve.
+- **Sesiones no revocables:** el JWT no se puede invalidar antes de su vencimiento; se mitiga verificando el usuario en cada lectura.
+- **Desktop:** se muestra la columna móvil centrada; el Figma es solo mobile y la alternativa responsive quedó archivada.
+- **Tests bajo carga extrema:** "Toques durante una transición" falló 1 de 5 solo con 12 workers en 12 núcleos (más carga que el CI); en condiciones normales pasa siempre.
+- **Observaciones menores abiertas tras T26:** tres, no bloqueantes, en `RecipientCarousel.tsx`, `RecipientCarousel.test.tsx` y `e2e/gestures.spec.ts` (esta última de nivel advertencia).
+- **Revisiones no registradas:** T6, T7b, T15 y T16 no tienen una revisión automática registrada.
+- **Deploy pendiente (T5):** todo es local hasta la aprobación del candidato.
+
+---
+
+## 7. Estructura del proyecto
+
+Organización por features ("screaming architecture"): la carpeta cuenta qué hace la app, no qué framework usa. Cada feature separa **dominio** (reglas puras, testeables), **datos** (repositorios con Prisma), **UI** (componentes) y, cuando hace falta, **server** (código que solo corre en el servidor: Server Actions, sesión). `app/` solo contiene rutas delgadas que conectan las piezas. El README tiene un "Tour del código" más detallado.
 
 ```
 src/
 ├── app/                        ← solo rutas (delgadas): conectan features
-│   ├── (app)/                  ← zona logueada: layout con navegación inferior
-│   │   ├── (home)/             page + loading
-│   │   ├── movimientos/
-│   │   │   ├── (list)/         page + loading
-│   │   │   └── [id]/           page + not-found (404 real)
-│   │   └── error.tsx
-│   ├── api/                    ← REST: auth/, movements/, account/ (con tests)
+│   ├── (app)/                  ← zona logueada
+│   │   ├── (home)/             Home
+│   │   ├── movimientos/        lista y detalle (404 real)
+│   │   ├── transferir/         flujo de envío
+│   │   └── recibir/            alias, CVU y QR
+│   ├── api/                    ← REST: auth, movements, account, transfers (con tests)
 │   └── login/
 ├── features/
 │   ├── auth/       domain/ data/ server/ ui/
+│   ├── account/    domain/ data/ server/ ui/
 │   ├── movements/  domain/ data/ ui/
-│   └── account/    domain/ data/ ui/
+│   └── transfers/  domain/ data/ server/ ui/
 ├── shared/
-│   ├── lib/        db, db-errors, api-response, validation, format, dates, like-pattern, routes
-│   └── ui/         AppShell, BottomNav, Button, ErrorState, RouteError, Skeleton, icons
-├── proxy.ts                    ← protección de rutas (+ test)
-└── test/                       ← fixtures de tests
-prisma/   schema · migrations (init, unaccent) · seed
-e2e/      auth.spec.ts · movements.spec.ts (Playwright)
-docs/     BITACORA.md · design/ (Figma) · screenshots/
+│   ├── config/
+│   ├── lib/        db, errores de base, respuestas de la API, dinero, formato, fechas, tokens de diseño
+│   └── ui/         componentes compartidos + brand/ gestures/ motion/ qr/
+└── proxy.ts                    ← protección de rutas (+ test)
+prisma/   schema · migrations · seed
+e2e/      specs de Playwright + fixtures/
+scripts/  base de tests, tokens para Figma, captura de pantallas
+docs/     BITACORA.md · CHECKLIST.md · design/ · screenshots/
 ```
 
 **Convenciones**
+
 - Los tests viven al lado del archivo que prueban (`x.ts` + `x.test.ts`). Los de integración contra la base usan `x.integration.test.ts`.
-- Las carpetas entre paréntesis (`(app)`, `(home)`, `(list)`) son *route groups* de Next: organizan el código sin cambiar la URL.
-- Las dependencias van en una sola dirección: `ui` → `domain` ← `data`. El dominio no conoce Prisma ni React.
+- Las carpetas entre paréntesis (`(app)`, `(home)`) son *route groups* de Next: organizan el código sin cambiar la URL.
+- Las dependencias van en una sola dirección: `ui` y `data` dependen de `domain`, nunca al revés. El dominio no conoce Prisma ni React.
 
 ---
 
-## 7. Cómo correrlo
+## 8. Cómo correrlo
 
 Los pasos completos, los scripts y la descripción de la API están en el [README](../README.md). Resumen:
 
@@ -698,6 +1038,6 @@ pnpm db:up && pnpm db:migrate && pnpm db:seed
 pnpm dev               # http://localhost:3000
 
 pnpm test              # unitarios
-pnpm test:integration  # integración (requiere Postgres)
-pnpm test:e2e          # end-to-end (requiere Postgres)
+pnpm test:integration  # integración (requiere Postgres; usa granabank_test)
+pnpm test:e2e          # end-to-end (requiere Postgres; usa granabank_test)
 ```
