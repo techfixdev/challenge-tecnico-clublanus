@@ -58,7 +58,7 @@ const STEP_HEADER: Record<
   recipient: {
     step: 1,
     title: "¿A quién le enviás?",
-    description: "Elegí a alguien de tus recientes o ingresá su alias o CVU.",
+    description: "Buscá por nombre, alias o CVU, o elegí de tus recientes.",
   },
   amount: { step: 2, title: "¿Cuánto le enviás?" },
   review: {

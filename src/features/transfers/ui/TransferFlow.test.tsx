@@ -144,6 +144,16 @@ describe("TransferFlow", () => {
     );
   });
 
+  it("opens on the recipient step with copy that matches its one search field", () => {
+    renderFlow();
+
+    expect(
+      screen.getByText(
+        "Buscá por nombre, alias o CVU, o elegí de tus recientes.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("only types an alias the server could not confirm, on the first step", () => {
     renderFlow({ prefill: { kind: "typed", text: "nadie.granate" } });
 
