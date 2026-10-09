@@ -85,14 +85,33 @@ describe("proxy", () => {
     expect(clearsSessionCookie(response)).toBe(true);
   });
 
-  it("on the expired-session login URL, drops the cookie and shows the login page", async () => {
-    // Valid signature but the user no longer exists: requireUser() sends them here.
+  it("on the expired-session login URL, keeps a validly signed cookie and asks the server whether it is dead", async () => {
+    // A link to /login?expired=1 must not sign a live session out: only the server, with
+    // the session row in view, may delete a validly signed cookie.
     const response = await proxy(
       request(ROUTES.loginExpired, await validToken()),
     );
 
+    expect(response.headers.get("location")).toBe(
+      `${ORIGIN}${ROUTES.expiredSessionCheck}`,
+    );
+    expect(clearsSessionCookie(response)).toBe(false);
+  });
+
+  it("on the expired-session login URL, drops a cookie it cannot verify and shows the login page", async () => {
+    const response = await proxy(
+      request(ROUTES.loginExpired, "not-a-valid-token"),
+    );
+
     expect(response.headers.get("location")).toBeNull();
     expect(clearsSessionCookie(response)).toBe(true);
+  });
+
+  it("on the expired-session login URL without a cookie, simply shows the login page", async () => {
+    const response = await proxy(request(ROUTES.loginExpired));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(clearsSessionCookie(response)).toBe(false);
   });
 
   it("fails safe when SESSION_SECRET is missing: treats everyone as signed out", async () => {

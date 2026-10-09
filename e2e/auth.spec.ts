@@ -141,6 +141,32 @@ test("logging out revokes the session: a copy of the cookie stops working", asyn
   await page.goto("/");
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByLabel("Email")).toBeVisible();
+  // The server confirmed the session dead and deleted the cookie: no redirect loop.
+  expect(
+    (await context.cookies()).some(
+      (cookie) => cookie.name === "granabank_session",
+    ),
+  ).toBe(false);
+});
+
+test("a link to /login?expired=1 cannot sign a live session out", async ({
+  page,
+  context,
+}) => {
+  await login(page);
+  const sessionCookie = async () =>
+    (await context.cookies()).find(
+      (cookie) => cookie.name === "granabank_session",
+    )?.value;
+  const before = await sessionCookie();
+
+  // What a third-party page could link to: the server sees a live session and sends the
+  // visitor home, with the same cookie.
+  await page.goto("/login?expired=1");
+
+  await expect(page).toHaveURL(/\/$/);
+  expect(await sessionCookie()).toBe(before);
+  expect((await page.request.get("/api/movements")).status()).toBe(200);
 });
 
 test("'Recordarme' issues a persistent 30-day cookie", async ({

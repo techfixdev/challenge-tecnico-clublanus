@@ -100,14 +100,20 @@ export async function proxy(request: NextRequest) {
 
   if (!isLoginPage && !isPrivatePage(pathname)) return respond.next();
 
-  // Signed cookie the server no longer honours (see LOGIN_EXPIRED_PARAM): drop it, show login.
+  const session = await readSessionSafely(request);
+
+  // Sent here because the server no longer honours the cookie (see LOGIN_EXPIRED_PARAM).
+  // A cookie that does not verify is dropped at once. A validly signed one is NOT: the
+  // proxy cannot tell a revoked session from a live one (no database here), and deleting
+  // it would let any link to this URL sign a live session out. The server decides.
   if (isLoginPage && searchParams.has(LOGIN_EXPIRED_PARAM)) {
+    if (session) return respond.redirect(ROUTES.expiredSessionCheck);
     const response = respond.next();
-    response.cookies.delete(SESSION_COOKIE_NAME);
+    if (request.cookies.has(SESSION_COOKIE_NAME)) {
+      response.cookies.delete(SESSION_COOKIE_NAME);
+    }
     return response;
   }
-
-  const session = await readSessionSafely(request);
 
   if (isLoginPage) {
     return session ? respond.redirect(ROUTES.home) : respond.next();
