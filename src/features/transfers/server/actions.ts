@@ -3,9 +3,9 @@
 import { randomUUID } from "node:crypto";
 
 import { getCurrentUser } from "@/features/auth/server/current-user";
+import { tooManyAttemptsMessage } from "@/shared/lib/rate-limit";
 
-import { prismaTransferRepository } from "../data/prisma-transfer-repository";
-import { TRANSFER_FAILURE_MESSAGE, previewRecipient } from "../domain/transfer";
+import { TRANSFER_FAILURE_MESSAGE } from "../domain/transfer";
 import {
   TRANSFER_FORM_MESSAGES,
   firstErrorMessage,
@@ -16,6 +16,7 @@ import {
 } from "../domain/transfer-form";
 import { toCanonicalAmount } from "../domain/transfer-rules";
 import { TRANSFER_MESSAGES } from "../domain/transfer-schema";
+import { lookupRecipientAs } from "./lookup-recipient";
 import { sendTransferAs } from "./send-transfer";
 
 /*
@@ -33,11 +34,7 @@ export async function lookupRecipient(query: string): Promise<RecipientLookup> {
 
   const text = typeof query === "string" ? query.trim() : null;
   try {
-    const result = await previewRecipient(
-      prismaTransferRepository,
-      user.id,
-      text,
-    );
+    const result = await lookupRecipientAs(user.id, text);
     if (result.ok) {
       return {
         ok: true,
@@ -50,6 +47,12 @@ export async function lookupRecipient(query: string): Promise<RecipientLookup> {
         message:
           firstErrorMessage(result.details) ??
           TRANSFER_MESSAGES.recipientRequired,
+      };
+    }
+    if (result.reason === "rate_limited") {
+      return {
+        ok: false,
+        message: tooManyAttemptsMessage(result.retryAfterSeconds),
       };
     }
     return { ok: false, message: TRANSFER_FAILURE_MESSAGE[result.reason] };
@@ -126,6 +129,14 @@ export async function submitTransfer(
       message:
         firstErrorMessage(result.details) ?? TRANSFER_FORM_MESSAGES.unexpected,
       step: stepForInvalidInput(result.details),
+    };
+  }
+  if (result.reason === "rate_limited") {
+    // Nothing was attempted: the key is kept, so trying again later is still one transfer.
+    return {
+      status: "error",
+      message: tooManyAttemptsMessage(result.retryAfterSeconds),
+      step: "review",
     };
   }
   if (result.reason === "idempotency_conflict") {

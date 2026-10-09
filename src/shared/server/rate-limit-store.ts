@@ -14,8 +14,14 @@ import {
  * The database is the one place every serverless instance shares, so no Redis is needed.
  */
 
+/** Bucket scope names; the column is VARCHAR(32), so keep each name within 32 chars. */
 export type RateLimitScope =
-  "login:email-client" | "login:email" | "login:ip" | "card:reveal";
+  | "login:email-client"
+  | "login:email"
+  | "login:ip"
+  | "card:reveal"
+  | "transfer:recipient-lookup"
+  | "transfer:send";
 
 /** A counted hit: the verdict, plus the window it was counted in (to refund it later). */
 export type RateLimitHit = RateLimitDecision & { windowStart: Date };

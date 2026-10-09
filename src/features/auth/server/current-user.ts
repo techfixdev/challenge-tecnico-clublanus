@@ -22,8 +22,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> =>
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) {
-    // Signed cookie whose session was revoked or expired, or whose user is gone: the proxy
-    // clears the cookie on this URL.
+    // Signed cookie whose session was revoked or expired, or whose user is gone: on this URL
+    // the proxy hands it to /api/auth/expired-session, which clears it (see ROUTES).
     redirect(ROUTES.loginExpired);
   }
   return user;

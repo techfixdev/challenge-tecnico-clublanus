@@ -41,7 +41,7 @@ async function allDetails(request: APIRequestContext): Promise<Details[]> {
   };
   return Promise.all(
     cards.data.map(async (card) => {
-      const response = await request.get(
+      const response = await request.post(
         `/api/account/cards/${card.id}/details`,
       );
       expect(response.status()).toBe(200);
@@ -180,19 +180,36 @@ test("the details endpoint needs a session and only serves the owner's cards", a
   await other.close();
 
   // No session: 401.
-  const anonymous = await page.request.get(
+  const anonymous = await page.request.post(
     `/api/account/cards/${hinchaCards.data[0].id}/details`,
   );
   expect(anonymous.status()).toBe(401);
   expect(anonymous.headers()["cache-control"]).toBe("no-store");
 
   await login(page);
-  const foreign = await page.request.get(
+  const foreign = await page.request.post(
     `/api/account/cards/${hinchaCards.data[0].id}/details`,
   );
   expect(foreign.status()).toBe(404);
   expect(foreign.headers()["cache-control"]).toBe("no-store");
   expect(await foreign.text()).not.toMatch(/\d{16}/);
+
+  // A reveal is not a safe method: GET is 405, and another site's page is refused.
+  const ownCards = (await (
+    await page.request.get("/api/account/cards")
+  ).json()) as {
+    data: { id: string }[];
+  };
+  const viaGet = await page.request.get(
+    `/api/account/cards/${ownCards.data[0].id}/details`,
+  );
+  expect(viaGet.status()).toBe(405);
+  const crossSite = await page.request.post(
+    `/api/account/cards/${ownCards.data[0].id}/details`,
+    { headers: { origin: "https://evil.example" } },
+  );
+  expect(crossSite.status()).toBe(403);
+  expect(await crossSite.text()).not.toMatch(/\d{16}/);
 });
 
 test.describe("past the reveal limit", () => {
@@ -233,7 +250,7 @@ test.describe("past the reveal limit", () => {
     ).json()) as {
       data: { id: string }[];
     };
-    const refused = await page.request.get(
+    const refused = await page.request.post(
       `/api/account/cards/${cards.data[0].id}/details`,
     );
     expect(refused.status()).toBe(429);

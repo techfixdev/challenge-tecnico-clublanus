@@ -34,7 +34,8 @@ vi.mock("@/features/account/data/prisma-card-reveal-log", () => ({
   recordCardReveal: mocks.recordCardReveal,
 }));
 
-const { GET } = await import("./route");
+const route = await import("./route");
+const { POST } = route;
 
 const NOW = new Date("2026-10-08T12:03:00.000Z");
 let hits: Map<string, number>;
@@ -42,9 +43,10 @@ let hits: Map<string, number>;
 const PAN = "5412751234561234";
 
 function call(id: string, headers: Record<string, string> = {}) {
-  return GET(
+  return POST(
     new NextRequest(`http://localhost/api/account/cards/${id}/details`, {
-      headers,
+      method: "POST",
+      headers: { host: "localhost", ...headers },
     }),
     { params: Promise.resolve({ id }) },
   );
@@ -70,7 +72,30 @@ beforeEach(() => {
   mocks.recordCardReveal.mockReset().mockResolvedValue(undefined);
 });
 
-describe("GET /api/account/cards/:id/details", () => {
+describe("POST /api/account/cards/:id/details", () => {
+  it("has no GET: a reveal spends budget and writes an audit row, so it is not a safe method", () => {
+    // Next answers 405 Method Not Allowed for a method the route does not export.
+    expect("GET" in route).toBe(false);
+  });
+
+  it("answers 403 to another site's page, without spending the budget or reading the card", async () => {
+    const response = await call("card_mc", {
+      origin: "https://evil.example",
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect((await response.json()).error.code).toBe("FORBIDDEN");
+    expect(mocks.consumeRateLimit).not.toHaveBeenCalled();
+    expect(mocks.findDetailsById).not.toHaveBeenCalled();
+  });
+
+  it("serves the app's own page (same Origin as Host)", async () => {
+    const response = await call("card_mc", { origin: "http://localhost" });
+
+    expect(response.status).toBe(200);
+  });
+
   it("returns the owner's full number, a 3-digit CVV and the balance, never cached", async () => {
     const response = await call("card_mc");
 

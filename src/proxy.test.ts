@@ -85,14 +85,33 @@ describe("proxy", () => {
     expect(clearsSessionCookie(response)).toBe(true);
   });
 
-  it("on the expired-session login URL, drops the cookie and shows the login page", async () => {
-    // Valid signature but the user no longer exists: requireUser() sends them here.
+  it("on the expired-session login URL, keeps a validly signed cookie and asks the server whether it is dead", async () => {
+    // A link to /login?expired=1 must not sign a live session out: only the server, with
+    // the session row in view, may delete a validly signed cookie.
     const response = await proxy(
       request(ROUTES.loginExpired, await validToken()),
     );
 
+    expect(response.headers.get("location")).toBe(
+      `${ORIGIN}${ROUTES.expiredSessionCheck}`,
+    );
+    expect(clearsSessionCookie(response)).toBe(false);
+  });
+
+  it("on the expired-session login URL, drops a cookie it cannot verify and shows the login page", async () => {
+    const response = await proxy(
+      request(ROUTES.loginExpired, "not-a-valid-token"),
+    );
+
     expect(response.headers.get("location")).toBeNull();
     expect(clearsSessionCookie(response)).toBe(true);
+  });
+
+  it("on the expired-session login URL without a cookie, simply shows the login page", async () => {
+    const response = await proxy(request(ROUTES.loginExpired));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(clearsSessionCookie(response)).toBe(false);
   });
 
   it("fails safe when SESSION_SECRET is missing: treats everyone as signed out", async () => {
@@ -107,5 +126,75 @@ describe("proxy", () => {
     );
     expect(loginPage.headers.get("location")).toBeNull();
     expect(log).toHaveBeenCalled();
+  });
+
+  it("does not guard pages outside the private area (not-found pages get the CSP only)", async () => {
+    const response = await proxy(request("/no-such-page"));
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("content-security-policy")).toContain(
+      "'strict-dynamic'",
+    );
+  });
+});
+
+describe("proxy: Content-Security-Policy", () => {
+  function nonceOf(policy: string | null): string | undefined {
+    return policy?.match(/'nonce-([^']+)'/)?.[1];
+  }
+
+  it("sends a nonce-based CSP to the browser and the same policy to the renderer", async () => {
+    const response = await proxy(request(ROUTES.login));
+    const policy = response.headers.get("content-security-policy");
+
+    expect(nonceOf(policy)).toBeTruthy();
+    // Next.js forwards overridden request headers this way; its renderer reads the nonce
+    // from the request's CSP and attaches it to the framework's scripts.
+    expect(
+      response.headers.get("x-middleware-request-content-security-policy"),
+    ).toBe(policy);
+  });
+
+  it("uses a fresh nonce on every request", async () => {
+    const first = await proxy(request(ROUTES.login));
+    const second = await proxy(request(ROUTES.login));
+
+    expect(nonceOf(first.headers.get("content-security-policy"))).not.toBe(
+      nonceOf(second.headers.get("content-security-policy")),
+    );
+  });
+
+  it("also covers redirects", async () => {
+    const response = await proxy(request("/movimientos"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("content-security-policy")).toContain(
+      "frame-ancestors 'none'",
+    );
+  });
+
+  it("matches every page except API routes, build assets, icons and prefetches", () => {
+    const catchAll = config.matcher.find(
+      (entry): entry is Exclude<typeof entry, string> =>
+        typeof entry !== "string",
+    );
+    const pattern = new RegExp(`^${catchAll?.source}$`);
+
+    for (const path of ["/no-such-page", "/manifest.webmanifest"]) {
+      expect(pattern.test(path)).toBe(true);
+    }
+    for (const path of [
+      "/api/movements",
+      "/_next/static/chunks/app.js",
+      "/_next/image",
+      "/favicon.ico",
+      "/icon.svg",
+      "/apple-icon.png",
+    ]) {
+      expect(pattern.test(path)).toBe(false);
+    }
+    expect(catchAll?.missing).toEqual(
+      expect.arrayContaining([{ type: "header", key: "next-router-prefetch" }]),
+    );
   });
 });

@@ -82,6 +82,9 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T40](#t40--diagramas-de-arquitectura-08102026) | Diagramas de arquitectura (README) | `4c509fa` |
 | | [T41](#t41--videos-del-recorrido-y-antes-y-después-08102026) | Videos: recorrido con subtítulos y antes y después | este commit |
 | | [T5](#t5--deploy-en-vercel-con-neon-08102026) | Deploy en Vercel con Neon | este commit |
+| | [T45](#t45--headers-de-seguridad-del-navegador-08102026) | Headers de seguridad del navegador (CSP con nonce) | `0ee0aba` |
+| | [T46](#t46--el-número-de-tarjeta-en-producción-readme-08102026) | El número de tarjeta en producción (README) | `9d5218a` |
+| | [T47](#t47--seguimiento-de-la-auditoría-de-seguridad-08102026) | Seguimiento de la auditoría de seguridad y del Judgment Day | `9711e99`…`8e1d1b8` (5) + este commit |
 
 ---
 
@@ -1167,6 +1170,45 @@ El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es par
 - Verificado en producción con Playwright: login, Home, búsqueda en Movimientos, detalle, Transferir hasta la revisión, Recibir con QR y `GET /api/movements`. Sin errores de página ni respuestas 5xx; la cookie de sesión sale `Secure`, `HttpOnly` y `SameSite=Lax`.
 
 **URL:** [challenge-tecnico-clublanus.vercel.app](https://challenge-tecnico-clublanus.vercel.app)
+
+#### T45 — Headers de seguridad del navegador (08/10/2026)
+
+**Pedido:** una revisión externa marcó que la app "no configura los headers de seguridad del navegador". En producción solo llegaba `Strict-Transport-Security`, que agrega Vercel.
+
+**Decisión:**
+
+- **CSP con nonce por pedido en `src/proxy.ts`**, como indica la guía de CSP de Next 16: el proxy pone la política en el pedido (Next extrae el nonce y lo aplica a sus scripts) y en la respuesta. `script-src 'self' 'nonce-…' 'strict-dynamic'`; `'unsafe-eval'` y el WebSocket de la recarga en caliente solo en desarrollo; `upgrade-insecure-requests` salvo en desarrollo y en la vista previa por LAN (http plano). Se eligió nonce sobre `'unsafe-inline'` en scripts porque es lo que efectivamente frena un XSS, y sobre SRI porque SRI todavía es experimental.
+- **Estilos con `'unsafe-inline'`:** React y Motion escriben atributos `style=""`, que no admiten nonce. El CSS en línea no ejecuta código.
+- **El matcher del proxy** sigue protegiendo las rutas privadas y `/login` (incluidas las precargas, como antes) y suma una entrada para el resto de las páginas (el 404 incluido) que omite la API, los assets de `_next`, los íconos y las precargas, como recomienda la guía. La redirección por sesión solo aplica a las rutas privadas y `/login`: una ruta desconocida recibe la CSP y su 404, no un redirect.
+- **Render por pedido:** el layout raíz llama a `connection()`. `/login` y `/_not-found` pasaron de estáticos a dinámicos (el build lo confirma); las páginas con sesión ya lo eran. Sin esto, el HTML prerenderizado de `/login` saldría con scripts sin nonce y el navegador los bloquearía.
+- **Headers fijos en `next.config.ts`** (`headers()`), porque no cambian por pedido y así cubren también la API y los archivos: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` (niega lo que la app no usa; deja `web-share` y `clipboard-write`, que usan Compartir y Copiar) y `Cross-Origin-Opener-Policy`. `poweredByHeader: false` quita `X-Powered-By: Next.js`. HSTS queda en Vercel, para no afectar la vista previa por http.
+- La política es una función pura (`src/shared/security/headers.ts`) con tests por entorno (producción, desarrollo, LAN).
+
+**Cómo se verificó:** 21 tests unitarios del proxy y la política; `e2e/security-headers.spec.ts` revisa los headers en `/login` y en una página con sesión, y recorre login → Home (revelado de tarjeta) → Movimientos (búsqueda) → detalle → Transferir pasos 1 y 2 → Recibir escuchando `securitypolicyviolation` y la consola: cero violaciones. La suite e2e completa pasa contra el servidor de desarrollo y contra un build de producción (118 de 118). Contra ese build también se comprobó que un `<img onerror>` inyectado no se ejecuta y que la consola reporta la violación.
+
+#### T46 — El número de tarjeta en producción (README) (08/10/2026)
+
+**Pedido:** explicar cómo se guardaría bien el PAN con tarjetas reales, en lugar de la línea "va cifrado o tokenizado". Solo documentación.
+
+**Qué se agregó:** la sección "El número de tarjeta en producción" del README: primero no guardarlo (tokenización con un proveedor PCI DSS Nivel 1 y los datos en su iframe); si hay que guardarlo, cifrado por sobre (AES-256-GCM por registro, clave de datos cifrada por una clave maestra en un KMS o HSM, rotación, una clave por entorno, huella HMAC para búsquedas); el CVV nunca se guarda (la demo lo deriva con HMAC); acceso y auditoría. Los requisitos de PCI DSS se citan solo a nivel de requisito (v4.0, requisitos 3 y 3.3.1). También se sumó la sección "Headers de seguridad del navegador" (T45).
+
+**Cómo se verificó:** `prettier --check` limpio y los enlaces internos del README apuntan a encabezados existentes.
+
+
+#### T47 — Seguimiento de la auditoría de seguridad (08/10/2026)
+
+**Pedido:** cerrar los hallazgos de una auditoría de seguridad de solo lectura y de un Judgment Day (ninguno Crítico ni Alto).
+
+**Qué cambió:**
+
+- **Búsqueda de destinatario limitada (Medio):** devolvía nombre, alias y últimos 4 del CVU de cualquier alias adivinado, sin límite: con el login público de la demo se podían cosechar nombres. Ahora `lookupRecipientAs` (compartido por la API y la Server Action) cuenta 30 búsquedas por usuario cada 10 minutos antes de leer cuentas; la API responde 429 con `Retry-After` y la pantalla muestra "Demasiados intentos. Probá de nuevo en N minutos.". La pantalla solo consulta al tocar "Continuar" (filtrar recientes pasa en el navegador), así que el uso normal queda muy lejos del límite.
+- **Envíos limitados:** 10 intentos de transferencia por usuario cada 10 minutos, contados antes de la transacción en `sendTransferAs`. Una repetición idempotente (misma clave, `replayed`) se devuelve al cupo; un reintento que llega con el cupo gastado recibe el 429 (documentado).
+- **Revelado de tarjeta por POST:** un revelado gasta cupo y escribe auditoría, así que ya no es un GET que un link o una precarga puedan disparar: `POST` con el chequeo de `Origin` de las otras mutaciones (403 antes de contar), GET responde 405 y se mantiene `Cache-Control: no-store`.
+- **`DEMO_CVV_SECRET` obligatorio en producción:** sin él (o con menos de 32 caracteres) el revelado falla con un error claro, en vez de reutilizar `SESSION_SECRET`. Desarrollo, tests y el preview LAN conservan el respaldo.
+- **Un link ya no cierra una sesión viva (JD-1):** `/login?expired=1` borraba la cookie sin condiciones. Ahora el proxy borra solo una cookie que no puede verificar; una firmada correctamente va a `GET /api/auth/expired-session`, donde el servidor mira la fila de la sesión: si está muerta borra la cookie (un Route Handler puede; un Server Component no) y lleva a `/login` sin bucle; si está viva vuelve a Home sin tocarla.
+- **E2E sin carrera de hidratación:** el texto tipeado justo después de `page.goto` podía llegar antes de hidratar y dejar "Continuar" deshabilitado; un helper `typeRecipient` reescribe hasta que el botón se habilita (solo tests).
+
+**Cómo se verificó:** RED antes de cada cambio (búsqueda 31.ª → 429, envío 11.º → 429, revelado sin GET y con otro `Origin` → 403, producción sin secreto → error, cookie firmada en `/login?expired=1` → se conserva), después typecheck, lint y prettier limpios, 1099 unitarios, 74 de integración, e2e contra `next dev` (115 pasan, 4 omitidos) y contra el build de producción en una copia descartable (119/119, sin violaciones de CSP).
 
 ---
 

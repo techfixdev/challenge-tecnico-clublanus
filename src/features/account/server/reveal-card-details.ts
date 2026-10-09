@@ -14,7 +14,7 @@ export type RevealCardDetailsResult =
   | { ok: false; reason: "card_not_found" };
 
 /**
- * Application service behind `GET /api/account/cards/:id/details`:
+ * Application service behind `POST /api/account/cards/:id/details`:
  * 1. counts the reveal against the user's budget (CARD_REVEAL_POLICY) before touching the
  *    card, so a refused request reads nothing (an unknown id counts too: probing ids is
  *    what the limit is for);

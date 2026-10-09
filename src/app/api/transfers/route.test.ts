@@ -6,6 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TransferReceipt } from "@/features/transfers/domain/transfer";
 import { TRANSFER_MESSAGES } from "@/features/transfers/domain/transfer-schema";
+import {
+  TRANSFER_SEND_POLICY,
+  decide,
+  windowStartFor,
+} from "@/shared/lib/rate-limit";
 import { databaseUnavailableError } from "@/test/db-errors";
 
 /*
@@ -16,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   execute: vi.fn(),
   revalidatePath: vi.fn(),
+  consumeRateLimit: vi.fn(),
+  refundRateLimit: vi.fn(),
 }));
 
 vi.mock("@/features/auth/server/current-user", () => ({
@@ -25,6 +32,14 @@ vi.mock("@/features/transfers/data/prisma-transfer-repository", () => ({
   prismaTransferRepository: { execute: mocks.execute, findRecipient: vi.fn() },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+// The limiter's verdict logic is real; only its PostgreSQL counter lives in memory.
+vi.mock("@/shared/server/rate-limit-store", () => ({
+  consumeRateLimit: mocks.consumeRateLimit,
+  refundRateLimit: mocks.refundRateLimit,
+}));
+
+const NOW = new Date("2026-10-08T12:03:00.000Z");
+let hits: Map<string, number>;
 
 const { POST } = await import("./route");
 
@@ -70,6 +85,76 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ ok: true, receipt: RECEIPT, replayed: false });
   mocks.revalidatePath.mockReset();
+  hits = new Map();
+  mocks.consumeRateLimit
+    .mockReset()
+    .mockImplementation(async (scope: string, key: string, policy) => {
+      const count = (hits.get(`${scope}:${key}`) ?? 0) + 1;
+      hits.set(`${scope}:${key}`, count);
+      const windowStart = windowStartFor(NOW, policy);
+      return { ...decide(count, windowStart, NOW, policy), windowStart };
+    });
+  mocks.refundRateLimit
+    .mockReset()
+    .mockImplementation(async (scope: string, key: string) => {
+      const count = hits.get(`${scope}:${key}`) ?? 0;
+      hits.set(`${scope}:${key}`, Math.max(0, count - 1));
+    });
+});
+
+describe("POST /api/transfers rate limit", () => {
+  it("answers the 11th send in 10 minutes with 429 and Retry-After, before any money moves", async () => {
+    for (let send = 1; send <= 10; send++) {
+      expect(
+        (await post({ ...BODY, idempotencyKey: randomUUID() })).status,
+      ).toBe(201);
+    }
+    mocks.execute.mockClear();
+
+    const response = await post({ ...BODY, idempotencyKey: randomUUID() });
+
+    expect(response.status).toBe(429);
+    // Window 12:00–12:10, now 12:03 → 420 s.
+    expect(response.headers.get("retry-after")).toBe("420");
+    expect((await response.json()).error).toEqual({
+      code: "RATE_LIMITED",
+      message: "Demasiados intentos. Probá de nuevo en 7 minutos.",
+    });
+    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.consumeRateLimit).toHaveBeenLastCalledWith(
+      "transfer:send",
+      "user_1",
+      TRANSFER_SEND_POLICY,
+    );
+  });
+
+  it("does not charge replays of the same key: a retried send never spends the budget twice", async () => {
+    mocks.execute.mockResolvedValue({
+      ok: true,
+      receipt: RECEIPT,
+      replayed: true,
+    });
+
+    for (let retry = 1; retry <= 15; retry++) {
+      expect((await post(BODY)).status).toBe(200);
+    }
+    expect(mocks.refundRateLimit).toHaveBeenCalledWith(
+      "transfer:send",
+      "user_1",
+      windowStartFor(NOW, TRANSFER_SEND_POLICY),
+    );
+  });
+
+  it("counts sends per user: another user still gets through", async () => {
+    for (let send = 1; send <= 11; send++) {
+      await post({ ...BODY, idempotencyKey: randomUUID() });
+    }
+    mocks.getCurrentUser.mockResolvedValue({ id: "user_2" });
+
+    expect((await post({ ...BODY, idempotencyKey: randomUUID() })).status).toBe(
+      201,
+    );
+  });
 });
 
 describe("POST /api/transfers", () => {

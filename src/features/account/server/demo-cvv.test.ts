@@ -60,6 +60,37 @@ describe("demoCvvSecret", () => {
   it("throws when neither is set", () => {
     expect(() => demoCvvSecret({})).toThrow();
   });
+
+  describe("in production", () => {
+    const PRODUCTION = {
+      NODE_ENV: "production",
+      SESSION_SECRET: "y".repeat(32),
+    };
+
+    it("requires its own DEMO_CVV_SECRET: no fallback to the session secret", () => {
+      expect(() => demoCvvSecret(PRODUCTION)).toThrow(
+        /DEMO_CVV_SECRET is required in production/,
+      );
+    });
+
+    it("refuses a DEMO_CVV_SECRET shorter than 32 characters", () => {
+      expect(() =>
+        demoCvvSecret({ ...PRODUCTION, DEMO_CVV_SECRET: "short" }),
+      ).toThrow(/at least 32 characters/);
+    });
+
+    it("uses a long enough DEMO_CVV_SECRET", () => {
+      expect(
+        demoCvvSecret({ ...PRODUCTION, DEMO_CVV_SECRET: "x".repeat(32) }),
+      ).toBe("x".repeat(32));
+    });
+
+    it("keeps the fallback for the local LAN preview (a production build on the Wi-Fi)", () => {
+      expect(demoCvvSecret({ ...PRODUCTION, GRANABANK_LAN_PREVIEW: "1" })).toBe(
+        "y".repeat(32),
+      );
+    });
+  });
 });
 
 const KNOWN_VECTOR = (() => {

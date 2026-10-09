@@ -55,6 +55,28 @@ export const CARD_REVEAL_POLICY: RateLimitPolicy = {
   windowMs: 10 * MINUTE_MS,
 };
 
+/**
+ * Recipient lookups (alias or CVU → full name, alias, last 4 CVU digits) per signed-in
+ * user: slows harvesting names by guessing aliases with the public demo login. The send
+ * flow only asks the server when "Continuar" is pressed (filtering the recents happens in
+ * the browser, typing never calls it), so a person uses a handful per transfer; 30 leaves
+ * room for typos while a script gets 3 names a minute.
+ */
+export const RECIPIENT_LOOKUP_POLICY: RateLimitPolicy = {
+  limit: 30,
+  windowMs: 10 * MINUTE_MS,
+};
+
+/**
+ * Transfer attempts per signed-in user (an idempotent replay of the same key is refunded,
+ * so a retry never costs twice): one a minute on average is far above a person's pace and
+ * caps how fast a stolen session can drain or spam accounts.
+ */
+export const TRANSFER_SEND_POLICY: RateLimitPolicy = {
+  limit: 10,
+  windowMs: 10 * MINUTE_MS,
+};
+
 /** Start of the window `now` falls in; windows are aligned to the Unix epoch. */
 export function windowStartFor(now: Date, policy: RateLimitPolicy): Date {
   const ms = now.getTime();

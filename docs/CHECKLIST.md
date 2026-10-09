@@ -45,7 +45,7 @@ Repositorio: [github.com/techfixdev/challenge-tecnico-clublanus](https://github.
 
 ## Qué se evalúa (cómo lo cubrimos)
 
-- [x] Claridad del código → lint y typecheck limpios, tests al lado del código (1065 unitarios, 72 de integración, 116 e2e).
+- [x] Claridad del código → lint y typecheck limpios, tests al lado del código (1099 unitarios, 74 de integración, 119 e2e).
 - [x] Seguir el diseño → ver la sección anterior.
 - [x] Organización del proyecto → estructura documentada en el README ("Tour del código", "Estructura del proyecto") y en la bitácora.
 - [x] Criterio técnico → decisiones con su porqué en el README ("Decisiones técnicas") y en `docs/BITACORA.md`.

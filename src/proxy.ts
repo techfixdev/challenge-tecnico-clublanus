@@ -6,7 +6,12 @@ import {
   verifySessionToken,
   type SessionPayload,
 } from "@/features/auth/server/session-token";
+import { isLanPreviewEnabled } from "@/shared/config/lan-preview";
 import { LOGIN_EXPIRED_PARAM, ROUTES } from "@/shared/lib/routes";
+import {
+  buildContentSecurityPolicy,
+  generateNonce,
+} from "@/shared/security/headers";
 
 let hasLoggedMissingSecret = false;
 
@@ -37,33 +42,85 @@ async function readSessionSafely(
   );
 }
 
+/** Pages that need a session; everything else the proxy matches only gets the CSP. */
+const PRIVATE_PATHS = [
+  ROUTES.movements,
+  ROUTES.transfer,
+  ROUTES.receive,
+] as const;
+
+function isPrivatePage(pathname: string): boolean {
+  return (
+    pathname === ROUTES.home ||
+    PRIVATE_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    )
+  );
+}
+
+/**
+ * Content-Security-Policy with a fresh nonce (Next.js CSP guide): set on the request, so
+ * Next.js reads the nonce while rendering and attaches it to its own scripts, and on every
+ * response (redirects included), so the browser enforces it. Pages must render per request
+ * for that to work: the root layout opts every page into dynamic rendering.
+ */
+function securedResponses(request: NextRequest) {
+  const policy = buildContentSecurityPolicy({
+    nonce: generateNonce(),
+    isDevelopment: process.env.NODE_ENV === "development",
+    isLanPreview: isLanPreviewEnabled(),
+    host: request.nextUrl.host,
+  });
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("Content-Security-Policy", policy);
+
+  function secure(response: NextResponse): NextResponse {
+    response.headers.set("Content-Security-Policy", policy);
+    return response;
+  }
+  return {
+    next: () =>
+      secure(NextResponse.next({ request: { headers: requestHeaders } })),
+    redirect: (path: string) =>
+      secure(NextResponse.redirect(new URL(path, request.url))),
+  };
+}
+
 /**
  * Optimistic route guard: only verifies the JWT signature/expiry from the cookie (no DB),
  * because it runs on every matched request, including prefetches (Next.js auth guide:
  * "avoid database checks" in Proxy). Whether the session is still live (not revoked by
  * logout) is decided by the server, in the data access layer (`requireUser`).
+ * It also sends the Content-Security-Policy of every page (see `securedResponses`).
  */
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
   const isLoginPage = pathname === ROUTES.login;
+  const respond = securedResponses(request);
 
-  // Signed cookie the server no longer honours (see LOGIN_EXPIRED_PARAM): drop it, show login.
-  if (isLoginPage && searchParams.has(LOGIN_EXPIRED_PARAM)) {
-    const response = NextResponse.next();
-    response.cookies.delete(SESSION_COOKIE_NAME);
-    return response;
-  }
+  if (!isLoginPage && !isPrivatePage(pathname)) return respond.next();
 
   const session = await readSessionSafely(request);
 
+  // Sent here because the server no longer honours the cookie (see LOGIN_EXPIRED_PARAM).
+  // A cookie that does not verify is dropped at once. A validly signed one is NOT: the
+  // proxy cannot tell a revoked session from a live one (no database here), and deleting
+  // it would let any link to this URL sign a live session out. The server decides.
+  if (isLoginPage && searchParams.has(LOGIN_EXPIRED_PARAM)) {
+    if (session) return respond.redirect(ROUTES.expiredSessionCheck);
+    const response = respond.next();
+    if (request.cookies.has(SESSION_COOKIE_NAME)) {
+      response.cookies.delete(SESSION_COOKIE_NAME);
+    }
+    return response;
+  }
+
   if (isLoginPage) {
-    return session
-      ? NextResponse.redirect(new URL(ROUTES.home, request.url))
-      : NextResponse.next();
+    return session ? respond.redirect(ROUTES.home) : respond.next();
   }
 
   if (!session) {
-    const response = NextResponse.redirect(new URL(ROUTES.login, request.url));
+    const response = respond.redirect(ROUTES.login);
     // Clear an expired or tampered cookie so the browser stops sending it.
     if (request.cookies.has(SESSION_COOKIE_NAME)) {
       response.cookies.delete(SESSION_COOKIE_NAME);
@@ -71,16 +128,27 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  return NextResponse.next();
+  return respond.next();
 }
 
 export const config = {
-  // Private pages plus /login. API routes authenticate themselves and answer 401, not redirects.
   matcher: [
+    // Private pages plus /login, prefetches included: the session check runs on them too.
+    // API routes authenticate themselves and answer 401, not redirects.
     "/",
     "/login",
     "/movimientos/:path*",
     "/transferir/:path*",
     "/recibir/:path*",
+    // Every other page (not-found included) for the CSP, skipping what renders no HTML:
+    // API routes, build assets, the icons, and prefetches (Next.js CSP guide).
+    {
+      source:
+        "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

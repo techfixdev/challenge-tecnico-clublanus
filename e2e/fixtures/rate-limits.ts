@@ -13,7 +13,7 @@ import { withTestDb } from "./test-db";
  * a global reset in one would wipe the counters another spec is building up.
  */
 
-/** Empties every counter (failed logins per email/IP, reveals per user): before a run only. */
+/** Empties every counter (failed logins per email/IP, per-user budgets): before a run only. */
 export function resetAllRateLimits(): Promise<void> {
   return withTestDb(async (client) => {
     await client.query(`DELETE FROM "RateLimitBucket"`);
@@ -22,7 +22,8 @@ export function resetAllRateLimits(): Promise<void> {
 
 /**
  * Empties every counter a sign-in as `email` meets: its failed logins (per email, and per
- * email from each client), ALL per-IP login counters and, if it is a user, its reveals.
+ * email from each client), ALL per-IP login counters and, if it is a user, its per-user
+ * budgets (card reveals, recipient lookups, transfer sends).
  * Every spec signs in from the same local address, so the per-IP counter is shared by the
  * whole run: it is emptied before any user's sign-in, or a run's worth of failed-login
  * scenarios would trip it.
@@ -34,7 +35,7 @@ export function resetRateLimitsBeforeSignIn(email: string): Promise<void> {
         WHERE "key" = $1
            OR ("scope" = 'login:email-client' AND starts_with("key", $1 || '|'))
            OR "scope" = 'login:ip'
-           OR ("scope" = 'card:reveal'
+           OR ("scope" IN ('card:reveal', 'transfer:recipient-lookup', 'transfer:send')
                AND "key" IN (SELECT id FROM "User" WHERE email = $1))`,
       [email],
     );
