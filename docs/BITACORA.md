@@ -82,6 +82,8 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T40](#t40--diagramas-de-arquitectura-08102026) | Diagramas de arquitectura (README) | `4c509fa` |
 | | [T41](#t41--videos-del-recorrido-y-antes-y-después-08102026) | Videos: recorrido con subtítulos y antes y después | este commit |
 | | [T5](#t5--deploy-en-vercel-con-neon-08102026) | Deploy en Vercel con Neon | este commit |
+| | [T45](#t45--headers-de-seguridad-del-navegador-08102026) | Headers de seguridad del navegador (CSP con nonce) | `0ee0aba` |
+| | [T46](#t46--el-número-de-tarjeta-en-producción-readme-08102026) | El número de tarjeta en producción (README) | este commit |
 
 ---
 
@@ -1167,6 +1169,29 @@ El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es par
 - Verificado en producción con Playwright: login, Home, búsqueda en Movimientos, detalle, Transferir hasta la revisión, Recibir con QR y `GET /api/movements`. Sin errores de página ni respuestas 5xx; la cookie de sesión sale `Secure`, `HttpOnly` y `SameSite=Lax`.
 
 **URL:** [challenge-tecnico-clublanus.vercel.app](https://challenge-tecnico-clublanus.vercel.app)
+
+#### T45 — Headers de seguridad del navegador (08/10/2026)
+
+**Pedido:** una revisión externa marcó que la app "no configura los headers de seguridad del navegador". En producción solo llegaba `Strict-Transport-Security`, que agrega Vercel.
+
+**Decisión:**
+
+- **CSP con nonce por pedido en `src/proxy.ts`**, como indica la guía de CSP de Next 16: el proxy pone la política en el pedido (Next extrae el nonce y lo aplica a sus scripts) y en la respuesta. `script-src 'self' 'nonce-…' 'strict-dynamic'`; `'unsafe-eval'` y el WebSocket de la recarga en caliente solo en desarrollo; `upgrade-insecure-requests` salvo en desarrollo y en la vista previa por LAN (http plano). Se eligió nonce sobre `'unsafe-inline'` en scripts porque es lo que efectivamente frena un XSS, y sobre SRI porque SRI todavía es experimental.
+- **Estilos con `'unsafe-inline'`:** React y Motion escriben atributos `style=""`, que no admiten nonce. El CSS en línea no ejecuta código.
+- **El matcher del proxy** sigue protegiendo las rutas privadas y `/login` (incluidas las precargas, como antes) y suma una entrada para el resto de las páginas (el 404 incluido) que omite la API, los assets de `_next`, los íconos y las precargas, como recomienda la guía. La redirección por sesión solo aplica a las rutas privadas y `/login`: una ruta desconocida recibe la CSP y su 404, no un redirect.
+- **Render por pedido:** el layout raíz llama a `connection()`. `/login` y `/_not-found` pasaron de estáticos a dinámicos (el build lo confirma); las páginas con sesión ya lo eran. Sin esto, el HTML prerenderizado de `/login` saldría con scripts sin nonce y el navegador los bloquearía.
+- **Headers fijos en `next.config.ts`** (`headers()`), porque no cambian por pedido y así cubren también la API y los archivos: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` (niega lo que la app no usa; deja `web-share` y `clipboard-write`, que usan Compartir y Copiar) y `Cross-Origin-Opener-Policy`. `poweredByHeader: false` quita `X-Powered-By: Next.js`. HSTS queda en Vercel, para no afectar la vista previa por http.
+- La política es una función pura (`src/shared/security/headers.ts`) con tests por entorno (producción, desarrollo, LAN).
+
+**Cómo se verificó:** 21 tests unitarios del proxy y la política; `e2e/security-headers.spec.ts` revisa los headers en `/login` y en una página con sesión, y recorre login → Home (revelado de tarjeta) → Movimientos (búsqueda) → detalle → Transferir pasos 1 y 2 → Recibir escuchando `securitypolicyviolation` y la consola: cero violaciones. La suite e2e completa pasa contra el servidor de desarrollo y contra un build de producción (118 de 118). Contra ese build también se comprobó que un `<img onerror>` inyectado no se ejecuta y que la consola reporta la violación.
+
+#### T46 — El número de tarjeta en producción (README) (08/10/2026)
+
+**Pedido:** explicar cómo se guardaría bien el PAN con tarjetas reales, en lugar de la línea "va cifrado o tokenizado". Solo documentación.
+
+**Qué se agregó:** la sección "El número de tarjeta en producción" del README: primero no guardarlo (tokenización con un proveedor PCI DSS Nivel 1 y los datos en su iframe); si hay que guardarlo, cifrado por sobre (AES-256-GCM por registro, clave de datos cifrada por una clave maestra en un KMS o HSM, rotación, una clave por entorno, huella HMAC para búsquedas); el CVV nunca se guarda (la demo lo deriva con HMAC); acceso y auditoría. Los requisitos de PCI DSS se citan solo a nivel de requisito (v4.0, requisitos 3 y 3.3.1). También se sumó la sección "Headers de seguridad del navegador" (T45).
+
+**Cómo se verificó:** `prettier --check` limpio y los enlaces internos del README apuntan a encabezados existentes.
 
 ---
 

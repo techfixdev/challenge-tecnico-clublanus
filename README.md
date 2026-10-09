@@ -473,8 +473,8 @@ El débito y el crédito se ejecutan en orden de id de tarjeta para que dos tran
   - **Nada sensible en la página inicial:** Home renderiza las tarjetas desde su "cara" (`CardFace`, sin saldo); ni el HTML ni el payload RSC traen saldo, número completo o CVV (un e2e lo verifica sobre el HTML). Recién al tocar el ojo el cliente pide `GET /api/account/cards/:id/details`, que reverifica la sesión, busca la tarjeta **por dueño** (una ajena responde 404, igual que una inexistente) y responde con `Cache-Control: no-store`. Una request por revelado, sin polling ni reintentos automáticos, limitada a 10 por usuario cada 10 minutos y registrada en un log de auditoría (ver "Límites de intentos").
   - **Se vuelven a ocultar solos** a los 30 segundos, al ocultarse la pestaña (`visibilitychange`) o al salir de la página; ocultar también borra los datos de la memoria del componente.
   - **Decisión: la preferencia ya no se recuerda.** Antes el ojo era uno solo (en la principal) y su elección vivía en una cookie. Ahora todo arranca oculto en cada visita, como pidió el usuario: recordar "visible" obligaría a mandar el saldo en el HTML inicial, justo lo que se quería evitar. El costo es una request (~decenas de ms) antes de que ruede el saldo.
-  - **Números ficticios:** cada tarjeta demo guarda un PAN de 16 dígitos inventado, válido por Luhn y consistente con sus últimos 4 (`buildDemoPan`, determinístico por usuario: el seed es idempotente). Un `CHECK` en la base exige 16 dígitos que terminen en `last4`. En un sistema real el PAN va cifrado o tokenizado (PCI DSS, req. 3).
-  - **El CVV no se guarda:** PCI DSS prohíbe almacenarlo después de autorizar. Para la demo se **deriva** en el servidor, solo para mostrarlo: HMAC-SHA256 del id de la tarjeta con un secreto del servidor (`DEMO_CVV_SECRET`, o `SESSION_SECRET` si no está), reducido a 3 dígitos. Es estable por tarjeta y no está en la base.
+  - **Números ficticios:** cada tarjeta demo guarda un PAN de 16 dígitos inventado, válido por Luhn y consistente con sus últimos 4 (`buildDemoPan`, determinístico por usuario: el seed es idempotente). Un `CHECK` en la base exige 16 dígitos que terminen en `last4`. Cómo se guardaría con tarjetas reales: ver [El número de tarjeta en producción](#el-número-de-tarjeta-en-producción).
+  - **El CVV no se guarda:** PCI DSS prohíbe almacenarlo después de autorizar (v4.0, requisito 3.3.1). Para la demo se **deriva** en el servidor, solo para mostrarlo: HMAC-SHA256 del id de la tarjeta con un secreto del servidor (`DEMO_CVV_SECRET`, o `SESSION_SECRET` si no está), reducido a 3 dígitos. Es estable por tarjeta y no está en la base.
 - **Vuelta de tarjeta:** tocar la tarjeta la da vuelta (ver "Movimiento y accesibilidad"); el reverso tiene banda magnética, panel de firma con el titular, CVV y la marca.
 - **Resumen del mes en Movimientos:** "Octubre · Ingresos +US$ X · Egresos −US$ Y", **una línea por moneda** (dólares primero, la de la tarjeta principal; después pesos): nunca suma monedas distintas. Ingresos = recibidos; egresos = enviados + débitos automáticos; solo movimientos **completados** (un pendiente todavía puede fallar). Mes calendario de Buenos Aires (empieza a las 03:00 UTC). No depende de la búsqueda ni del filtro: describe el mes. La base suma los `Decimal` (`groupBy`) y la app solo los combina como centavos enteros, nunca como `float`.
 - **Transferencias entre usuarios** (`src/features/transfers`): por alias o CVU (el CVU se valida con sus dígitos verificadores, como un CBU). Todo ocurre en **una sola transacción**: se reclama la clave de idempotencia, se debita, se acredita en la tarjeta del destinatario **en la misma moneda** que la de origen (la principal si hay varias; sin conversión) y se crean los dos movimientos (`SENT` y `RECEIVED`, enlazados a un `Transfer`); si algo falla, no queda nada a medias.
@@ -497,6 +497,37 @@ El débito y el crédito se ejecutan en orden de id de tarjeta para que dos tran
   - **IP del cliente:** primer valor de `x-forwarded-for` y, si falta, `x-real-ip` (`src/shared/server/client-ip.ts`). Supone que la app corre detrás de un proxy que pisa esos headers, como Vercel, que reemplaza `x-forwarded-for` con la IP real de la conexión. Sin ese proxy un cliente podría inventar su IP: el límite por IP sería solo orientativo, pero el límite por email no depende de headers. Sin IP (por ejemplo, un servidor local sin proxy), no hay límite por IP y todos esos pedidos comparten un mismo cupo de 5 por email; en Vercel siempre hay IP.
   - **Tests:** los límites nunca se apagan con una variable de entorno. Los e2e vacían los contadores al empezar la corrida y los de cada usuario al iniciar sesión (como un visitante nuevo); el escenario del 429 usa un usuario propio que crea y borra, así ningún login en paralelo le vacía el cupo gastado. Los tests de integración usan claves propias y las borran al terminar.
 - **Errores de API clasificados:** base caída → 503 (reintentable); bug → 500 genérico con log; `redirect()`/`notFound()` de Next se dejan pasar.
+
+### Headers de seguridad del navegador
+
+Cada página sale con una **Content-Security-Policy con nonce**: `src/proxy.ts` genera 128 bits al azar por pedido y arma la política con `src/shared/security/headers.ts` (una función pura, con tests por entorno). Next lee el nonce del pedido y lo pone en sus propios scripts; un `<script>` inyectado no lo tiene y el navegador no lo ejecuta. En producción:
+
+```text
+default-src 'self'; script-src 'self' 'nonce-…' 'strict-dynamic'; style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+```
+
+- **Scripts con nonce y `'strict-dynamic'`:** los chunks que carga un script confiable heredan la confianza. En desarrollo se suma `'unsafe-eval'` (React lo usa para sus trazas de error) y el WebSocket de la recarga en caliente; en producción no.
+- **Estilos con `'unsafe-inline'`, sin nonce:** React escribe atributos `style=""` (Motion anima por ahí y el layout fija variables CSS en línea) y a un atributo no se le puede poner nonce; además, un nonce en `style-src` haría que el navegador ignore `'unsafe-inline'`. Es una concesión acotada: el CSS en línea no ejecuta código, y la protección contra XSS está en `script-src`.
+- **Render por pedido:** el nonce solo se aplica al renderizar, así que el layout raíz llama a `connection()` y `/login` y el 404 dejan de ser estáticos (las páginas con sesión ya lo eran).
+- **Headers fijos** (`next.config.ts`, en todas las respuestas, también la API): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin` y una `Permissions-Policy` que niega cámara, micrófono, ubicación, pagos, USB y otros sensores que la app no usa. Compartir (`web-share`) y copiar (`clipboard-write`) quedan permitidos. Sin `X-Powered-By`.
+- **HSTS lo pone Vercel** (`max-age=63072000; includeSubDomains; preload`) en sus dominios HTTPS. La app no lo envía ni pide `upgrade-insecure-requests` en la vista previa por LAN (`GRANABANK_LAN_PREVIEW=1`), que es http plano.
+- **Verificado:** `e2e/security-headers.spec.ts` revisa los headers y recorre login, Home (con el revelado), Movimientos, el detalle, Transferir y Recibir sin una sola violación de CSP, contra el servidor de desarrollo y contra el build de producción.
+
+### El número de tarjeta en producción
+
+La demo guarda PAN ficticios en claro: son números inventados (válidos por Luhn), no hay datos reales de tarjetas y un `CHECK` ata el PAN a sus últimos 4. Con tarjetas reales se haría así (PCI DSS v4.0, requisito 3):
+
+1. **Mejor, no guardarlo.** Tokenizar con un emisor o procesador certificado PCI DSS Nivel 1: la app guarda solo un token, los últimos 4, la marca y el vencimiento. El número completo se muestra en un iframe o elemento seguro del proveedor, así el PAN nunca pasa por nuestros servidores y el alcance de PCI DSS se reduce a casi nada.
+2. **Si hay que guardarlo, cifrado por sobre** (_envelope encryption_):
+   - Una clave de datos por registro, AES-256-GCM, con IV único y su etiqueta de autenticación.
+   - Esa clave se guarda cifrada con una clave maestra que vive en un KMS o HSM (por ejemplo AWS KMS o Google Cloud KMS, que generan y cifran claves de datos sin que la maestra salga del servicio). Ninguna clave en variables de entorno ni en el repositorio.
+   - Se descifra solo en el caso de uso de revelar, por pedido, y nunca se cachea.
+   - Rotación: se cambia la clave maestra y se re-cifran las claves de datos, sin tocar los PAN. Una clave maestra distinta por entorno.
+   - Para buscar o deduplicar, una huella HMAC del PAN con una clave propia (un hash sin clave se revierte probando todos los números posibles), en lugar de descifrar.
+3. **El CVV nunca se guarda** después de autorizar (requisito 3.3.1). La demo tampoco lo guarda: lo deriva con HMAC-SHA256 del id de la tarjeta y un secreto del servidor (`src/features/account/server/demo-cvv.ts`).
+4. **Acceso y auditoría:** lo que ya hace la demo (revelado bajo demanda, con límite de 10 cada 10 minutos, una fila de auditoría `CardDetailsReveal` por revelado, enmascarado por defecto y `Cache-Control: no-store`) más no escribir nunca un PAN en los logs.
 
 El razonamiento completo, tarea por tarea, está en [`docs/BITACORA.md`](docs/BITACORA.md).
 
@@ -695,7 +726,7 @@ La pantalla de "¡Transferencia enviada!" mueve plata entre los usuarios demo, a
 
 ## Qué mejoraría con más tiempo
 
-- **PAN cifrado o tokenizado** (y un proveedor que muestre los datos en un iframe propio) si las tarjetas fueran reales.
+- **Tarjetas reales:** tokenizar con un proveedor PCI DSS (o cifrado por sobre con un KMS) y mostrar los datos en su iframe; el plan está en [El número de tarjeta en producción](#el-número-de-tarjeta-en-producción).
 - **Monitoreo** con Sentry o similar, usando el `digest` de los errores.
 - **E2E contra el deploy preview de cada PR.** Vercel ya genera un preview por PR; faltaría correr la suite de Playwright contra esa URL en CI.
 - **Notificaciones reales.** Hoy la campanita es decorativa (quedó fuera del alcance desde el principio). El siguiente paso sería avisar cuando llega una transferencia, con una tabla de notificaciones y un indicador en la campanita.
