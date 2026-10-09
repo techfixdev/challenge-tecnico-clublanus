@@ -89,6 +89,20 @@ describe("consumeRateLimit", () => {
     ).toBe(true);
   });
 
+  it.each(["transfer:recipient-lookup", "transfer:send"] as const)(
+    "stores the %s scope (the column is VARCHAR(32))",
+    async (scope) => {
+      const k = key(scope);
+
+      const hit = await consumeRateLimit(scope, k, POLICY, NEVER_SWEEP);
+
+      expect(hit.allowed).toBe(true);
+      expect(await db.rateLimitBucket.count({ where: { scope, key: k } })).toBe(
+        1,
+      );
+    },
+  );
+
   it("starts counting again in the next window, stored at the exact window start", async () => {
     const k = key("rollover");
     for (let hit = 0; hit < 11; hit++) {

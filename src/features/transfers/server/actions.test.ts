@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   sendTransferAs: vi.fn(),
   findRecipient: vi.fn(),
+  consumeRateLimit: vi.fn(),
 }));
 
 vi.mock("@/features/auth/server/current-user", () => ({
@@ -27,6 +28,10 @@ vi.mock("../data/prisma-transfer-repository", () => ({
     findRecipient: mocks.findRecipient,
     execute: vi.fn(),
   },
+}));
+
+vi.mock("@/shared/server/rate-limit-store", () => ({
+  consumeRateLimit: mocks.consumeRateLimit,
 }));
 
 const { lookupRecipient, submitTransfer } = await import("./actions");
@@ -70,6 +75,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
   mocks.getCurrentUser.mockResolvedValue(USER);
+  mocks.consumeRateLimit.mockResolvedValue({
+    allowed: true,
+    remaining: 29,
+    windowStart: new Date("2026-10-08T12:00:00.000Z"),
+  });
 });
 
 describe("submitTransfer", () => {
@@ -230,6 +240,22 @@ describe("submitTransfer", () => {
     });
     expect(mocks.sendTransferAs).not.toHaveBeenCalled();
   });
+
+  it("asks to wait, on the review step and keeping the key, when the user sent too many", async () => {
+    mocks.sendTransferAs.mockResolvedValue({
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: 420,
+    });
+
+    await expect(
+      submitTransfer(INITIAL_SEND_TRANSFER_STATE, formData(FIELDS)),
+    ).resolves.toEqual({
+      status: "error",
+      message: "Demasiados intentos. Probá de nuevo en 7 minutos.",
+      step: "review",
+    });
+  });
 });
 
 describe("lookupRecipient", () => {
@@ -294,5 +320,24 @@ describe("lookupRecipient", () => {
       ok: false,
       message: TRANSFER_FORM_MESSAGES.sessionExpired,
     });
+  });
+
+  it("asks to wait, without searching, when the user looked up too many accounts", async () => {
+    mocks.consumeRateLimit.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 420,
+      windowStart: new Date("2026-10-08T12:00:00.000Z"),
+    });
+
+    await expect(lookupRecipient("hincha.granate")).resolves.toEqual({
+      ok: false,
+      message: "Demasiados intentos. Probá de nuevo en 7 minutos.",
+    });
+    expect(mocks.findRecipient).not.toHaveBeenCalled();
+    expect(mocks.consumeRateLimit).toHaveBeenCalledWith(
+      "transfer:recipient-lookup",
+      USER.id,
+      expect.objectContaining({ limit: 30 }),
+    );
   });
 });
