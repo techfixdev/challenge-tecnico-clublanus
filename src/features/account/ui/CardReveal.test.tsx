@@ -109,7 +109,7 @@ describe("card reveal", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/account/cards/card_mc/details",
-      expect.objectContaining({ cache: "no-store" }),
+      expect.objectContaining({ method: "POST", cache: "no-store" }),
     );
     const card = mastercard();
     expect(await within(card).findByText("978,85 dólares")).toBeInTheDocument();

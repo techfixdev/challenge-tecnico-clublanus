@@ -84,7 +84,13 @@ async function fetchCardSecrets(
 ): Promise<CardSecrets> {
   const response = await fetch(
     `/api/account/cards/${encodeURIComponent(cardId)}/details`,
-    { cache: "no-store", signal, headers: { Accept: "application/json" } },
+    {
+      // POST: a reveal spends budget and is audited, so it is not a safe GET.
+      method: "POST",
+      cache: "no-store",
+      signal,
+      headers: { Accept: "application/json" },
+    },
   );
   if (response.status === 429) {
     throw new RevealRateLimitedError(retryAfterSeconds(response));
