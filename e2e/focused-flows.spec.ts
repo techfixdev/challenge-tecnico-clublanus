@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { recipientSearch } from "./fixtures/screens";
+import { typeRecipient } from "./fixtures/screens";
 import { login } from "./fixtures/session";
 import { settle } from "./fixtures/view-transitions";
 
@@ -63,7 +63,7 @@ test.describe("the transfer flow is a focused task", () => {
     await expectTappableWithoutScrolling(page, proceed);
     await expect(proceed).toBeDisabled();
 
-    await recipientSearch(page).fill("hincha.granate");
+    await typeRecipient(page, "hincha.granate");
     await expectTappableWithoutScrolling(page, proceed);
     await proceed.click();
 

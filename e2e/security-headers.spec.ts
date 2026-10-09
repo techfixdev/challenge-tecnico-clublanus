@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Response } from "@playwright/test";
 
-import { movementRows, recipientSearch } from "./fixtures/screens";
+import { movementRows, typeRecipient } from "./fixtures/screens";
 import { loginUntilHomeSettles } from "./fixtures/session";
 
 /*
@@ -100,14 +100,8 @@ test("the main screens run under the CSP without a single violation", async ({
       .getByRole("region", { name: "Recientes" })
       .getByRole("option", { name: /Hincha Granate/ }),
   ).toBeVisible();
-  // Text typed before the screen hydrates may not reach its state: type until it does.
-  const next = page.getByRole("button", { name: "Continuar" });
-  await expect(async () => {
-    await recipientSearch(page).fill("");
-    await recipientSearch(page).fill("hincha.granate");
-    await expect(next).toBeEnabled({ timeout: 1_000 });
-  }).toPass();
-  await next.click();
+  await typeRecipient(page, "hincha.granate");
+  await page.getByRole("button", { name: "Continuar" }).click();
   await expect(
     page.getByRole("heading", { name: "¿Cuánto le enviás?" }),
   ).toBeVisible();

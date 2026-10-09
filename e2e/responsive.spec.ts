@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
-import { recipientSearch } from "./fixtures/screens";
+import { typeRecipient } from "./fixtures/screens";
 import { DEMO_USER, login } from "./fixtures/session";
 import { waitForScreenToSettle } from "./fixtures/view-transitions";
 
@@ -172,14 +172,14 @@ test.describe("every screen fits every width", () => {
     test("every step of a transfer, with its errors", async ({ page }) => {
       await page.goto("/transferir");
       await expectFitsEveryWidth(page, "transfer recipient");
-      await recipientSearch(page).fill("nadie.en.granabank");
+      await typeRecipient(page, "nadie.en.granabank");
       await page.getByRole("button", { name: "Continuar" }).click();
       await expect(
         page.getByRole("alert").filter({ hasText: "No encontramos" }),
       ).toBeVisible();
       await expectFitsEveryWidth(page, "transfer unknown recipient");
 
-      await recipientSearch(page).fill("hincha.granate");
+      await typeRecipient(page, "hincha.granate");
       await page.getByRole("button", { name: "Continuar" }).click();
       // The peso card is preselected; the dollar one has the smaller balance.
       await page.locator("label", { hasText: "Mastercard" }).click();

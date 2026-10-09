@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { formatAmount, formatMoney } from "../src/shared/lib/format";
 import { expectFitsEveryWidth } from "./fixtures/layout-audit";
-import { primaryCard, recipientSearch } from "./fixtures/screens";
+import { primaryCard, typeRecipient } from "./fixtures/screens";
 import {
   DEMO_USER,
   login,
@@ -91,7 +91,7 @@ test("sends money to hincha.granate, who receives it", async ({
     recents.getByRole("option", { name: /Hincha Granate/ }),
   ).toBeVisible();
   await expect(recents).toContainText(/•••• \d{4}$/);
-  await recipientSearch(page).fill("hincha.granate");
+  await typeRecipient(page, "hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   // Step 2: amount (decimal comma) from the dollar card (the peso card is
@@ -166,7 +166,7 @@ test("sends pesos from the Visa, credited to the recipient's peso card", async (
 
   await login(page, SENDER);
   await page.goto("/transferir");
-  await recipientSearch(page).fill("hincha.granate");
+  await typeRecipient(page, "hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   // The peso card is the default: the field is in pesos and takes the Argentine format.
@@ -210,7 +210,7 @@ test("refuses an amount above the balance, in Spanish, and moves nothing", async
 }) => {
   await login(page, SENDER);
   await page.goto("/transferir");
-  await recipientSearch(page).fill("hincha.granate");
+  await typeRecipient(page, "hincha.granate");
   await page.getByRole("button", { name: "Continuar" }).click();
 
   await page.locator("label", { hasText: "Mastercard" }).click();
@@ -236,7 +236,7 @@ test("explains an unknown alias without leaving the first step", async ({
 }) => {
   await login(page, SENDER);
   await page.goto("/transferir");
-  await recipientSearch(page).fill("nadie.en.granabank");
+  await typeRecipient(page, "nadie.en.granabank");
   // No recent is called that: the search offers to look the alias up.
   await expect(
     page.getByText("Sin coincidencias en tus recientes", { exact: true }),
