@@ -17,6 +17,8 @@ env:
   # Test-only values: the database is the throwaway service container below.
   DATABASE_URL: postgresql://granabank:granabank@localhost:5432/granabank?schema=public
   SESSION_SECRET: ci-only-session-secret-at-least-32-characters
+  # Production builds require a dedicated CVV secret (the e2e job runs `pnpm start`).
+  DEMO_CVV_SECRET: ci-only-demo-cvv-secret-at-least-32-characters
 
 # Third-party actions are pinned to a full commit SHA (a tag can be moved; a SHA cannot).
 jobs:
