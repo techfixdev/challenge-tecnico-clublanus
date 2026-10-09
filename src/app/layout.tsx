@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins, Rokkitt } from "next/font/google";
+import { connection } from "next/server";
 
 import { APP_BACKGROUND_COLOR } from "@/shared/lib/theme";
 import { AppShell } from "@/shared/ui/AppShell";
@@ -51,7 +52,15 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+/**
+ * `connection()` renders every page per request, /login and not-found included (the
+ * signed-in pages already were, reading the session cookie). The Content-Security-Policy
+ * carries a fresh nonce per request (src/proxy.ts) and Next.js can only attach it to its
+ * scripts while rendering: a page prerendered at build time would ship scripts without
+ * it, and the browser would block them.
+ */
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  await connection();
   return (
     // Browsers add their own attributes to <html> before React hydrates (Chrome for iOS
     // injects `__gcrremoteframetoken`); this silences that one-level mismatch only.
