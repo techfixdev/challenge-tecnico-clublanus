@@ -10,6 +10,8 @@ import { prismaTransferRepository } from "../data/prisma-transfer-repository";
 import { sendTransfer, type TransferResult } from "../domain/transfer";
 import { revalidateAfterTransfer } from "./revalidate";
 
+const SEND_SCOPE = "transfer:send";
+
 export type SendTransferAsResult =
   | TransferResult
   | { ok: false; reason: "rate_limited"; retryAfterSeconds: number };
@@ -30,7 +32,7 @@ export async function sendTransferAs(
   input: unknown,
 ): Promise<SendTransferAsResult> {
   const budget = await consumeRateLimit(
-    "transfer:send",
+    SEND_SCOPE,
     senderId,
     TRANSFER_SEND_POLICY,
   );
@@ -45,7 +47,13 @@ export async function sendTransferAs(
   const result = await sendTransfer(prismaTransferRepository, senderId, input);
   if (result.ok && !result.replayed) revalidateAfterTransfer();
   if (result.ok && result.replayed) {
-    await refundRateLimit("transfer:send", senderId, budget.windowStart);
+    // Bookkeeping only: the replay already succeeded, so a failed refund must not turn
+    // it into an error (the hit just stays counted until the window ends).
+    await refundRateLimit(SEND_SCOPE, senderId, budget.windowStart).catch(
+      (error: unknown) => {
+        console.error("Could not refund a replayed transfer's budget", error);
+      },
+    );
   }
   return result;
 }
