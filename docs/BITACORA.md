@@ -83,7 +83,8 @@ Los hashes citados son los del historial actual de la rama `feat/granabank` y to
 | | [T41](#t41--videos-del-recorrido-y-antes-y-después-08102026) | Videos: recorrido con subtítulos y antes y después | este commit |
 | | [T5](#t5--deploy-en-vercel-con-neon-08102026) | Deploy en Vercel con Neon | este commit |
 | | [T45](#t45--headers-de-seguridad-del-navegador-08102026) | Headers de seguridad del navegador (CSP con nonce) | `0ee0aba` |
-| | [T46](#t46--el-número-de-tarjeta-en-producción-readme-08102026) | El número de tarjeta en producción (README) | este commit |
+| | [T46](#t46--el-número-de-tarjeta-en-producción-readme-08102026) | El número de tarjeta en producción (README) | `9d5218a` |
+| | [T47](#t47--seguimiento-de-la-auditoría-de-seguridad-08102026) | Seguimiento de la auditoría de seguridad y del Judgment Day | `9711e99`…`8e1d1b8` (5) + este commit |
 
 ---
 
@@ -1192,6 +1193,22 @@ El commit anterior a este pase, `05495e8`, sí cambia comportamiento y no es par
 **Qué se agregó:** la sección "El número de tarjeta en producción" del README: primero no guardarlo (tokenización con un proveedor PCI DSS Nivel 1 y los datos en su iframe); si hay que guardarlo, cifrado por sobre (AES-256-GCM por registro, clave de datos cifrada por una clave maestra en un KMS o HSM, rotación, una clave por entorno, huella HMAC para búsquedas); el CVV nunca se guarda (la demo lo deriva con HMAC); acceso y auditoría. Los requisitos de PCI DSS se citan solo a nivel de requisito (v4.0, requisitos 3 y 3.3.1). También se sumó la sección "Headers de seguridad del navegador" (T45).
 
 **Cómo se verificó:** `prettier --check` limpio y los enlaces internos del README apuntan a encabezados existentes.
+
+
+#### T47 — Seguimiento de la auditoría de seguridad (08/10/2026)
+
+**Pedido:** cerrar los hallazgos de una auditoría de seguridad de solo lectura y de un Judgment Day (ninguno Crítico ni Alto).
+
+**Qué cambió:**
+
+- **Búsqueda de destinatario limitada (Medio):** devolvía nombre, alias y últimos 4 del CVU de cualquier alias adivinado, sin límite: con el login público de la demo se podían cosechar nombres. Ahora `lookupRecipientAs` (compartido por la API y la Server Action) cuenta 30 búsquedas por usuario cada 10 minutos antes de leer cuentas; la API responde 429 con `Retry-After` y la pantalla muestra "Demasiados intentos. Probá de nuevo en N minutos.". La pantalla solo consulta al tocar "Continuar" (filtrar recientes pasa en el navegador), así que el uso normal queda muy lejos del límite.
+- **Envíos limitados:** 10 intentos de transferencia por usuario cada 10 minutos, contados antes de la transacción en `sendTransferAs`. Una repetición idempotente (misma clave, `replayed`) se devuelve al cupo; un reintento que llega con el cupo gastado recibe el 429 (documentado).
+- **Revelado de tarjeta por POST:** un revelado gasta cupo y escribe auditoría, así que ya no es un GET que un link o una precarga puedan disparar: `POST` con el chequeo de `Origin` de las otras mutaciones (403 antes de contar), GET responde 405 y se mantiene `Cache-Control: no-store`.
+- **`DEMO_CVV_SECRET` obligatorio en producción:** sin él (o con menos de 32 caracteres) el revelado falla con un error claro, en vez de reutilizar `SESSION_SECRET`. Desarrollo, tests y el preview LAN conservan el respaldo.
+- **Un link ya no cierra una sesión viva (JD-1):** `/login?expired=1` borraba la cookie sin condiciones. Ahora el proxy borra solo una cookie que no puede verificar; una firmada correctamente va a `GET /api/auth/expired-session`, donde el servidor mira la fila de la sesión: si está muerta borra la cookie (un Route Handler puede; un Server Component no) y lleva a `/login` sin bucle; si está viva vuelve a Home sin tocarla.
+- **E2E sin carrera de hidratación:** el texto tipeado justo después de `page.goto` podía llegar antes de hidratar y dejar "Continuar" deshabilitado; un helper `typeRecipient` reescribe hasta que el botón se habilita (solo tests).
+
+**Cómo se verificó:** RED antes de cada cambio (búsqueda 31.ª → 429, envío 11.º → 429, revelado sin GET y con otro `Origin` → 403, producción sin secreto → error, cookie firmada en `/login?expired=1` → se conserva), después typecheck, lint y prettier limpios, 1099 unitarios, 74 de integración, e2e contra `next dev` (115 pasan, 4 omitidos) y contra el build de producción en una copia descartable (119/119, sin violaciones de CSP).
 
 ---
 
